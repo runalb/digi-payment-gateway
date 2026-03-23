@@ -6,7 +6,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 // use in future - not used yet - placeholder
 @RestController
-@RequestMapping("ui/api/v1")
+@RequestMapping("/api/v1/ui")
 public class UiController {
 
     @GetMapping("/test")

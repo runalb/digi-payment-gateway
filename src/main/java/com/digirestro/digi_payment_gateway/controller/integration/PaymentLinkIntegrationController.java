@@ -13,7 +13,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 @RestController
-@RequestMapping("integration/api/v1/payment-links")
+@RequestMapping("/api/v1/integration/payment-links")
 public class PaymentLinkIntegrationController {
 
     private final PaymentOrchestrationService paymentOrchestrationService;
