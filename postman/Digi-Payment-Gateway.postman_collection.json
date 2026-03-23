@@ -1,0 +1,113 @@
+{
+  "info": {
+    "_postman_id": "d4c8e2a0-9b1f-4e2d-8c7a-digi-payment-gateway",
+    "name": "Digi Payment Gateway",
+    "description": "All REST endpoints for digi-payment-gateway (Spring Boot). Default base URL matches `application-dev.properties` (port 8080). Edit the `baseUrl` collection variable for other environments.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:8080"
+    },
+    {
+      "key": "paymentLinkId",
+      "value": "1"
+    }
+  ],
+  "item": [
+    {
+      "name": "Integration API",
+      "item": [
+        {
+          "name": "Payment Links",
+          "item": [
+            {
+              "name": "Create payment link",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"merchantId\": 1,\n  \"merchantReferencePaymentId\": \"ORDER-12345\",\n  \"amount\": 99.99,\n  \"merchantMetadataJson\": \"{\\\"orderId\\\":\\\"ORD-001\\\"}\"\n}"
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/integration/api/v1/payment-links/create",
+                  "protocol": "http",
+                  "host": ["localhost"],
+                  "port": "8080",
+                  "path": ["integration", "api", "v1", "payment-links", "create"]
+                },
+                "description": "Creates a payment link. Body matches `PaymentLinkRequest` (merchantId, merchantReferencePaymentId, amount ≥ 0.01, optional merchantMetadataJson). Currency is taken from `merchant_config` for the merchant."
+              },
+              "response": []
+            },
+            {
+              "name": "Get payment details by id",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/integration/api/v1/payment-links/{{paymentLinkId}}",
+                  "protocol": "http",
+                  "host": ["localhost"],
+                  "port": "8080",
+                  "path": ["integration", "api", "v1", "payment-links", "{{paymentLinkId}}"]
+                },
+                "description": "Returns `PaymentDetailsResponse` for the given payment link id."
+              },
+              "response": []
+            }
+          ]
+        },
+        {
+          "name": "Terminal Payments",
+          "item": [
+            {
+              "name": "Test (placeholder)",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/integration/api/v1/terminal-payments/test",
+                  "protocol": "http",
+                  "host": ["localhost"],
+                  "port": "8080",
+                  "path": ["integration", "api", "v1", "terminal-payments", "test"]
+                },
+                "description": "Placeholder endpoint from `TerminalPaymentIntegrationController`."
+              },
+              "response": []
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "UI API",
+      "item": [
+        {
+          "name": "Test (placeholder)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/ui/api/v1/test",
+              "protocol": "http",
+              "host": ["localhost"],
+              "port": "8080",
+              "path": ["ui", "api", "v1", "test"]
+            },
+            "description": "Placeholder endpoint from `UiController`."
+          },
+          "response": []
+        }
+      ]
+    }
+  ]
+}

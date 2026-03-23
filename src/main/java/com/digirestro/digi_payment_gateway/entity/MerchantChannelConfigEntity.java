@@ -1,0 +1,38 @@
+package com.digirestro.digi_payment_gateway.entity;
+
+import jakarta.persistence.Column;
+import jakarta.persistence.Entity;
+import jakarta.persistence.GeneratedValue;
+import jakarta.persistence.GenerationType;
+import jakarta.persistence.Id;
+import jakarta.persistence.JoinColumn;
+import jakarta.persistence.ManyToOne;
+import jakarta.persistence.Table;
+import lombok.Getter;
+import lombok.Setter;
+
+@Getter
+@Setter
+@Entity
+@Table(name = "merchant_channel_config")
+public class MerchantChannelConfigEntity extends AuditableEntity {
+
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
+
+    @ManyToOne(optional = false)
+    @JoinColumn(name = "merchant_id", nullable = false)
+    private MerchantEntity merchant;
+
+    @ManyToOne(optional = false)
+    @JoinColumn(name = "payment_channel_id", nullable = false)
+    private PaymentChannelEntity paymentChannel;
+
+    @Column(nullable = false)
+    private Boolean isActive = Boolean.TRUE;
+
+    @Column(columnDefinition = "TEXT")
+    private String configJson;
+
+}
