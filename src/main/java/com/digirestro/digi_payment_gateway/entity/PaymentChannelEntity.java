@@ -16,7 +16,7 @@ import lombok.Setter;
 @Setter
 @Entity
 @Table(name = "payment_channel")
-public class PaymentChannelEntity {
+public class PaymentChannelEntity extends AuditableEntity {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -25,5 +25,8 @@ public class PaymentChannelEntity {
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, unique = true)
     private PaymentChannelNameEnum name;
+
+    @Column(nullable = false)
+    private Boolean isActive = Boolean.TRUE;
 
 }
