@@ -4,6 +4,7 @@ import com.digirestro.digi_payment_gateway.adapter.PaymentChannelAdapter;
 import com.digirestro.digi_payment_gateway.dto.PaymentDetailsResponse;
 import com.digirestro.digi_payment_gateway.dto.PaymentLinkRequest;
 import com.digirestro.digi_payment_gateway.dto.PaymentLinkResponse;
+import com.digirestro.digi_payment_gateway.dto.adaptor.AdapterPaymentLinkResponse;
 import com.digirestro.digi_payment_gateway.entity.PaymentEntity;
 import com.digirestro.digi_payment_gateway.repository.MerchantChannelConfigRepository;
 import com.digirestro.digi_payment_gateway.repository.MerchantConfigRepository;
@@ -12,6 +13,7 @@ import com.digirestro.digi_payment_gateway.repository.PaymentRepository;
 
 import jakarta.persistence.EntityNotFoundException;
 import java.util.List;
+import java.util.Objects;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -50,7 +52,7 @@ public class PaymentOrchestrationService {
                 .orElseThrow(() -> new EntityNotFoundException("Active merchant channel configuration not found"));
 
         var adapter = adapters.stream()
-                .filter(a -> a.getChannel().getName() == channelConfig.getPaymentChannel().getName())
+                .filter(a -> Objects.equals(a.getChannel().getName(), channelConfig.getPaymentChannel().getName()))
                 .findFirst()
                 .orElseThrow(() -> new IllegalStateException("No adapter found for channel"));
 
@@ -64,7 +66,7 @@ public class PaymentOrchestrationService {
         payment.setMerchantMetadataJson(request.merchantMetadataJson());
         payment = paymentRepository.save(payment);
 
-        PaymentLinkResponse adapterResponse = adapter.createPaymentLink(request, merchantConfig,channelConfig);
+        AdapterPaymentLinkResponse adapterResponse = adapter.createPaymentLink(request, merchantConfig,channelConfig);
         payment.setPaymentLinkUrl(adapterResponse.paymentLinkUrl());
         payment.setPaymentChannelTxnId(adapterResponse.paymentChannelTxnId());
         payment = paymentRepository.save(payment);
