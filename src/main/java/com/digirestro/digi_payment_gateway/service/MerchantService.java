@@ -73,9 +73,9 @@ public class MerchantService {
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Merchant not found"));
 
         var channel = paymentChannelRepository
-                .findByName(request.paymentChannelName())
+                .findById(request.paymentChannelId())
                 .orElseThrow(() -> new ResponseStatusException(
-                        HttpStatus.NOT_FOUND, "Payment channel not found: " + request.paymentChannelName()));
+                        HttpStatus.NOT_FOUND, "Payment channel not found: " + request.paymentChannelId()));
 
         if (merchantChannelConfigRepository.existsByMerchant_IdAndPaymentChannel_Id(merchantId, channel.getId())) {
             throw new ResponseStatusException(
