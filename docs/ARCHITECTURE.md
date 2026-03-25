@@ -20,7 +20,8 @@ The **Digi Payment Gateway** is a Common Payment Gateway Application that acts a
 │                        DIGI PAYMENT GATEWAY (Spring Boot)                                         │
 │  ┌─────────────────────────────────────────────────────────────────────────────────────────────┐  │
 │  │                    Consumer API Layer (REST Controllers)                                    │  │
-│  │  /api/v1/payments/link  │  /api/v1/payments/status  │  /api/v1/webhooks/consumer            │  │
+│  │  /api/v1/integration/payment-links  │  /api/v1/integration/terminal-payments  │  /api/v1/ui │  │
+│  │  /webhook/v1/payment-channel-webhooks  (payment channel → gateway)                         │  │
 │  └─────────────────────────────────────────────────────────────────────────────────────────────┘  │
 │                                           │                                                       │
 │  ┌─────────────────────────────────────────────────────────────────────────────────────────────┐  │
@@ -62,11 +63,13 @@ The **Digi Payment Gateway** is a Common Payment Gateway Application that acts a
 ### 2.1 Consumer API Layer
 
 
-| Component             | Responsibility                | Endpoints                                                        |
-| --------------------- | ----------------------------- | ---------------------------------------------------------------- |
-| **PaymentController** | Unified payment operations    | `POST /api/v1/payments/link`, `GET /api/v1/payments/{id}/status` |
-| **WebhookController** | Consumer webhook registration | `POST /api/v1/merchants/{id}/webhooks`                           |
-| **HealthController**  | Health & readiness            | `GET /actuator/health`                                           |
+| Component                             | Responsibility                         | Endpoints                                                                 |
+| ------------------------------------- | -------------------------------------- | ------------------------------------------------------------------------- |
+| **PaymentLinkIntegrationController**  | Payment links (server-to-server)       | `POST /api/v1/integration/payment-links/create`, `GET /api/v1/integration/payment-links/{id}` |
+| **TerminalPaymentIntegrationController** | Terminal payments (stub)          | `GET /api/v1/integration/terminal-payments/test`                          |
+| **PaymentChannelWebhookController**   | Inbound webhooks from payment channels | `POST /webhook/v1/payment-channel-webhooks/test` (TEST channel stub)     |
+| **UiController**                      | Management UI API (stub)               | `GET /api/v1/ui/test`                                                     |
+| **Actuator**                          | Health & readiness                     | `GET /actuator/health`                                                    |
 
 
 **Key Features:**
@@ -77,8 +80,8 @@ The **Digi Payment Gateway** is a Common Payment Gateway Application that acts a
 
 **Authentication:**
 
-- **API key (Merchant.apiKey)** — Used **only for server-to-server** payment API calls. Consumer applications (e-commerce, POS, etc.) send the merchant’s API key (plain UUID) in the request (e.g. header `X-API-Key`). Protects: `POST /api/v1/payments/link`, `GET /api/v1/payments/{id}/status`, and other payment/merchant config APIs called by systems.
-- **JWT** — Used for **login and UI** (app configuration). Users sign in with email/password; the app issues a JWT. The JWT is used to access the management UI and configuration endpoints (e.g. manage merchants, channel config, users). Separate from payment API key auth.
+- **Target model:** **API key (`Merchant.apiKey`)** for server-to-server integration calls (e.g. header `X-API-Key`) on payment-link and related integration APIs; **JWT** for login and UI/configuration. These are not wired to endpoint rules yet.
+- **Current application:** `SecurityConfig` uses `authorizeHttpRequests(anyRequest().permitAll())` with HTTP Basic available on the filter chain — suitable for local development only. Harden before production.
 
 ---
 
@@ -100,22 +103,29 @@ The **Digi Payment Gateway** is a Common Payment Gateway Application that acts a
 ### 2.3 Payment Channel Adapters (Strategy Pattern)
 
 ```java
-// Conceptual interface
+// Actual interface (package adapter)
 public interface PaymentChannelAdapter {
-    PaymentChannelEntity getChannel();  // returns PaymentChannelEntity (id, name, isActive)
-    PaymentLinkResponse createPaymentLink(PaymentLinkRequest request, MerchantChannelConfig config);
-    PaymentStatusResponse validateAndParseWebhook(String payload, String signature, String secret);  // returns PaymentStatusResponse (e.g. status, paymentChannelTxnId, etc.)
+    PaymentChannelEntity getChannel();
+
+    AdapterPaymentLinkResponse createPaymentLink(
+            PaymentEntity payment,
+            MerchantConfigEntity merchantConfig,
+            MerchantChannelConfigEntity channelConfig);
+
+    // Record: status, paymentId, paymentChannelTxnId, merchantReferencePaymentId
+    AdaptorWebhookResponse validateAndParseWebhook(String payload, String signature, String secret);
 }
 ```
 
 
-| Adapter             | Implementation Order | Payment channel API                        |
-| ------------------- | -------------------- | ------------------------------------------ |
-| **XplorPayAdapter** | 1st                  | XplorPay REST API                          |
-| **PaymobAdapter**   | 2nd                  | Paymob REST API                            |
-| **StripeAdapter**   | 3rd                  | Stripe REST API                            |
-| **RazorpayAdapter** | 4th                  | Razorpay REST API                          |
-| **FutureAdapter**   | Extensible           | New payment channels via new adapter class |
+| Adapter                    | Implementation Order | Payment channel API                        |
+| -------------------------- | -------------------- | ------------------------------------------ |
+| **TestPaymentChannelAdapter** | Implemented (dev) | In-process TEST channel (no external API)  |
+| **XplorPayAdapter**        | 1st (planned)        | XplorPay REST API                          |
+| **PaymobAdapter**          | 2nd (planned)        | Paymob REST API                            |
+| **StripeAdapter**          | 3rd (planned)        | Stripe REST API                            |
+| **RazorpayAdapter**        | 4th (planned)        | Razorpay REST API                          |
+| **Future adapters**        | Extensible           | New `@Component` implementing the interface |
 
 
 #### Outbound HTTP Standard (Direct RestTemplate)
@@ -144,7 +154,7 @@ public interface PaymentChannelAdapter {
 
 | Component                               | Responsibility                                                                                |
 | --------------------------------------- | --------------------------------------------------------------------------------------------- |
-| **Payment channel webhook controllers** | Receive webhooks from each payment channel (e.g., `/webhooks/xplorpay`, `/webhooks/razorpay`) |
+| **Payment channel webhook controllers** | Receive webhooks under `/webhook/v1/payment-channel-webhooks/...` (e.g. `/test` for TEST); add per-provider paths as adapters ship |
 | **Webhook Validator**                   | Verify signature/secret per payment channel                                                   |
 | **Webhook Processor**                   | Parse payload, update payment record, trigger consumer notification                           |
 | **Consumer Notification Service**       | Forward payment result to the consumer webhook URL from `merchant_config` with retry          |
@@ -174,8 +184,9 @@ public interface PaymentChannelAdapter {
 │  (XplorPay)  │     │  (Webhook Receiver) │     │  (Processor)        │     │             │
 └──────┬───────┘     └──────────┬──────────┘     └──────────┬──────────┘     └─────┬───────┘
        │                        │                           │                      │
-       │ 1. POST /webhooks/     │                           │                      │
-       │    xplorpay            │                           │                      │
+       │ 1. POST /webhook/v1/   │                           │                      │
+       │    payment-channel-    │                           │                      │
+       │    webhooks/…          │                           │                      │
        │  (payment status)      │                           │                      │
        │───────────────────────>│                           │                      │
        │                        │                           │                      │
@@ -204,7 +215,7 @@ public interface PaymentChannelAdapter {
 
 ### Webhook Steps
 
-1. **Receive** — Payment channel sends HTTP POST to `POST /webhooks/{channel}` (e.g., `/webhooks/xplorpay`).
+1. **Receive** — Payment channel sends HTTP POST to `POST /webhook/v1/payment-channel-webhooks/...` (today: `/test` for the TEST adapter; future providers get dedicated subpaths).
 2. **Validate** — Verify signature/secret using payment channel-specific validation (HMAC, API key, etc.).
 3. **Parse** — Extract payment ID, status, amount, payment channel transaction ID.
 4. **Store** — Update `payment` record and optionally `webhook_incoming_log`.
@@ -253,9 +264,9 @@ The entity definitions in **§4.2** follow this diagram.
 │ id (Long PK)        │───┐   │ id (Long PK)                   │   ┌───│ id (Long PK)            │
 │ name                │   │   │ merchantId (FK)                │   │   │ name (PaymentChannelNameEnum) │
 │ apiKey (UUID)       │   └──>│ paymentChannelId (FK)          │<──┘   │ isActive                │
-│ isActive            │       │ isActive                       │       └─────────────────────────┘
-│ createdAt           │       │ configJson                     │
-│ updatedAt           │       │ createdAt                      │
+│ isActive            │       │ isActive                       │       │ createdAt               │
+│ createdAt           │       │ configJson                     │       │ updatedAt               │
+│ updatedAt           │       │ createdAt                      │       └─────────────────────────┘
                        │       │ updatedAt                      │
 └─────────────────────┘       └────────────────────────────────┘
                                           │
@@ -273,7 +284,6 @@ The entity definitions in **§4.2** follow this diagram.
 │ amount              │       │ status                      │       │ payload                    │
 │ currency            │       │ createdAt                   │       │ status                     │
 │ status              │       └─────────────────────────────┘       │ retryCount                 │
-│                     │                                             │ lastAttemptAt              │
 │ paymentChannelTxnId │                                             │ lastAttemptAt              │
 │ paymentLinkUrl      │                                             │ createdAt                  │
 │ merchantReferencePaymentId   │                                    └────────────────────────────┘
@@ -371,14 +381,18 @@ Exactly **one** row per merchant (enforced by unique `merchant_id`). Holds integ
 
 #### PaymentChannelEntity (table: `payment_channel`)
 
-Channel is identified by **name** only. The **name** field is an **enum** type with suffix `Enum` (e.g. `PaymentChannelNameEnum`: XPLORPAY, PAYMOB, STRIPE, RAZORPAY). No separate code field.
+Extends **`AuditableEntity`** (`createdDateTime`, `updatedDateTime` in JPA; physical column names depend on naming strategy — often `created_date_time` / `updated_date_time`).
+
+Channel is identified by **`name`** (`PaymentChannelNameEnum`, stored as string). Values include **XPLORPAY**, **PAYMOB**, **STRIPE**, **RAZORPAY**, **TEST**. No separate provider code column.
 
 
 | Field    | Type                   | Description                            |
 | -------- | ---------------------- | -------------------------------------- |
 | id       | Long                   | PK (1, 2, 3, …)                        |
-| name     | PaymentChannelNameEnum | XPLORPAY, PAYMOB, STRIPE, RAZORPAY     |
+| name     | PaymentChannelNameEnum | Unique channel key (enum, see above)   |
 | isActive | Boolean                | Whether this payment channel is active |
+| createdAt | Instant               | From `AuditableEntity` (see note above) |
+| updatedAt | Instant               | From `AuditableEntity` (see note above) |
 
 
 #### MerchantChannelConfigEntity (table: `merchant_channel_config`)
@@ -485,7 +499,7 @@ sequenceDiagram
     participant Adapter as XplorPay Adapter
     participant XplorPay as XplorPay API
 
-    Consumer->>API: POST …/payment-links/create (integration API)
+    Consumer->>API: POST /api/v1/integration/payment-links/create
     Note over Consumer,API: { merchantId, amount, merchantReferencePaymentId, merchantMetadata } — no currency in body
 
     API->>API: Validate request & authenticate
@@ -527,7 +541,7 @@ sequenceDiagram
     participant Notifier as Consumer Notifier
     participant Consumer as Consumer System
 
-    Channel->>Webhook: POST /webhooks/xplorpay
+    Channel->>Webhook: POST /webhook/v1/payment-channel-webhooks/{path}
     Note over Channel,Webhook: { payment_id, status, signature, ... }
 
     Webhook->>Validator: validate(payload, signature, secret)
@@ -602,5 +616,7 @@ sequenceDiagram
 | ------- | ---------- | ----------------------------------------------------------------------- |
 | 1.0     | 2025-03-17 | Initial architecture documentation                                      |
 | 1.1     | 2025-03-23 | `merchant_config` (1:1): `webhookUrl` + `currency`; payment link currency from DB, not request body |
+| 1.2     | 2025-03-23 | `PaymentChannelEntity` extends `AuditableEntity`; ER diagram and field table include audit timestamps and **TEST** enum |
+| 1.3     | 2026-03-25 | Integration base paths (`/api/v1/integration/...`), webhook base (`/webhook/v1/payment-channel-webhooks`), actual controller names; `PaymentChannelAdapter` + `AdaptorWebhookResponse`; **TestPaymentChannelAdapter**; security note (permit-all dev); ER diagram duplicate row fix |
 
 

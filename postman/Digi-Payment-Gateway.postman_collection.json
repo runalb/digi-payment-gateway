@@ -13,6 +13,10 @@
     {
       "key": "paymentLinkId",
       "value": "1"
+    },
+    {
+      "key": "merchantId",
+      "value": "1"
     }
   ],
   "item": [
@@ -37,13 +41,13 @@
                   "raw": "{\n  \"merchantId\": 1,\n  \"merchantReferencePaymentId\": \"ORDER-12345\",\n  \"amount\": 99.99,\n  \"merchantMetadataJson\": \"{\\\"orderId\\\":\\\"ORD-001\\\"}\"\n}"
                 },
                 "url": {
-                  "raw": "{{baseUrl}}/integration/api/v1/payment-links/create",
+                  "raw": "{{baseUrl}}/api/v1/integration/payment-links/create",
                   "protocol": "http",
                   "host": ["localhost"],
                   "port": "8080",
-                  "path": ["integration", "api", "v1", "payment-links", "create"]
+                  "path": ["api", "v1", "integration", "payment-links", "create"]
                 },
-                "description": "Creates a payment link. Body matches `PaymentLinkRequest` (merchantId, merchantReferencePaymentId, amount ≥ 0.01, optional merchantMetadataJson). Currency is taken from `merchant_config` for the merchant."
+                "description": "Creates a payment link. Body matches `PaymentLinkRequest` (merchantId, merchantReferencePaymentId, amount >= 0.01, optional merchantMetadataJson). For TEST channel, response `paymentLinkUrl` points to `/test-payment-link.html?paymentId=...&merchantId=...`."
               },
               "response": []
             },
@@ -53,11 +57,11 @@
                 "method": "GET",
                 "header": [],
                 "url": {
-                  "raw": "{{baseUrl}}/integration/api/v1/payment-links/{{paymentLinkId}}",
+                  "raw": "{{baseUrl}}/api/v1/integration/payment-links/{{paymentLinkId}}",
                   "protocol": "http",
                   "host": ["localhost"],
                   "port": "8080",
-                  "path": ["integration", "api", "v1", "payment-links", "{{paymentLinkId}}"]
+                  "path": ["api", "v1", "integration", "payment-links", "{{paymentLinkId}}"]
                 },
                 "description": "Returns `PaymentDetailsResponse` for the given payment link id."
               },
@@ -74,17 +78,72 @@
                 "method": "GET",
                 "header": [],
                 "url": {
-                  "raw": "{{baseUrl}}/integration/api/v1/terminal-payments/test",
+                  "raw": "{{baseUrl}}/api/v1/integration/terminal-payments/test",
                   "protocol": "http",
                   "host": ["localhost"],
                   "port": "8080",
-                  "path": ["integration", "api", "v1", "terminal-payments", "test"]
+                  "path": ["api", "v1", "integration", "terminal-payments", "test"]
                 },
                 "description": "Placeholder endpoint from `TerminalPaymentIntegrationController`."
               },
               "response": []
             }
           ]
+        }
+      ]
+    },
+    {
+      "name": "Payment Channel Webhooks",
+      "item": [
+        {
+          "name": "Receive TEST webhook (success)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"outcome\": \"SUCCESS\",\n  \"paymentId\": {{paymentLinkId}},\n  \"merchantId\": \"{{merchantId}}\",\n  \"cardNumberLast4\": \"4242\",\n  \"cardExpiry\": \"12/28\",\n  \"cvvProvided\": true\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/payment-channel-webhooks/test",
+              "protocol": "http",
+              "host": ["localhost"],
+              "port": "8080",
+              "path": ["api", "v1", "payment-channel-webhooks", "test"]
+            },
+            "description": "Posts to `PaymentChannelWebhookController.receiveTestWebhook`. Current controller logs payload and returns fixed `AdaptorWebhookResponse` (TEST-REF / TEST-TXN / SUCCESS)."
+          },
+          "response": []
+        },
+        {
+          "name": "Receive TEST webhook (failed payload sample)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"outcome\": \"FAILED\",\n  \"paymentId\": {{paymentLinkId}},\n  \"merchantId\": \"{{merchantId}}\",\n  \"cardNumberLast4\": \"4242\",\n  \"cardExpiry\": \"12/28\",\n  \"cvvProvided\": true\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/payment-channel-webhooks/test",
+              "protocol": "http",
+              "host": ["localhost"],
+              "port": "8080",
+              "path": ["api", "v1", "payment-channel-webhooks", "test"]
+            },
+            "description": "Same endpoint with FAILED payload sample. Response is still fixed by current controller implementation."
+          },
+          "response": []
         }
       ]
     },
@@ -97,11 +156,11 @@
             "method": "GET",
             "header": [],
             "url": {
-              "raw": "{{baseUrl}}/ui/api/v1/test",
+              "raw": "{{baseUrl}}/api/v1/ui/test",
               "protocol": "http",
               "host": ["localhost"],
               "port": "8080",
-              "path": ["ui", "api", "v1", "test"]
+              "path": ["api", "v1", "ui", "test"]
             },
             "description": "Placeholder endpoint from `UiController`."
           },

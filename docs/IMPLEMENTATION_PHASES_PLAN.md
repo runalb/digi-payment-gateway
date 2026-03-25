@@ -4,11 +4,11 @@ This document provides a practical phase-by-phase implementation plan for the Di
 
 ---
 
-## Phase 1 - Project setup and dummy adapter
+## Phase 1 - Project setup and test adapter
 
 ### Goal
 
-Bootstrap the project and validate the end-to-end flow with a dummy adapter before integrating real payment channels.
+Bootstrap the project and validate the end-to-end flow with a test adapter before integrating real payment channels.
 
 ### Scope
 
@@ -18,7 +18,7 @@ Bootstrap the project and validate the end-to-end flow with a dummy adapter befo
 - Add shared `RestTemplate` bean configuration for outbound HTTP defaults (timeouts, interceptors, error handler).
 - Create core entities/repositories with  required fields.
 - Implement `PaymentChannelAdapter` contract.
-- Add `DummyPaymentChannelAdapter` returning static/simulated responses.
+- Add `TestPaymentChannelAdapter` returning static/simulated responses.
 - Wire adapter selection through orchestration service.
 - Expose initial payment API endpoints with mock flow support.
 
@@ -26,7 +26,7 @@ Bootstrap the project and validate the end-to-end flow with a dummy adapter befo
 
 - Runnable service with health endpoint.
 - DB schema initialized.
-- Dummy adapter integrated and selectable by configuration.
+- Test adapter integrated and selectable by configuration.
 - Basic API request/response flow working with test data.
 
 ---
@@ -67,7 +67,7 @@ Implement the first real payment channel adapter (XplorPay) as production refere
 - Apply shared bean defaults (timeouts, interceptors, error handler) and map transport errors to domain exceptions.
 - Implement payment link creation request/response mapping.
 - Implement webhook signature validation.
-- Parse webhook payload into `PaymentStatusResponse`.
+- Parse webhook payload into `AdaptorWebhookPaymentStatusResponse`.
 - Persist masked request/response logs in payment channel API log table.
 - Integrate adapter with orchestration and webhook processor.
 - Add integration test flow against sandbox/mock.
@@ -130,7 +130,7 @@ Implement user/account and user-merchant management capabilities for UI/admin op
 
 ## Suggested Execution Order
 
-1. Phase 1 -> foundation and dummy flow
+1. Phase 1 -> foundation and test flow
 2. Phase 2 -> secure the foundation
 3. Phase 3 -> first production adapter (XplorPay)
 4. Phase 4 -> scale to additional channels

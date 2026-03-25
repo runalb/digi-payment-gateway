@@ -14,8 +14,8 @@
 | ----- | ----- |
 | **ORM** | Spring Data JPA / Hibernate |
 | **Development** | `spring.jpa.hibernate.ddl-auto=update` may apply DDL at startup — convenient for dev, **not** a controlled migration for production. |
-| **Physical column naming** | Default Spring Boot / Hibernate physical naming typically maps Java camelCase to **snake_case** (e.g. `apiKey` → `api_key`). Columns with an explicit `@Column(name = "…")` are subject to the same strategy unless you override `spring.jpa.hibernate.naming.*`. **Always validate** against `information_schema.columns` or Hibernate-exported DDL for your environment. |
-| **Auditing** | Tables extending `AuditableEntity` include timestamp columns (see §3.1). Requires JPA Auditing enabled in the application. |
+| **Physical column naming** | Spring Boot’s default Hibernate physical naming usually maps Java camelCase to **snake_case** (e.g. `apiKey` → `api_key`, `passwordHash` → `password_hash`) unless you override `spring.jpa.hibernate.naming.*`. **Exception:** `AuditableEntity` sets explicit names **`createdDateTime`** and **`updatedDateTime`** (see §3.1) — those columns are not snake_case. **Always validate** against `information_schema.columns` or Hibernate-exported DDL. |
+| **Auditing** | `@EnableJpaAuditing` on `DigiPaymentGatewayApplication`; all entities extending `AuditableEntity` get the columns in §3.1. |
 
 ---
 
@@ -71,8 +71,8 @@ erDiagram
     string name
     boolean is_active
     boolean is_verified
-    timestamp created_date_time
-    timestamp updated_date_time
+    timestamp createdDateTime
+    timestamp updatedDateTime
   }
 
   merchant {
@@ -80,8 +80,8 @@ erDiagram
     string name
     string api_key UK
     boolean is_active
-    timestamp created_date_time
-    timestamp updated_date_time
+    timestamp createdDateTime
+    timestamp updatedDateTime
   }
 
   user_merchant {
@@ -94,13 +94,16 @@ erDiagram
     bigint merchant_id FK
     text webhook_url
     varchar currency
-    timestamp created_date_time
-    timestamp updated_date_time
+    timestamp createdDateTime
+    timestamp updatedDateTime
   }
 
   payment_channel {
     bigint id PK
     varchar name UK
+    boolean is_active
+    timestamp createdDateTime
+    timestamp updatedDateTime
   }
 
   merchant_channel_config {
@@ -109,8 +112,8 @@ erDiagram
     bigint payment_channel_id FK
     boolean is_active
     text config_json
-    timestamp created_date_time
-    timestamp updated_date_time
+    timestamp createdDateTime
+    timestamp updatedDateTime
   }
 
   payment {
@@ -118,7 +121,6 @@ erDiagram
     bigint merchant_id FK
     bigint channel_config_id FK
     bigint payment_channel_id FK
-    varchar payment_channel_name
     string merchant_reference_payment_id
     string payment_channel_txn_id
     numeric amount
@@ -126,8 +128,8 @@ erDiagram
     varchar status
     string payment_link_url
     text merchant_metadata_json
-    timestamp created_date_time
-    timestamp updated_date_time
+    timestamp createdDateTime
+    timestamp updatedDateTime
   }
 
   webhook_incoming_log {
@@ -136,8 +138,8 @@ erDiagram
     bigint payment_channel_id FK
     text raw_payload
     string status
-    timestamp created_date_time
-    timestamp updated_date_time
+    timestamp createdDateTime
+    timestamp updatedDateTime
   }
 
   webhook_merchant_log {
@@ -150,8 +152,8 @@ erDiagram
     string status
     integer retry_count
     timestamp last_attempt_at
-    timestamp created_date_time
-    timestamp updated_date_time
+    timestamp createdDateTime
+    timestamp updatedDateTime
   }
 
   payment_channel_api_log {
@@ -168,8 +170,8 @@ erDiagram
     text response_headers
     text response_body
     int duration_ms
-    timestamp created_date_time
-    timestamp updated_date_time
+    timestamp createdDateTime
+    timestamp updatedDateTime
   }
 ```
 
@@ -183,7 +185,7 @@ erDiagram
 | `payment_channel` | `merchant_channel_config` | **1:N** | Same channel can be configured for many merchants. |
 | `merchant` | `payment` | **1:N** | |
 | `merchant_channel_config` | `payment` | **1:N** | |
-| `payment_channel` | `payment` | **1:N** | Denormalized channel on `payment` for query convenience (must stay consistent with `channel_config`). |
+| `payment_channel` | `payment` | **1:N** | `payment.payment_channel_id` references the channel row; channel key is `payment_channel.name` (enum string), not duplicated on `payment`. |
 | `payment` | `webhook_incoming_log` | **1:N** | `payment_id` nullable on entity → optional FK in DB. |
 | `payment` | `webhook_merchant_log` | **1:N** | `payment_id` NOT NULL. |
 | `webhook_incoming_log` | `webhook_merchant_log` | **1:N** | `webhook_incoming_log_id` nullable. |
@@ -193,18 +195,18 @@ erDiagram
 
 ## 3. Table specifications
 
-Naming below uses **snake_case** for physical columns as commonly produced by Spring Boot defaults. Adjust if your naming strategy differs.
+Naming below: non-audit fields use **snake_case** as typically produced by Spring Boot’s default physical naming. **Audit** columns are the exception (see §3.1).
 
 ### 3.1 Auditing columns (inherited)
 
-Present on all entities that extend `AuditableEntity` (see per-table lists).
+Present on every entity that extends `AuditableEntity` (`UserEntity`, `MerchantEntity`, `MerchantConfigEntity`, `PaymentChannelEntity`, `MerchantChannelConfigEntity`, `PaymentEntity`, `WebhookIncomingLogEntity`, `WebhookMerchantLogEntity`, `PaymentChannelApiLogEntity`). Mapped in `AuditableEntity` with explicit `@Column` names:
 
 | Column | Type | Nullable | Description |
 | ------ | ---- | -------- | ----------- |
-| `created_date_time` | `timestamp` | NOT NULL | Set on insert (JPA `@CreatedDate`). |
-| `updated_date_time` | `timestamp` | NOT NULL | Updated on each change (`@LastModifiedDate`). |
+| `createdDateTime` | `timestamp` | NOT NULL | Set on insert (`@CreatedDate`). |
+| `updatedDateTime` | `timestamp` | NOT NULL | Updated on each change (`@LastModifiedDate`). |
 
-*If your DDL shows `createdDateTime` / `updatedDateTime` (mixed case), the app uses explicit `@Column` names — match the live database.*
+On PostgreSQL, Hibernate typically emits quoted identifiers for these names so casing matches the mapping. Per-table “+ audit” rows in §3.2–§3.11 refer to these two columns.
 
 ---
 
@@ -220,7 +222,7 @@ Back-office / UI users; many-to-many with merchants.
 | `name` | `varchar` | NOT NULL | Display name. |
 | `is_active` | `boolean` | NOT NULL | Account enabled. |
 | `is_verified` | `boolean` | NOT NULL | Verification flag. |
-| + audit | timestamps | NOT NULL | §3.1 |
+| + audit | `createdDateTime`, `updatedDateTime` | NOT NULL | §3.1 |
 
 **Indexes (recommended):** PK on `id`, UNIQUE on `email`.
 
@@ -249,7 +251,7 @@ Core merchant record; API key for server-to-server integration.
 | `name` | `varchar` | NOT NULL | |
 | `api_key` | `varchar` | NOT NULL, UNIQUE | Merchant API key (e.g. UUID string). |
 | `is_active` | `boolean` | NOT NULL | |
-| + audit | timestamps | NOT NULL | §3.1 |
+| + audit | `createdDateTime`, `updatedDateTime` | NOT NULL | §3.1 |
 
 **Indexes:** PK, UNIQUE(`api_key`).
 
@@ -265,7 +267,7 @@ Core merchant record; API key for server-to-server integration.
 | `merchant_id` | `bigint` | NOT NULL, FK → `merchant.id`, **UNIQUE** | Enforces 1:1. |
 | `webhook_url` | `text` | NULL | Consumer webhook URL for outbound notifications. |
 | `currency` | `varchar(3)` | NOT NULL | ISO 4217 alphabetic code (e.g. `USD`). Used when creating payments / links. |
-| + audit | timestamps | NOT NULL | §3.1 |
+| + audit | `createdDateTime`, `updatedDateTime` | NOT NULL | §3.1 |
 
 **Indexes:** UNIQUE(`merchant_id`); FK to `merchant`.
 
@@ -273,14 +275,14 @@ Core merchant record; API key for server-to-server integration.
 
 ### 3.6 `payment_channel`
 
-Catalog of integrated payment providers.
+Catalog of integrated payment providers. Mapped by **`PaymentChannelEntity`**, which **extends `AuditableEntity`** (same audit columns as §3.1).
 
 | Column | Type | Constraints | Description |
 | ------ | ---- | ----------- | ----------- |
 | `id` | `bigint` | PK, identity | |
-| `name` | `varchar` | NOT NULL, UNIQUE | Enum string — see §4. |
-
-*No auditing columns on this entity in the current model.*
+| `name` | `varchar` | NOT NULL, UNIQUE | Enum string — see §4.1. |
+| `is_active` | `boolean` | NOT NULL | Whether this channel is available for new routing / configuration. |
+| + audit | `createdDateTime`, `updatedDateTime` | NOT NULL | §3.1 |
 
 ---
 
@@ -295,7 +297,7 @@ Per-merchant, per-channel credentials and settings (often JSON).
 | `payment_channel_id` | `bigint` | NOT NULL, FK → `payment_channel.id` | |
 | `is_active` | `boolean` | NOT NULL | Only active configs should be used by orchestration. |
 | `config_json` | `text` | NULL | Channel-specific secrets/config (protect at rest). |
-| + audit | timestamps | NOT NULL | §3.1 |
+| + audit | `createdDateTime`, `updatedDateTime` | NOT NULL | §3.1 |
 
 **Indexes (recommended):** `(merchant_id, is_active)` for “resolve active config” queries; FKs.
 
@@ -310,8 +312,7 @@ Payment attempt / transaction record.
 | `id` | `bigint` | PK, identity | Internal payment id (exposed to consumers as appropriate). |
 | `merchant_id` | `bigint` | NOT NULL, FK → `merchant.id` | |
 | `channel_config_id` | `bigint` | NOT NULL, FK → `merchant_channel_config.id` | |
-| `payment_channel_id` | `bigint` | NOT NULL, FK → `payment_channel.id` | |
-| `payment_channel_name` | `varchar` | NOT NULL | Denormalized channel enum string at creation (matches `payment_channel.name`; see §4.1). |
+| `payment_channel_id` | `bigint` | NOT NULL, FK → `payment_channel.id` | Channel key is **`payment_channel.name`** (see §4.1); there is no separate name column on `payment`. |
 | `merchant_reference_payment_id` | `varchar` | NOT NULL | Idempotent / correlation id from consumer. |
 | `payment_channel_txn_id` | `varchar` | NULL | Provider transaction id after link creation / updates. |
 | `amount` | `numeric(19,4)` | NOT NULL | |
@@ -319,7 +320,7 @@ Payment attempt / transaction record.
 | `status` | `varchar` | NOT NULL | Enum string — see §4. Default `PENDING`. |
 | `payment_link_url` | `varchar` | NULL | Generated checkout URL. |
 | `merchant_metadata_json` | `text` | NULL | Opaque merchant metadata. |
-| + audit | timestamps | NOT NULL | §3.1 |
+| + audit | `createdDateTime`, `updatedDateTime` | NOT NULL | §3.1 |
 
 **Indexes (recommended):** FK indexes; optional UNIQUE(`merchant_id`, `merchant_reference_payment_id`) if business rules require global idempotency per merchant.
 
@@ -336,7 +337,7 @@ Inbound webhook payload audit from payment channels.
 | `payment_channel_id` | `bigint` | FK → `payment_channel.id`, NULL | |
 | `raw_payload` | `text` | NOT NULL | Raw body. |
 | `status` | `varchar` | NOT NULL | Application-defined processing status. |
-| + audit | timestamps | NOT NULL | §3.1 |
+| + audit | `createdDateTime`, `updatedDateTime` | NOT NULL | §3.1 |
 
 ---
 
@@ -355,7 +356,7 @@ Outbound calls to the consumer webhook URL (and retries).
 | `status` | `varchar` | NOT NULL | e.g. PENDING / SUCCESS / FAILED. |
 | `retry_count` | `integer` | NOT NULL | Default 0. |
 | `last_attempt_at` | `timestamp` | NULL | |
-| + audit | timestamps | NOT NULL | §3.1 |
+| + audit | `createdDateTime`, `updatedDateTime` | NOT NULL | §3.1 |
 
 ---
 
@@ -378,7 +379,7 @@ Outbound HTTP audit to payment channel APIs.
 | `response_headers` | `text` | NULL | |
 | `response_body` | `text` | NULL | |
 | `duration_ms` | `integer` | NULL | |
-| + audit | timestamps | NOT NULL | §3.1 |
+| + audit | `createdDateTime`, `updatedDateTime` | NOT NULL | §3.1 |
 
 **Retention:** Log tables can grow quickly — define **retention/archival** policy (partitioning by month, TTL job, etc.).
 
@@ -390,7 +391,17 @@ Stored as **strings** in VARCHAR columns (`EnumType.STRING`).
 
 ### 4.1 `payment_channel.name` — `PaymentChannelNameEnum`
 
-`XPLORPAY`, `PAYMOB`, `STRIPE`, `RAZORPAY`, `DUMMY`
+`XPLORPAY`, `PAYMOB`, `STRIPE`, `RAZORPAY`, `TEST`
+
+If the database was created with an older CHECK constraint (for example only `DUMMY` or without `TEST`), manual inserts or Hibernate may fail with:
+
+`violates check constraint "payment_channel_name_check"`.
+
+Reconcile the constraint with the enum by running:
+
+`scripts/sql/postgresql/update-payment-channel-name-check.sql`
+
+If any row still uses `DUMMY`, update it to `TEST` before applying the script (see comment in that file).
 
 ### 4.2 `payment.status` — `PaymentStatusEnum`
 
@@ -411,3 +422,5 @@ Stored as **strings** in VARCHAR columns (`EnumType.STRING`).
 | Version | Date | Author / note | Changes |
 | ------- | ---- | ------------- | ------- |
 | 1.0 | 2025-03-23 | Engineering | Initial DBA-oriented schema doc from JPA entities. |
+| 1.1 | 2025-03-23 | Engineering | `payment_channel`: `PaymentChannelEntity` extends `AuditableEntity`; document `is_active` and audit columns. |
+| 1.2 | 2026-03-25 | Engineering | Align with JPA: audit columns **`createdDateTime`** / **`updatedDateTime`** (`AuditableEntity`); remove obsolete `payment.payment_channel_name`; ER diagram and §1 naming notes; `@EnableJpaAuditing` reference. |
