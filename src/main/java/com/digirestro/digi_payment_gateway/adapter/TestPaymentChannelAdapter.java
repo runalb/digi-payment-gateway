@@ -36,6 +36,6 @@ public class TestPaymentChannelAdapter implements PaymentChannelAdapter {
 
     @Override
     public AdaptorWebhookResponse validateAndParseWebhook(String payload, String signature, String secret) {
-        return new AdaptorWebhookResponse(null, "TEST-REF", PaymentStatusEnum.SUCCESS, "TEST-TXN");
+        return new AdaptorWebhookResponse(PaymentStatusEnum.SUCCESS, null, null, null);
     }
 }

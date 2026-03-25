@@ -5,9 +5,7 @@ import com.digirestro.digi_payment_gateway.enums.PaymentStatusEnum;
 
 import java.util.Map;
 
-import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
-import org.springframework.util.StringUtils;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -17,13 +15,13 @@ import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
 @RestController
-@RequestMapping("/api/v1/payment-channel-webhooks")
+@RequestMapping("/webhook/v1/payment-channel-webhooks")
 public class PaymentChannelWebhookController {
 
     @PostMapping(value = "/test")
     public ResponseEntity<AdaptorWebhookResponse> receiveTestWebhook(@RequestBody Map<String, Object> body) {
         log.info("Received test webhook: {}", body);
-        return ResponseEntity.ok(new AdaptorWebhookResponse(null, "TEST-REF", PaymentStatusEnum.SUCCESS, "TEST-TXN"));
+        return ResponseEntity.ok(new AdaptorWebhookResponse(PaymentStatusEnum.SUCCESS, null, null, null));
     }
 
 
