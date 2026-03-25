@@ -66,7 +66,7 @@ public class PaymentOrchestrationService {
         payment.setMerchantMetadataJson(request.merchantMetadataJson());
         payment = paymentRepository.save(payment);
 
-        AdapterPaymentLinkResponse adapterResponse = adapter.createPaymentLink(request, merchantConfig,channelConfig);
+        AdapterPaymentLinkResponse adapterResponse = adapter.createPaymentLink(payment, merchantConfig,channelConfig);
         payment.setPaymentLinkUrl(adapterResponse.paymentLinkUrl());
         payment.setPaymentChannelTxnId(adapterResponse.paymentChannelTxnId());
         payment = paymentRepository.save(payment);
