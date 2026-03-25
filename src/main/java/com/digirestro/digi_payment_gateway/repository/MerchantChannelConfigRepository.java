@@ -6,4 +6,6 @@ import org.springframework.data.jpa.repository.JpaRepository;
 
 public interface MerchantChannelConfigRepository extends JpaRepository<MerchantChannelConfigEntity, Long> {
     Optional<MerchantChannelConfigEntity> findFirstByMerchant_IdAndIsActiveTrue(Long merchantId);
+
+    boolean existsByMerchant_IdAndPaymentChannel_Id(Long merchantId, Long paymentChannelId);
 }
