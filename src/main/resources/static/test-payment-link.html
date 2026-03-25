@@ -1,0 +1,414 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Test payment</title>
+  <style>
+    :root {
+      --bg: #0f1419;
+      --card: #1a2332;
+      --text: #e7ecf3;
+      --muted: #8b9bb4;
+      --accent: #3d8bfd;
+      --danger: #f85149;
+      --ok: #3fb950;
+      --border: #30363d;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      min-height: 100vh;
+      font-family: system-ui, Segoe UI, Roboto, sans-serif;
+      background: radial-gradient(ellipse at top, #1a2a3d 0%, var(--bg) 55%);
+      color: var(--text);
+      padding: 2rem 1rem;
+    }
+    .wrap { max-width: 420px; margin: 0 auto; }
+    h1 {
+      font-size: 1.35rem;
+      font-weight: 600;
+      margin: 0 0 0.35rem;
+    }
+    .badge {
+      display: inline-block;
+      font-size: 0.7rem;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      padding: 0.2rem 0.5rem;
+      border-radius: 4px;
+      background: #21262d;
+      color: var(--muted);
+      margin-bottom: 1.25rem;
+    }
+    form {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 1.25rem 1.35rem;
+    }
+    label {
+      display: block;
+      font-size: 0.8rem;
+      color: var(--muted);
+      margin-bottom: 0.35rem;
+    }
+    input[type="text"] {
+      width: 100%;
+      padding: 0.65rem 0.75rem;
+      border-radius: 8px;
+      border: 1px solid var(--border);
+      background: #0d1117;
+      color: var(--text);
+      margin-bottom: 1rem;
+      font-size: 1rem;
+    }
+    input:focus {
+      outline: 2px solid var(--accent);
+      outline-offset: 1px;
+    }
+    .card-meta-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 0.75rem;
+    }
+    .card-meta-grid .field {
+      min-width: 0;
+    }
+    .card-meta-grid input {
+      margin-bottom: 1rem;
+    }
+    @media (max-width: 460px) {
+      .card-meta-grid {
+        grid-template-columns: 1fr;
+        gap: 0;
+      }
+    }
+    .outcomes {
+      display: flex;
+      gap: 1rem;
+      margin-bottom: 1rem;
+      flex-wrap: wrap;
+    }
+    .outcomes label {
+      display: flex;
+      align-items: center;
+      gap: 0.4rem;
+      cursor: pointer;
+      color: var(--text);
+      font-size: 0.95rem;
+    }
+    .outcomes input { margin: 0; }
+    button[type="submit"] {
+      width: 100%;
+      padding: 0.75rem 1rem;
+      border: none;
+      border-radius: 8px;
+      background: var(--accent);
+      color: #fff;
+      font-size: 1rem;
+      font-weight: 600;
+      cursor: pointer;
+    }
+    button[type="submit"]:hover { filter: brightness(1.08); }
+    button[type="submit"]:disabled { opacity: 0.5; cursor: not-allowed; }
+    .hint {
+      font-size: 0.75rem;
+      color: var(--muted);
+      margin-top: 0.5rem;
+      line-height: 1.4;
+    }
+    #result {
+      margin-top: 1.25rem;
+      padding: 1rem;
+      border-radius: 8px;
+      font-size: 0.85rem;
+      white-space: pre-wrap;
+      word-break: break-word;
+      display: none;
+    }
+    #result.show { display: block; }
+    #result.ok { background: rgba(63, 185, 80, 0.12); border: 1px solid var(--ok); }
+    #result.err { background: rgba(248, 81, 73, 0.12); border: 1px solid var(--danger); }
+    .url-context {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 0.85rem 1rem;
+      margin-bottom: 1rem;
+      font-size: 0.85rem;
+    }
+    .url-context-row {
+      display: flex;
+      justify-content: space-between;
+      gap: 1rem;
+      align-items: baseline;
+      padding: 0.35rem 0;
+      border-bottom: 1px solid var(--border);
+    }
+    .url-context-row:last-child { border-bottom: none; padding-bottom: 0; }
+    .url-context-row:first-child { padding-top: 0; }
+    .url-context .k { color: var(--muted); flex-shrink: 0; }
+    .url-context .v {
+      font-family: ui-monospace, monospace;
+      text-align: right;
+      word-break: break-all;
+      color: var(--text);
+    }
+    .url-context .v.missing { color: var(--muted); font-style: italic; }
+    .field-error {
+      margin-top: -0.6rem;
+      margin-bottom: 1rem;
+      font-size: 0.8rem;
+      color: var(--danger);
+      display: none;
+    }
+    .field-error.show { display: block; }
+    .input-error {
+      border-color: var(--danger) !important;
+      outline-color: var(--danger) !important;
+    }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <h1>Test payment page</h1>
+    <span class="badge">Simulation only</span>
+    <div class="url-context" aria-label="Values from URL">
+      <div class="url-context-row">
+        <span class="k">Payment id</span>
+        <span class="v" id="displayPaymentId">—</span>
+      </div>
+      <div class="url-context-row">
+        <span class="k">Merchant id</span>
+        <span class="v" id="displayMerchantId">—</span>
+      </div>
+    </div>
+
+    <form id="payForm" novalidate>
+      <label for="cardNumber">Card number</label>
+      <input type="text" id="cardNumber" name="cardNumber" placeholder="4242 4242 4242 4242" autocomplete="cc-number" inputmode="numeric" maxlength="19" required />
+      <div class="field-error" id="errCardNumber">Card number is required.</div>
+
+      <div class="card-meta-grid">
+        <div class="field">
+          <label for="cardExpiry">Expiry (MM/YY)</label>
+          <input type="text" id="cardExpiry" name="cardExpiry" placeholder="12/28" autocomplete="cc-exp" inputmode="numeric" maxlength="5" required />
+          <div class="field-error" id="errCardExpiry">Expiry month/year is required (MM/YY).</div>
+        </div>
+        <div class="field">
+          <label for="cvv">CVV</label>
+          <input type="text" id="cvv" name="cvv" placeholder="123" autocomplete="cc-csc" inputmode="numeric" maxlength="4" required />
+          <div class="field-error" id="errCvv">CVV is required.</div>
+        </div>
+      </div>
+
+      <p style="margin: 0 0 0.5rem; font-size: 0.85rem; color: var(--muted);">Simulated outcome after Pay:</p>
+      <div class="outcomes">
+        <label><input type="radio" name="outcome" value="SUCCESS" checked /> Transaction success</label>
+        <label><input type="radio" name="outcome" value="FAILED" /> Transaction failed</label>
+      </div>
+
+      <button type="submit" id="payBtn">Pay</button>
+      <p class="hint">
+        Example Payment URL link: <br>
+        <code id="paymentLinkUrl"></code>
+        <br><br>
+        Webhook: <br><code id="webhookUrl"></code><br>
+      </p>
+    </form>
+
+    <div id="result" role="status"></div>
+  </div>
+
+  <script>
+    (function () {
+      const form = document.getElementById('payForm');
+      const resultEl = document.getElementById('result');
+      const payBtn = document.getElementById('payBtn');
+      const apiBaseUrl = 'http://localhost:8080';
+      const webhookPath = '/api/v1/payment-channel-webhooks/test';
+      const paymentLinkUrl = apiBaseUrl + '/test-payment-link.html?paymentId={ID}&merchantId={MERCHANT_ID}';
+      const paymentLinkUrlEl = document.getElementById('paymentLinkUrl');
+      paymentLinkUrlEl.textContent = paymentLinkUrl;
+      const webhookUrl = document.getElementById('webhookUrl');
+      webhookUrl.textContent = apiBaseUrl + webhookPath;
+
+      const params = new URLSearchParams(window.location.search);
+      const paymentIdFromUrl = params.get('paymentId');
+      const merchantIdFromUrl = params.get('merchantId');
+
+      const displayPaymentId = document.getElementById('displayPaymentId');
+      const displayMerchantId = document.getElementById('displayMerchantId');
+      const paymentIdTrim =
+        paymentIdFromUrl == null || String(paymentIdFromUrl).trim() === ''
+          ? null
+          : String(paymentIdFromUrl).trim();
+      const merchantIdTrim =
+        merchantIdFromUrl == null || String(merchantIdFromUrl).trim() === ''
+          ? null
+          : String(merchantIdFromUrl).trim();
+      if (paymentIdTrim) {
+        displayPaymentId.textContent = paymentIdTrim;
+        displayPaymentId.classList.remove('missing');
+      } else {
+        displayPaymentId.textContent = 'not set (add ?paymentId=…)';
+        displayPaymentId.classList.add('missing');
+      }
+      if (merchantIdTrim) {
+        displayMerchantId.textContent = merchantIdTrim;
+        displayMerchantId.classList.remove('missing');
+      } else {
+        displayMerchantId.textContent = 'not set (add ?merchantId=…)';
+        displayMerchantId.classList.add('missing');
+      }
+
+      function digitsOnly(s) {
+        return (s || '').replace(/\D/g, '');
+      }
+
+      function formatCardNumber(raw) {
+        const digits = digitsOnly(raw).slice(0, 16);
+        return digits.replace(/(\d{4})(?=\d)/g, '$1 ');
+      }
+
+      function formatExpiry(raw) {
+        const digits = digitsOnly(raw).slice(0, 4);
+        if (digits.length <= 2) {
+          return digits;
+        }
+        return digits.slice(0, 2) + '/' + digits.slice(2);
+      }
+
+      function showResult(ok, text) {
+        resultEl.className = 'show ' + (ok ? 'ok' : 'err');
+        resultEl.textContent = text;
+      }
+
+      const cardNumberInput = document.getElementById('cardNumber');
+      const cardExpiryInput = document.getElementById('cardExpiry');
+      const cvvInput = document.getElementById('cvv');
+      const errCardNumber = document.getElementById('errCardNumber');
+      const errCardExpiry = document.getElementById('errCardExpiry');
+      const errCvv = document.getElementById('errCvv');
+
+      function setFieldError(inputEl, errEl, message) {
+        if (message) {
+          inputEl.classList.add('input-error');
+          errEl.textContent = message;
+          errEl.classList.add('show');
+        } else {
+          inputEl.classList.remove('input-error');
+          errEl.classList.remove('show');
+        }
+      }
+
+      function validateCardNumber() {
+        const digits = digitsOnly(cardNumberInput.value);
+        if (!digits) return 'Card number is required.';
+        if (digits.length < 12) return 'Card number looks too short.';
+        return null;
+      }
+
+      function validateExpiry() {
+        const raw = (cardExpiryInput.value || '').trim();
+        if (!raw) return 'Expiry month/year is required (MM/YY).';
+        const m = raw.match(/^(\d{2})\/(\d{2})$/);
+        if (!m) return 'Expiry must be in MM/YY format.';
+        const mm = Number(m[1]);
+        if (!(mm >= 1 && mm <= 12)) return 'Expiry month must be 01 to 12.';
+        return null;
+      }
+
+      function validateCvv() {
+        const digits = digitsOnly(cvvInput.value);
+        if (!digits) return 'CVV is required.';
+        if (!(digits.length === 3 || digits.length === 4)) return 'CVV must be 3 or 4 digits.';
+        return null;
+      }
+
+      cardNumberInput.addEventListener('input', function () {
+        cardNumberInput.value = formatCardNumber(cardNumberInput.value);
+        setFieldError(cardNumberInput, errCardNumber, validateCardNumber());
+      });
+
+      cardExpiryInput.addEventListener('input', function () {
+        cardExpiryInput.value = formatExpiry(cardExpiryInput.value);
+        setFieldError(cardExpiryInput, errCardExpiry, validateExpiry());
+      });
+
+      cvvInput.addEventListener('input', function () {
+        cvvInput.value = digitsOnly(cvvInput.value).slice(0, 4);
+        setFieldError(cvvInput, errCvv, validateCvv());
+      });
+
+      form.addEventListener('submit', async function (e) {
+        e.preventDefault();
+        resultEl.className = '';
+        resultEl.textContent = '';
+
+        const cardErr = validateCardNumber();
+        const expErr = validateExpiry();
+        const cvvErr = validateCvv();
+        setFieldError(cardNumberInput, errCardNumber, cardErr);
+        setFieldError(cardExpiryInput, errCardExpiry, expErr);
+        setFieldError(cvvInput, errCvv, cvvErr);
+        if (cardErr || expErr || cvvErr) {
+          return;
+        }
+
+        const cardRaw = document.getElementById('cardNumber').value.trim();
+        const digits = digitsOnly(cardRaw);
+        const expiry = document.getElementById('cardExpiry').value.trim();
+        const cvv = document.getElementById('cvv').value;
+        const outcome = document.querySelector('input[name="outcome"]:checked').value;
+        const paymentIdParsed =
+          paymentIdFromUrl == null || String(paymentIdFromUrl).trim() === ''
+            ? null
+            : Number(String(paymentIdFromUrl).trim());
+        const merchantId =
+          merchantIdFromUrl == null || String(merchantIdFromUrl).trim() === ''
+            ? null
+            : String(merchantIdFromUrl).trim();
+
+        const payload = {
+          outcome: outcome,
+          paymentId: Number.isFinite(paymentIdParsed) ? paymentIdParsed : null,
+          merchantId: merchantId,
+          cardNumberLast4: digits.length >= 4 ? digits.slice(-4) : (digits || null),
+          cardExpiry: expiry || null,
+          cvvProvided: cvv.length > 0,
+        };
+
+        payBtn.disabled = true;
+        try {
+          const res = await fetch(apiBaseUrl + webhookPath, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+            body: JSON.stringify(payload),
+          });
+          const bodyText = await res.text();
+          let parsed;
+          try {
+            parsed = JSON.parse(bodyText);
+          } catch (_) {
+            parsed = bodyText;
+          }
+          if (!res.ok) {
+            showResult(false, 'HTTP ' + res.status + '\n\n' + (typeof parsed === 'string' ? parsed : JSON.stringify(parsed, null, 2)));
+            return;
+          }
+          showResult(
+            true,
+            'Webhook OK (' + res.status + ')\n\nSent JSON:\n' + JSON.stringify(payload, null, 2) + '\n\nResponse:\n' + JSON.stringify(parsed, null, 2)
+          );
+        } catch (err) {
+          showResult(false, 'Request failed: ' + (err && err.message ? err.message : String(err)));
+        } finally {
+          payBtn.disabled = false;
+        }
+      });
+    })();
+  </script>
+</body>
+</html>

@@ -5,5 +5,5 @@ public enum PaymentChannelNameEnum {
     PAYMOB,
     STRIPE,
     RAZORPAY,
-    DUMMY
+    TEST
 }
