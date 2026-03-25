@@ -5,6 +5,7 @@ import com.digirestro.digi_payment_gateway.enums.PaymentStatusEnum;
 
 import java.util.Map;
 
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -21,7 +22,8 @@ public class PaymentChannelWebhookController {
     @PostMapping(value = "/test")
     public ResponseEntity<AdaptorWebhookResponse> receiveTestWebhook(@RequestBody Map<String, Object> body) {
         log.info("Received test webhook: {}", body);
-        return ResponseEntity.ok(new AdaptorWebhookResponse(PaymentStatusEnum.SUCCESS, null, null, null));
+        AdaptorWebhookResponse response = new AdaptorWebhookResponse(PaymentStatusEnum.SUCCESS, null, null, null);
+        return new ResponseEntity<>(response, HttpStatus.OK);
     }
 
 
