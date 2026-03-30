@@ -24,5 +24,5 @@ public record PaymentDetailsResponse(
         String paymentLinkUrl,
 
         // timestamps
-        LocalDateTime createdAt,
-        LocalDateTime updatedAt) {}
+        LocalDateTime createdDateTime,
+        LocalDateTime updatedDateTime) {}

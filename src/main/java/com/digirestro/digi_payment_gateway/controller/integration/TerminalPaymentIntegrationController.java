@@ -8,7 +8,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 // use in future - not used yet - placeholder
 @RestController
-@RequestMapping("/api/v1/integration/terminal-payments")
+@RequestMapping("/api/v1/integration/terminal-payment")
 public class TerminalPaymentIntegrationController {
 
     @GetMapping("/test")
