@@ -52,7 +52,7 @@ public class PaymentEntity extends AuditableEntity {
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
-    private PaymentStatusEnum status = PaymentStatusEnum.PENDING;
+    private PaymentStatusEnum status = PaymentStatusEnum.INITIATED;
 
     private String paymentLinkUrl;
 

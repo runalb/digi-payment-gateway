@@ -1,7 +1,7 @@
 package com.digirestro.digi_payment_gateway.controller.webhooks;
 
+import com.digirestro.digi_payment_gateway.adapter.TestPaymentChannelAdapter;
 import com.digirestro.digi_payment_gateway.dto.adaptor.AdaptorWebhookResponse;
-import com.digirestro.digi_payment_gateway.enums.PaymentStatusEnum;
 
 import java.util.Map;
 
@@ -18,11 +18,17 @@ import lombok.extern.slf4j.Slf4j;
 @RestController
 @RequestMapping("/webhook/v1/payment-channel-webhooks")
 public class PaymentChannelWebhookController {
+    private final TestPaymentChannelAdapter testPaymentChannelAdapter;
+
+    public PaymentChannelWebhookController(TestPaymentChannelAdapter testPaymentChannelAdapter) {
+        this.testPaymentChannelAdapter = testPaymentChannelAdapter;
+    }
 
     @PostMapping(value = "/test")
     public ResponseEntity<AdaptorWebhookResponse> receiveTestWebhook(@RequestBody Map<String, Object> body) {
         log.info("Received test webhook: {}", body);
-        AdaptorWebhookResponse response = new AdaptorWebhookResponse(PaymentStatusEnum.SUCCESS, null, null, null);
+        String payload = String.valueOf(body);
+        AdaptorWebhookResponse response = testPaymentChannelAdapter.validateAndParseWebhook(payload, null, null);
         return new ResponseEntity<>(response, HttpStatus.OK);
     }
 

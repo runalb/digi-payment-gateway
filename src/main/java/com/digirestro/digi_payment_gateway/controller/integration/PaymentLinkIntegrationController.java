@@ -24,9 +24,9 @@ public class PaymentLinkIntegrationController {
         this.paymentOrchestrationService = paymentOrchestrationService;
     }
 
-    @PostMapping("/create")
-    public ResponseEntity<PaymentLinkResponse> createPaymentLink(@Valid @RequestBody PaymentLinkRequest request) {
-        PaymentLinkResponse response = paymentOrchestrationService.createPaymentLink(request);
+    @PostMapping("/generate")
+    public ResponseEntity<PaymentLinkResponse> generatePaymentLink(@Valid @RequestBody PaymentLinkRequest request) {
+        PaymentLinkResponse response = paymentOrchestrationService.generatePaymentLink(request);
         return new ResponseEntity<>(response, HttpStatus.CREATED);
     }
 

@@ -6,6 +6,7 @@ import com.digirestro.digi_payment_gateway.dto.PaymentLinkRequest;
 import com.digirestro.digi_payment_gateway.dto.PaymentLinkResponse;
 import com.digirestro.digi_payment_gateway.dto.adaptor.AdapterPaymentLinkResponse;
 import com.digirestro.digi_payment_gateway.entity.PaymentEntity;
+import com.digirestro.digi_payment_gateway.enums.PaymentStatusEnum;
 import com.digirestro.digi_payment_gateway.repository.MerchantChannelConfigRepository;
 import com.digirestro.digi_payment_gateway.repository.MerchantConfigRepository;
 import com.digirestro.digi_payment_gateway.repository.MerchantRepository;
@@ -40,7 +41,7 @@ public class PaymentOrchestrationService {
     }
 
     @Transactional
-    public PaymentLinkResponse createPaymentLink(PaymentLinkRequest request) {
+    public PaymentLinkResponse generatePaymentLink(PaymentLinkRequest request) {
         var merchant = merchantRepository.findById(request.merchantId())
                 .orElseThrow(() -> new EntityNotFoundException("Merchant not found"));
 
@@ -69,6 +70,7 @@ public class PaymentOrchestrationService {
         AdapterPaymentLinkResponse adapterResponse = adapter.createPaymentLink(payment, merchantConfig,channelConfig);
         payment.setPaymentLinkUrl(adapterResponse.paymentLinkUrl());
         payment.setPaymentChannelTxnId(adapterResponse.paymentChannelTxnId());
+        payment.setStatus(PaymentStatusEnum.PAYMENT_LINK_GENERATED);
         payment = paymentRepository.save(payment);
 
         return new PaymentLinkResponse(
