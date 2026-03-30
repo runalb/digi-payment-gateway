@@ -6,7 +6,6 @@ import com.digirestro.digi_payment_gateway.dto.PaymentLinkRequest;
 import com.digirestro.digi_payment_gateway.dto.PaymentLinkResponse;
 import com.digirestro.digi_payment_gateway.dto.adaptor.AdapterPaymentLinkResponse;
 import com.digirestro.digi_payment_gateway.entity.PaymentEntity;
-import com.digirestro.digi_payment_gateway.enums.PaymentStatusEnum;
 import com.digirestro.digi_payment_gateway.repository.MerchantChannelConfigRepository;
 import com.digirestro.digi_payment_gateway.repository.MerchantConfigRepository;
 import com.digirestro.digi_payment_gateway.repository.MerchantRepository;
@@ -86,17 +85,16 @@ public class PaymentOrchestrationService {
                 .orElseThrow(() -> new EntityNotFoundException("Payment not found"));
         return new PaymentDetailsResponse(
                 payment.getId(),
-                payment.getMerchant().getId(),
-                payment.getChannelConfig().getId(),
-                payment.getPaymentChannel().getId(),
-                payment.getPaymentChannel().getName(),
-                payment.getMerchantReferencePaymentId(),
-                payment.getPaymentChannelTxnId(),
                 payment.getAmount(),
                 payment.getCurrency(),
                 payment.getStatus(),
-                payment.getPaymentLinkUrl(),
+                payment.getMerchant().getId(),
+                payment.getMerchantReferencePaymentId(),
                 payment.getMerchantMetadataJson(),
+                payment.getPaymentChannel().getId(),
+                payment.getPaymentChannel().getName(),
+                payment.getPaymentChannelTxnId(),
+                payment.getPaymentLinkUrl(),
                 payment.getCreatedDateTime(),
                 payment.getUpdatedDateTime());
     }

@@ -6,17 +6,23 @@ import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
 public record PaymentDetailsResponse(
+        // payment details
         Long id,
-        Long merchantId,
-        Long channelConfigId,
-        Long paymentChannelId,
-        PaymentChannelNameEnum paymentChannelName,
-        String merchantReferencePaymentId,
-        String paymentChannelTxnId,
         BigDecimal amount,
         String currency,
         PaymentStatusEnum status,
-        String paymentLinkUrl,
+
+        // merchant details
+        Long merchantId,
+        String merchantReferencePaymentId,
         String merchantMetadataJson,
+
+        // payment channel details
+        Long paymentChannelId,
+        PaymentChannelNameEnum paymentChannelName,
+        String paymentChannelTxnId,
+        String paymentLinkUrl,
+
+        // timestamps
         LocalDateTime createdAt,
         LocalDateTime updatedAt) {}
