@@ -9,6 +9,7 @@ import com.digirestro.digi_payment_gateway.entity.PaymentEntity;
 import com.digirestro.digi_payment_gateway.enums.PaymentChannelNameEnum;
 import com.digirestro.digi_payment_gateway.enums.PaymentStatusEnum;
 
+import java.util.Map;
 import java.util.UUID;
 import org.springframework.stereotype.Component;
 
@@ -38,8 +39,8 @@ public class TestPaymentChannelAdapter implements PaymentChannelAdapter {
     }
 
     @Override
-    public AdaptorWebhookResponse validateAndParseWebhook(String payload) {
-        log.info("Validating and parsing webhook payload: {}", payload);
+    public AdaptorWebhookResponse validateAndParseWebhook(Map<String, Object> webhookPayload) {
+        log.info("Validating and parsing webhook payload: {}", webhookPayload);
         return new AdaptorWebhookResponse(PaymentStatusEnum.SUCCESS, null, null, null);
     }
 }

@@ -25,10 +25,9 @@ public class PaymentChannelWebhookController {
     }
 
     @PostMapping(value = "/test")
-    public ResponseEntity<AdaptorWebhookResponse> receiveTestWebhook(@RequestBody Map<String, Object> body) {
-        log.info("Received test webhook: {}", body);
-        String payload = String.valueOf(body);
-        AdaptorWebhookResponse response = testPaymentChannelAdapter.validateAndParseWebhook(payload);
+    public ResponseEntity<AdaptorWebhookResponse> receiveTestWebhook(@RequestBody Map<String, Object> webhookPayload) {
+        log.info("Received test webhook: {}", webhookPayload);
+        AdaptorWebhookResponse response = testPaymentChannelAdapter.validateAndParseWebhook(webhookPayload);
         return new ResponseEntity<>(response, HttpStatus.OK);
     }
 
