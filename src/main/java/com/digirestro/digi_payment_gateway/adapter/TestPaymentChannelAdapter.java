@@ -33,9 +33,13 @@ public class TestPaymentChannelAdapter implements PaymentChannelAdapter {
     @Override
     public AdapterPaymentLinkResponse createPaymentLink(PaymentEntity payment, MerchantConfigEntity merchantConfig, MerchantChannelConfigEntity channelConfig) {
         String paymentChannelTxnId = "TEST-TXN-" + UUID.randomUUID();
-        String paymentUrl = "http://localhost:8080/test-payment-link.html?paymentId=" + payment.getId()
-                + "&merchantId=" + payment.getMerchant().getId();
-        return new AdapterPaymentLinkResponse(paymentUrl, paymentChannelTxnId, PaymentStatusEnum.PENDING);
+        String paymentUrl = "http://localhost:8080/test-payment-link.html?paymentId=" + payment.getId() + "&merchantId=" + payment.getMerchant().getId();
+        
+        if (!paymentUrl.isEmpty()) {
+            payment.setStatus(PaymentStatusEnum.PAYMENT_LINK_GENERATED);
+        }
+        
+        return new AdapterPaymentLinkResponse(paymentUrl, paymentChannelTxnId,payment.getStatus() );
     }
 
     @Override

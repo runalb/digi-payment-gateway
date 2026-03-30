@@ -70,7 +70,7 @@ public class PaymentOrchestrationService {
         AdapterPaymentLinkResponse adapterResponse = adapter.createPaymentLink(payment, merchantConfig,channelConfig);
         payment.setPaymentLinkUrl(adapterResponse.paymentLinkUrl());
         payment.setPaymentChannelTxnId(adapterResponse.paymentChannelTxnId());
-        payment.setStatus(PaymentStatusEnum.PAYMENT_LINK_GENERATED);
+        payment.setStatus(adapterResponse.status());
         payment = paymentRepository.save(payment);
 
         return new PaymentLinkResponse(
