@@ -29,6 +29,10 @@ public class WebhookIncomingLogEntity extends AuditableEntity {
     @JoinColumn(name = "payment_channel_id")
     private PaymentChannelEntity paymentChannel;
 
+    @ManyToOne
+    @JoinColumn(name = "merchant_id")
+    private MerchantEntity merchant;
+
     @Column(columnDefinition = "TEXT", nullable = false)
     private String rawPayload;
 

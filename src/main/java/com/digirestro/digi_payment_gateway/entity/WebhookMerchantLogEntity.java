@@ -22,8 +22,8 @@ public class WebhookMerchantLogEntity extends AuditableEntity {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @ManyToOne
-    @JoinColumn(name = "webhook_incoming_log_id")
+    @ManyToOne(optional = false)
+    @JoinColumn(name = "webhook_incoming_log_id", nullable = false)
     private WebhookIncomingLogEntity webhookIncomingLog;
 
     @ManyToOne(optional = false)
@@ -33,6 +33,10 @@ public class WebhookMerchantLogEntity extends AuditableEntity {
     @ManyToOne(optional = false)
     @JoinColumn(name = "payment_channel_id", nullable = false)
     private PaymentChannelEntity paymentChannel;
+
+    @ManyToOne
+    @JoinColumn(name = "merchant_id")
+    private MerchantEntity merchant;
 
     @Column(nullable = false)
     private String webhookUrl;
