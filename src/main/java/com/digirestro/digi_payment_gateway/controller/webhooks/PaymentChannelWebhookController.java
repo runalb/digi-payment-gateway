@@ -28,7 +28,7 @@ public class PaymentChannelWebhookController {
     public ResponseEntity<AdaptorWebhookResponse> receiveTestWebhook(@RequestBody Map<String, Object> body) {
         log.info("Received test webhook: {}", body);
         String payload = String.valueOf(body);
-        AdaptorWebhookResponse response = testPaymentChannelAdapter.validateAndParseWebhook(payload, null, null);
+        AdaptorWebhookResponse response = testPaymentChannelAdapter.validateAndParseWebhook(payload);
         return new ResponseEntity<>(response, HttpStatus.OK);
     }
 

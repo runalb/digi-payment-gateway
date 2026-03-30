@@ -12,5 +12,5 @@ public interface PaymentChannelAdapter {
 
     AdapterPaymentLinkResponse createPaymentLink(PaymentEntity payment, MerchantConfigEntity merchantConfig, MerchantChannelConfigEntity channelConfig);
 
-    AdaptorWebhookResponse validateAndParseWebhook(String payload, String signature, String secret);
+    AdaptorWebhookResponse validateAndParseWebhook(String payload);
 }
