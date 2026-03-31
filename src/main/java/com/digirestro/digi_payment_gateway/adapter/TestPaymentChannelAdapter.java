@@ -2,8 +2,6 @@ package com.digirestro.digi_payment_gateway.adapter;
 
 import com.digirestro.digi_payment_gateway.dto.adaptor.AdapterPaymentLinkResponse;
 import com.digirestro.digi_payment_gateway.dto.adaptor.AdaptorWebhookResponse;
-import com.digirestro.digi_payment_gateway.entity.MerchantChannelConfigEntity;
-import com.digirestro.digi_payment_gateway.entity.MerchantConfigEntity;
 import com.digirestro.digi_payment_gateway.entity.PaymentChannelEntity;
 import com.digirestro.digi_payment_gateway.entity.PaymentEntity;
 import com.digirestro.digi_payment_gateway.enums.PaymentChannelNameEnum;
@@ -31,15 +29,17 @@ public class TestPaymentChannelAdapter implements PaymentChannelAdapter {
     }
 
     @Override
-    public AdapterPaymentLinkResponse createPaymentLink(PaymentEntity payment, MerchantConfigEntity merchantConfig, MerchantChannelConfigEntity channelConfig) {
+    public AdapterPaymentLinkResponse createPaymentLink(PaymentEntity payment) {
         String paymentChannelTxnId = "TEST-TXN-" + UUID.randomUUID();
         String paymentUrl = "http://localhost:8080/test-payment-link.html?paymentId=" + payment.getId() + "&merchantId=" + payment.getMerchant().getId();
         
-        if (!paymentUrl.isEmpty()) {
+        if (!paymentChannelTxnId.isEmpty() && !paymentUrl.isEmpty()) {
+            payment.setPaymentChannelTxnId(paymentChannelTxnId);
+            payment.setPaymentLinkUrl(paymentUrl);
             payment.setStatus(PaymentStatusEnum.PAYMENT_LINK_GENERATED);
         }
-        
-        return new AdapterPaymentLinkResponse(paymentUrl, paymentChannelTxnId,payment.getStatus() );
+
+        return new AdapterPaymentLinkResponse(payment);
     }
 
     @Override
