@@ -4,7 +4,7 @@ import com.digirestro.digi_payment_gateway.enums.PaymentChannelNameEnum;
 
 import jakarta.validation.constraints.NotNull;
 
-public record MerchantChannelConfigCreateRequest(
+public record MerchantPaymentChannelConfigCreateRequest(
         @NotNull Long paymentChannelId,
         PaymentChannelNameEnum paymentChannelName,
         Boolean isActive,

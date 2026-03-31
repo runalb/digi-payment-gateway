@@ -2,8 +2,8 @@ package com.digirestro.digi_payment_gateway.service;
 
 import com.digirestro.digi_payment_gateway.dto.MerchantRegistrationRequest;
 import com.digirestro.digi_payment_gateway.dto.MerchantRegistrationResponse;
-import com.digirestro.digi_payment_gateway.dto.MerchantChannelConfigCreateRequest;
-import com.digirestro.digi_payment_gateway.dto.MerchantChannelConfigResponse;
+import com.digirestro.digi_payment_gateway.dto.MerchantPaymentChannelConfigCreateRequest;
+import com.digirestro.digi_payment_gateway.dto.MerchantPaymentChannelConfigResponse;
 import com.digirestro.digi_payment_gateway.entity.MerchantPaymentChannelConfigEntity;
 import com.digirestro.digi_payment_gateway.entity.MerchantConfigEntity;
 import com.digirestro.digi_payment_gateway.entity.MerchantEntity;
@@ -39,7 +39,7 @@ public class MerchantService {
     }
 
     @Transactional
-    public MerchantRegistrationResponse registerMerchant(MerchantRegistrationRequest request) {
+    public MerchantRegistrationResponse createMerchant(MerchantRegistrationRequest request) {
         String currency = StringUtils.hasText(request.currency())
                 ? request.currency().trim().toUpperCase()
                 : DEFAULT_CURRENCY;
@@ -67,7 +67,7 @@ public class MerchantService {
     }
 
     @Transactional
-    public MerchantChannelConfigResponse createMerchantChannelConfig(Long merchantId, MerchantChannelConfigCreateRequest request) {
+    public MerchantPaymentChannelConfigResponse createMerchantPaymentChannelConfig(Long merchantId, MerchantPaymentChannelConfigCreateRequest request) {
         var merchant = merchantRepository
                 .findById(merchantId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Merchant not found"));
@@ -91,7 +91,7 @@ public class MerchantService {
         entity.setConfigJson(configJson);
         entity = merchantPaymentChannelConfigRepository.save(entity);
 
-        return new MerchantChannelConfigResponse(
+        return new MerchantPaymentChannelConfigResponse(
                 entity.getId(),
                 merchant.getId(),
                 paymentChannel.getId(),

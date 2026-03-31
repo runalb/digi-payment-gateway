@@ -2,7 +2,7 @@ package com.digirestro.digi_payment_gateway.dto;
 
 import com.digirestro.digi_payment_gateway.enums.PaymentChannelNameEnum;
 
-public record MerchantChannelConfigResponse(
+public record MerchantPaymentChannelConfigResponse(
         Long id,
         Long merchantId,
         Long paymentChannelId,
