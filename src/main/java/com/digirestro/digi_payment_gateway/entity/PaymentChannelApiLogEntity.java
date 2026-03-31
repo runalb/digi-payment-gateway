@@ -30,8 +30,12 @@ public class PaymentChannelApiLogEntity extends AuditableEntity {
     private PaymentChannelEntity paymentChannel;
 
     @ManyToOne
-    @JoinColumn(name = "channel_config_id")
-    private MerchantChannelConfigEntity channelConfig;
+    @JoinColumn(name = "merchant_id")
+    private MerchantEntity merchant;
+
+    @ManyToOne
+    @JoinColumn(name = "merchant_payment_channel_config_id")
+    private MerchantPaymentChannelConfigEntity merchantPaymentChannelConfig;
 
     @Column(nullable = false)
     private String operation;

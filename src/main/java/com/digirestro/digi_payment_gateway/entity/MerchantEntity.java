@@ -31,7 +31,7 @@ public class MerchantEntity extends AuditableEntity {
     private String apiKey;
 
     @OneToOne(mappedBy = "merchant", fetch = FetchType.LAZY)
-    private MerchantConfigEntity config;
+    private MerchantConfigEntity merchantConfig;
 
     @Column(nullable = false)
     private Boolean isActive = Boolean.TRUE;

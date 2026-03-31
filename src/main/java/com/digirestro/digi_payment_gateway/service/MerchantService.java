@@ -4,10 +4,10 @@ import com.digirestro.digi_payment_gateway.dto.MerchantRegistrationRequest;
 import com.digirestro.digi_payment_gateway.dto.MerchantRegistrationResponse;
 import com.digirestro.digi_payment_gateway.dto.MerchantChannelConfigCreateRequest;
 import com.digirestro.digi_payment_gateway.dto.MerchantChannelConfigResponse;
-import com.digirestro.digi_payment_gateway.entity.MerchantChannelConfigEntity;
+import com.digirestro.digi_payment_gateway.entity.MerchantPaymentChannelConfigEntity;
 import com.digirestro.digi_payment_gateway.entity.MerchantConfigEntity;
 import com.digirestro.digi_payment_gateway.entity.MerchantEntity;
-import com.digirestro.digi_payment_gateway.repository.MerchantChannelConfigRepository;
+import com.digirestro.digi_payment_gateway.repository.MerchantPaymentChannelConfigRepository;
 import com.digirestro.digi_payment_gateway.repository.MerchantConfigRepository;
 import com.digirestro.digi_payment_gateway.repository.MerchantRepository;
 import com.digirestro.digi_payment_gateway.repository.PaymentChannelRepository;
@@ -25,17 +25,17 @@ public class MerchantService {
     private final MerchantRepository merchantRepository;
     private final MerchantConfigRepository merchantConfigRepository;
     private final PaymentChannelRepository paymentChannelRepository;
-    private final MerchantChannelConfigRepository merchantChannelConfigRepository;
+    private final MerchantPaymentChannelConfigRepository merchantPaymentChannelConfigRepository;
 
     public MerchantService(
             MerchantRepository merchantRepository,
             MerchantConfigRepository merchantConfigRepository,
             PaymentChannelRepository paymentChannelRepository,
-            MerchantChannelConfigRepository merchantChannelConfigRepository) {
+            MerchantPaymentChannelConfigRepository merchantPaymentChannelConfigRepository) {
         this.merchantRepository = merchantRepository;
         this.merchantConfigRepository = merchantConfigRepository;
         this.paymentChannelRepository = paymentChannelRepository;
-        this.merchantChannelConfigRepository = merchantChannelConfigRepository;
+        this.merchantPaymentChannelConfigRepository = merchantPaymentChannelConfigRepository;
     }
 
     @Transactional
@@ -72,31 +72,30 @@ public class MerchantService {
                 .findById(merchantId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Merchant not found"));
 
-        var channel = paymentChannelRepository
+        var paymentChannel = paymentChannelRepository
                 .findById(request.paymentChannelId())
                 .orElseThrow(() -> new ResponseStatusException(
                         HttpStatus.NOT_FOUND, "Payment channel not found: " + request.paymentChannelId()));
 
-        if (merchantChannelConfigRepository.existsByMerchant_IdAndPaymentChannel_Id(merchantId, channel.getId())) {
-            throw new ResponseStatusException(
-                    HttpStatus.CONFLICT, "Merchant already has configuration for this payment channel");
+        if (merchantPaymentChannelConfigRepository.existsByMerchant_IdAndPaymentChannel_Id(merchantId, paymentChannel.getId())) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "Merchant already has configuration for this payment channel");
         }
 
         boolean active = request.isActive() != null ? request.isActive() : Boolean.TRUE;
         String configJson = StringUtils.hasText(request.configJson()) ? request.configJson() : null;
 
-        MerchantChannelConfigEntity entity = new MerchantChannelConfigEntity();
+        MerchantPaymentChannelConfigEntity entity = new MerchantPaymentChannelConfigEntity();
         entity.setMerchant(merchant);
-        entity.setPaymentChannel(channel);
+        entity.setPaymentChannel(paymentChannel);
         entity.setIsActive(active);
         entity.setConfigJson(configJson);
-        entity = merchantChannelConfigRepository.save(entity);
+        entity = merchantPaymentChannelConfigRepository.save(entity);
 
         return new MerchantChannelConfigResponse(
                 entity.getId(),
                 merchant.getId(),
-                channel.getId(),
-                channel.getName(),
+                paymentChannel.getId(),
+                paymentChannel.getName(),
                 entity.getIsActive(),
                 entity.getConfigJson());
     }

@@ -6,7 +6,7 @@ import com.digirestro.digi_payment_gateway.dto.PaymentLinkRequest;
 import com.digirestro.digi_payment_gateway.dto.PaymentLinkResponse;
 import com.digirestro.digi_payment_gateway.dto.adaptor.AdapterPaymentLinkResponse;
 import com.digirestro.digi_payment_gateway.entity.PaymentEntity;
-import com.digirestro.digi_payment_gateway.repository.MerchantChannelConfigRepository;
+import com.digirestro.digi_payment_gateway.repository.MerchantPaymentChannelConfigRepository;
 import com.digirestro.digi_payment_gateway.repository.MerchantConfigRepository;
 import com.digirestro.digi_payment_gateway.repository.MerchantRepository;
 import com.digirestro.digi_payment_gateway.repository.PaymentRepository;
@@ -22,19 +22,19 @@ public class PaymentOrchestrationService {
 
     private final MerchantRepository merchantRepository;
     private final MerchantConfigRepository merchantConfigRepository;
-    private final MerchantChannelConfigRepository merchantChannelConfigRepository;
+    private final MerchantPaymentChannelConfigRepository merchantPaymentChannelConfigRepository;
     private final PaymentRepository paymentRepository;
     private final List<PaymentChannelAdapter> adapters;
 
     public PaymentOrchestrationService(
             MerchantRepository merchantRepository,
             MerchantConfigRepository merchantConfigRepository,
-            MerchantChannelConfigRepository merchantChannelConfigRepository,
+            MerchantPaymentChannelConfigRepository merchantPaymentChannelConfigRepository,
             PaymentRepository paymentRepository,
             List<PaymentChannelAdapter> adapters) {
         this.merchantRepository = merchantRepository;
         this.merchantConfigRepository = merchantConfigRepository;
-        this.merchantChannelConfigRepository = merchantChannelConfigRepository;
+        this.merchantPaymentChannelConfigRepository = merchantPaymentChannelConfigRepository;
         this.paymentRepository = paymentRepository;
         this.adapters = adapters;
     }
@@ -44,24 +44,24 @@ public class PaymentOrchestrationService {
         var merchant = merchantRepository.findById(request.merchantId())
                         .orElseThrow(() -> new EntityNotFoundException("Merchant not found"));
 
-        var merchantChannelConfig = merchantChannelConfigRepository
+        var merchantPaymentChannelConfig = merchantPaymentChannelConfigRepository
                         .findFirstByMerchant_IdAndIsActiveTrue(request.merchantId())
                         .orElseThrow(() -> new EntityNotFoundException(
-                                        "Active merchant channel configuration not found"));
+                                        "Active merchant payment channel configuration not found"));
 
         var merchantConfig = merchantConfigRepository
                         .findByMerchant_Id(request.merchantId())
                         .orElseThrow(() -> new EntityNotFoundException("Merchant configuration not found"));
 
         var adapter = adapters.stream()
-                        .filter(a -> Objects.equals(a.getChannel().getName(), merchantChannelConfig.getPaymentChannel().getName()))
+                        .filter(a -> Objects.equals(a.getChannel().getName(), merchantPaymentChannelConfig.getPaymentChannel().getName()))
                         .findFirst()
                         .orElseThrow(() -> new IllegalStateException("No adapter found for channel"));
 
         PaymentEntity payment = new PaymentEntity();
         payment.setMerchant(merchant);
-        payment.setMerchantChannelConfig(merchantChannelConfig);
-        payment.setPaymentChannel(merchantChannelConfig.getPaymentChannel());
+        payment.setMerchantPaymentChannelConfig(merchantPaymentChannelConfig);
+        payment.setPaymentChannel(merchantPaymentChannelConfig.getPaymentChannel());
         payment.setCurrency(merchantConfig.getCurrency());
         payment.setAmount(request.amount());
         payment.setMerchantReferencePaymentId(request.merchantReferencePaymentId());

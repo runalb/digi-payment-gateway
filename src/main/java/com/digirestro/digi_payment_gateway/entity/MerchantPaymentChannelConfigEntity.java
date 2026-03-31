@@ -14,8 +14,8 @@ import lombok.Setter;
 @Getter
 @Setter
 @Entity
-@Table(name = "merchant_channel_config")
-public class MerchantChannelConfigEntity extends AuditableEntity {
+@Table(name = "merchant_payment_channel_config")
+public class MerchantPaymentChannelConfigEntity extends AuditableEntity {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
