@@ -22,19 +22,19 @@ public class PaymentOrchestrationService {
 
     private final MerchantRepository merchantRepository;
     private final MerchantConfigRepository merchantConfigRepository;
-    private final MerchantChannelConfigRepository channelConfigRepository;
+    private final MerchantChannelConfigRepository merchantChannelConfigRepository;
     private final PaymentRepository paymentRepository;
     private final List<PaymentChannelAdapter> adapters;
 
     public PaymentOrchestrationService(
             MerchantRepository merchantRepository,
             MerchantConfigRepository merchantConfigRepository,
-            MerchantChannelConfigRepository channelConfigRepository,
+            MerchantChannelConfigRepository merchantChannelConfigRepository,
             PaymentRepository paymentRepository,
             List<PaymentChannelAdapter> adapters) {
         this.merchantRepository = merchantRepository;
         this.merchantConfigRepository = merchantConfigRepository;
-        this.channelConfigRepository = channelConfigRepository;
+        this.merchantChannelConfigRepository = merchantChannelConfigRepository;
         this.paymentRepository = paymentRepository;
         this.adapters = adapters;
     }
@@ -42,41 +42,45 @@ public class PaymentOrchestrationService {
     @Transactional
     public PaymentLinkResponse generatePaymentLink(PaymentLinkRequest request) {
         var merchant = merchantRepository.findById(request.merchantId())
-                .orElseThrow(() -> new EntityNotFoundException("Merchant not found"));
+                        .orElseThrow(() -> new EntityNotFoundException("Merchant not found"));
+
+        var merchantChannelConfig = merchantChannelConfigRepository
+                        .findFirstByMerchant_IdAndIsActiveTrue(request.merchantId())
+                        .orElseThrow(() -> new EntityNotFoundException(
+                                        "Active merchant channel configuration not found"));
 
         var merchantConfig = merchantConfigRepository
-                .findByMerchant_Id(request.merchantId())
-                .orElseThrow(() -> new EntityNotFoundException("Merchant configuration not found"));
-
-        var channelConfig = channelConfigRepository.findFirstByMerchant_IdAndIsActiveTrue(request.merchantId())
-                .orElseThrow(() -> new EntityNotFoundException("Active merchant channel configuration not found"));
+                        .findByMerchant_Id(request.merchantId())
+                        .orElseThrow(() -> new EntityNotFoundException("Merchant configuration not found"));
 
         var adapter = adapters.stream()
-                .filter(a -> Objects.equals(a.getChannel().getName(), channelConfig.getPaymentChannel().getName()))
-                .findFirst()
-                .orElseThrow(() -> new IllegalStateException("No adapter found for channel"));
+                        .filter(a -> Objects.equals(a.getChannel().getName(), merchantChannelConfig.getPaymentChannel().getName()))
+                        .findFirst()
+                        .orElseThrow(() -> new IllegalStateException("No adapter found for channel"));
 
         PaymentEntity payment = new PaymentEntity();
         payment.setMerchant(merchant);
-        payment.setChannelConfig(channelConfig);
-        payment.setPaymentChannel(channelConfig.getPaymentChannel());
-        payment.setMerchantReferencePaymentId(request.merchantReferencePaymentId());
-        payment.setAmount(request.amount());
+        payment.setMerchantChannelConfig(merchantChannelConfig);
+        payment.setPaymentChannel(merchantChannelConfig.getPaymentChannel());
         payment.setCurrency(merchantConfig.getCurrency());
+        payment.setAmount(request.amount());
+        payment.setMerchantReferencePaymentId(request.merchantReferencePaymentId());
         payment.setMerchantMetadataJson(request.merchantMetadataJson());
         payment = paymentRepository.save(payment);
 
-        AdapterPaymentLinkResponse adapterResponse = adapter.createPaymentLink(payment, merchantConfig,channelConfig);
-        payment.setPaymentLinkUrl(adapterResponse.paymentLinkUrl());
-        payment.setPaymentChannelTxnId(adapterResponse.paymentChannelTxnId());
-        payment.setStatus(adapterResponse.status());
+        // adapter will return the payment with the payment link url and payment details
+        AdapterPaymentLinkResponse adapterResponse = adapter.createPaymentLink(payment);
+        payment.setPaymentLinkUrl(adapterResponse.payment().getPaymentLinkUrl());
+        payment.setPaymentChannelTxnId(adapterResponse.payment().getPaymentChannelTxnId());
+        payment.setStatus(adapterResponse.payment().getStatus());
         payment = paymentRepository.save(payment);
 
         return new PaymentLinkResponse(
                 payment.getId(),
                 payment.getPaymentLinkUrl(),
                 payment.getPaymentChannelTxnId(),
-                payment.getStatus());
+                payment.getStatus()
+        );
     }
 
     @Transactional(readOnly = true)
@@ -96,6 +100,7 @@ public class PaymentOrchestrationService {
                 payment.getPaymentChannelTxnId(),
                 payment.getPaymentLinkUrl(),
                 payment.getCreatedDateTime(),
-                payment.getUpdatedDateTime());
+                payment.getUpdatedDateTime()
+        );
     }
 }

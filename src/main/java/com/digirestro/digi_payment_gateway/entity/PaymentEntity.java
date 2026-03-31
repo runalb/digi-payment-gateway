@@ -31,7 +31,7 @@ public class PaymentEntity extends AuditableEntity {
 
     @ManyToOne(optional = false)
     @JoinColumn(name = "channel_config_id", nullable = false)
-    private MerchantChannelConfigEntity channelConfig;
+    private MerchantChannelConfigEntity merchantChannelConfig;
 
     @ManyToOne(optional = false)
     @JoinColumn(name = "payment_channel_id", nullable = false)
