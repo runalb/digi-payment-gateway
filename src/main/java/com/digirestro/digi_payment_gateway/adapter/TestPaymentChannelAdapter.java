@@ -6,6 +6,7 @@ import com.digirestro.digi_payment_gateway.entity.PaymentChannelEntity;
 import com.digirestro.digi_payment_gateway.entity.PaymentEntity;
 import com.digirestro.digi_payment_gateway.enums.PaymentChannelNameEnum;
 import com.digirestro.digi_payment_gateway.enums.PaymentStatusEnum;
+import com.digirestro.digi_payment_gateway.repository.PaymentChannelRepository;
 
 import java.util.Map;
 import java.util.UUID;
@@ -17,10 +18,12 @@ import lombok.extern.slf4j.Slf4j;
 @Slf4j
 public class TestPaymentChannelAdapter implements PaymentChannelAdapter {
 
-    private final PaymentChannelEntity channel = new PaymentChannelEntity();
+    private final PaymentChannelEntity channel;
 
-    public TestPaymentChannelAdapter() {
-        channel.setName(PaymentChannelNameEnum.TEST);
+    public TestPaymentChannelAdapter(PaymentChannelRepository paymentChannelRepository) {
+        this.channel = paymentChannelRepository
+                .findByName(PaymentChannelNameEnum.TEST)
+                .orElseThrow(() -> new IllegalStateException("Payment channel TEST not found in database"));
     }
 
     @Override
