@@ -1,20 +1,44 @@
 package com.digirestro.digi_payment_gateway.config;
 
+import com.digirestro.digi_payment_gateway.security.ApiKeyAuthenticationFilter;
+import com.digirestro.digi_payment_gateway.security.JwtAuthenticationFilter;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.security.config.Customizer;
+import org.springframework.http.HttpMethod;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
+import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 
 @Configuration
 public class SecurityConfig {
 
     @Bean
-    SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
+    PasswordEncoder passwordEncoder() {
+        return new BCryptPasswordEncoder();
+    }
+
+    @Bean
+    SecurityFilterChain securityFilterChain(
+            HttpSecurity http,
+            ApiKeyAuthenticationFilter apiKeyAuthenticationFilter,
+            JwtAuthenticationFilter jwtAuthenticationFilter) {
         return http
                 .csrf(csrf -> csrf.disable())
-                .authorizeHttpRequests(auth -> auth.anyRequest().permitAll())
-                .httpBasic(Customizer.withDefaults())
+                .authorizeHttpRequests(auth -> auth
+                        .requestMatchers("/webhook/**").permitAll()
+                        .requestMatchers(HttpMethod.POST, "/api/v1/ui/users").permitAll()
+                        .requestMatchers(HttpMethod.POST, "/api/v1/ui/auth/login").permitAll()
+                        .requestMatchers(HttpMethod.POST, "/api/v1/ui/auth/login/mobile/request-otp").permitAll()
+                        .requestMatchers(HttpMethod.POST, "/api/v1/ui/auth/login/mobile/verify-otp").permitAll()
+                        .requestMatchers(HttpMethod.POST, "/api/v1/ui/auth/refresh").permitAll()
+                        .requestMatchers(HttpMethod.POST, "/api/v1/ui/auth/logout").permitAll()
+                        .requestMatchers("/api/v1/integration/**").authenticated()
+                        .requestMatchers("/api/**").authenticated()
+                        .anyRequest().permitAll())
+                .addFilterBefore(apiKeyAuthenticationFilter, UsernamePasswordAuthenticationFilter.class)
+                .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class)
                 .build();
     }
 }

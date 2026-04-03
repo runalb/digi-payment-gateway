@@ -6,7 +6,7 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
-/** Placeholder UI routes. Merchant onboarding lives in {@link MerchantController} under {@code /api/v1/ui/merchants}. */
+/** Placeholder UI routes. Merchants: {@link MerchantController}; users: {@link UserController}. */
 @RestController
 @RequestMapping("/api/v1/ui")
 public class UiController {
