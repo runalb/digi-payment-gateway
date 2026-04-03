@@ -2,52 +2,64 @@
   "info": {
     "_postman_id": "d4c8e2a0-9b1f-4e2d-8c7a-digi-payment-gateway",
     "name": "Digi Payment Gateway",
-    "description": "All REST endpoints for digi-payment-gateway (Spring Boot). Default base URL matches `application-dev.properties` (port 8080). Edit the `baseUrl` collection variable for other environments.",
+    "description": "REST endpoints aligned with the Spring Boot app. Integration routes require header `X-API-Key` (merchant API key; merchant is resolved from the key—do not send `merchantId` in `PaymentLinkRequest`). Most `/api/v1/ui/**` routes require `Authorization: Bearer {{accessToken}}` except user signup and auth endpoints (see `SecurityConfig` / `JwtAuthenticationFilter`). Webhooks under `/webhook/**` are permit-all. Default `baseUrl`: `http://localhost:8080`.",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "variable": [
-    {
-      "key": "baseUrl",
-      "value": "http://localhost:8080"
-    },
-    {
-      "key": "paymentLinkId",
-      "value": "1"
-    },
-    {
-      "key": "merchantId",
-      "value": "1"
-    }
+    { "key": "baseUrl", "value": "http://localhost:8080" },
+    { "key": "apiKey", "value": "your-merchant-api-key" },
+    { "key": "accessToken", "value": "" },
+    { "key": "refreshToken", "value": "" },
+    { "key": "paymentId", "value": "1" },
+    { "key": "merchantId", "value": "1" },
+    { "key": "userId", "value": "1" },
+    { "key": "configId", "value": "1" }
   ],
   "item": [
     {
       "name": "Integration API",
+      "description": "Authenticated via `ApiKeyAuthenticationFilter`: send `X-API-Key` on every request.",
       "item": [
         {
-          "name": "Payment Links",
+          "name": "Payment link",
           "item": [
             {
-              "name": "Create payment link",
+              "name": "Generate payment link",
               "request": {
                 "method": "POST",
                 "header": [
-                  {
-                    "key": "Content-Type",
-                    "value": "application/json"
-                  }
+                  { "key": "Content-Type", "value": "application/json" },
+                  { "key": "X-API-Key", "value": "{{apiKey}}" }
                 ],
                 "body": {
                   "mode": "raw",
-                  "raw": "{\n  \"merchantId\": 1,\n  \"merchantReferencePaymentId\": \"ORDER-12345\",\n  \"amount\": 99.99,\n  \"merchantMetadataJson\": \"{\\\"orderId\\\":\\\"ORD-001\\\"}\"\n}"
+                  "raw": "{\n  \"merchantReferencePaymentId\": \"ORDER-12345\",\n  \"amount\": 99.99,\n  \"merchantMetadataJson\": \"{\\\"orderId\\\":\\\"ORD-001\\\"}\"\n}"
                 },
                 "url": {
-                  "raw": "{{baseUrl}}/api/v1/integration/payment-links/create",
-                  "protocol": "http",
-                  "host": ["localhost"],
-                  "port": "8080",
-                  "path": ["api", "v1", "integration", "payment-links", "create"]
+                  "raw": "{{baseUrl}}/api/v1/integration/payment-link/generate",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["api", "v1", "integration", "payment-link", "generate"]
                 },
-                "description": "Creates a payment link. Body matches `PaymentLinkRequest` (merchantId, merchantReferencePaymentId, amount >= 0.01, optional merchantMetadataJson). For TEST channel, response `paymentLinkUrl` points to `/test-payment-link.html?paymentId=...&merchantId=...`."
+                "description": "`PaymentLinkIntegrationController`: creates a link. Body is `PaymentLinkRequest` (merchantReferencePaymentId, amount ≥ 0.01, optional merchantMetadataJson). Merchant comes from the API key, not the body. Returns 201 `PaymentLinkResponse`. TEST channel URLs look like `/test-payment-link.html?paymentId=...&merchantId=...`."
+              },
+              "response": []
+            }
+          ]
+        },
+        {
+          "name": "Transactions",
+          "item": [
+            {
+              "name": "List transactions",
+              "request": {
+                "method": "GET",
+                "header": [{ "key": "X-API-Key", "value": "{{apiKey}}" }],
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/integration/transactions",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["api", "v1", "integration", "transactions"]
+                },
+                "description": "`TransactionIntegrationController`: returns `List<PaymentDetailsResponse>` for the authenticated merchant."
               },
               "response": []
             },
@@ -55,36 +67,32 @@
               "name": "Get payment details by id",
               "request": {
                 "method": "GET",
-                "header": [],
+                "header": [{ "key": "X-API-Key", "value": "{{apiKey}}" }],
                 "url": {
-                  "raw": "{{baseUrl}}/api/v1/integration/payment-links/{{paymentLinkId}}",
-                  "protocol": "http",
-                  "host": ["localhost"],
-                  "port": "8080",
-                  "path": ["api", "v1", "integration", "payment-links", "{{paymentLinkId}}"]
+                  "raw": "{{baseUrl}}/api/v1/integration/transactions/{{paymentId}}",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["api", "v1", "integration", "transactions", "{{paymentId}}"]
                 },
-                "description": "Returns `PaymentDetailsResponse` for the given payment link id."
+                "description": "`TransactionIntegrationController`: `PaymentDetailsResponse` for `id` scoped to the merchant from the API key."
               },
               "response": []
             }
           ]
         },
         {
-          "name": "Terminal Payments",
+          "name": "Terminal payment",
           "item": [
             {
               "name": "Test (placeholder)",
               "request": {
                 "method": "GET",
-                "header": [],
+                "header": [{ "key": "X-API-Key", "value": "{{apiKey}}" }],
                 "url": {
-                  "raw": "{{baseUrl}}/api/v1/integration/terminal-payments/test",
-                  "protocol": "http",
-                  "host": ["localhost"],
-                  "port": "8080",
-                  "path": ["api", "v1", "integration", "terminal-payments", "test"]
+                  "raw": "{{baseUrl}}/api/v1/integration/terminal-payment/test",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["api", "v1", "integration", "terminal-payment", "test"]
                 },
-                "description": "Placeholder endpoint from `TerminalPaymentIntegrationController`."
+                "description": "`TerminalPaymentIntegrationController`: placeholder; returns plain text."
               },
               "response": []
             }
@@ -93,55 +101,42 @@
       ]
     },
     {
-      "name": "Payment Channel Webhooks",
+      "name": "Payment channel webhooks",
+      "description": "No auth. Path prefix `/webhook/v1/payment-channel-webhooks` (not under `/api/v1`).",
       "item": [
         {
-          "name": "Receive TEST webhook (success)",
+          "name": "TEST webhook (success)",
           "request": {
             "method": "POST",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              }
-            ],
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"outcome\": \"SUCCESS\",\n  \"paymentId\": {{paymentLinkId}},\n  \"merchantId\": \"{{merchantId}}\",\n  \"cardNumberLast4\": \"4242\",\n  \"cardExpiry\": \"12/28\",\n  \"cvvProvided\": true\n}"
+              "raw": "{\n  \"paymentStatus\": \"SUCCESS\",\n  \"paymentId\": {{paymentId}}\n}"
             },
             "url": {
-              "raw": "{{baseUrl}}/api/v1/payment-channel-webhooks/test",
-              "protocol": "http",
-              "host": ["localhost"],
-              "port": "8080",
-              "path": ["api", "v1", "payment-channel-webhooks", "test"]
+              "raw": "{{baseUrl}}/webhook/v1/payment-channel-webhooks/test",
+              "host": ["{{baseUrl}}"],
+              "path": ["webhook", "v1", "payment-channel-webhooks", "test"]
             },
-            "description": "Posts to `PaymentChannelWebhookController.receiveTestWebhook`. Current controller logs payload and returns fixed `AdaptorWebhookResponse` (TEST-REF / TEST-TXN / SUCCESS)."
+            "description": "`PaymentChannelWebhookController` → `TestPaymentChannelAdapter.validateAndParseWebhook`: requires `paymentStatus` (`PaymentStatusEnum`: INITIATED, PAYMENT_LINK_GENERATED, SUCCESS, FAILED, REFUNDED, VOIDED) and numeric `paymentId`. Response is `AdaptorWebhookResponse` (status, paymentId, paymentChannelTxnId, merchantReferencePaymentId)."
           },
           "response": []
         },
         {
-          "name": "Receive TEST webhook (failed payload sample)",
+          "name": "TEST webhook (failed)",
           "request": {
             "method": "POST",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              }
-            ],
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"outcome\": \"FAILED\",\n  \"paymentId\": {{paymentLinkId}},\n  \"merchantId\": \"{{merchantId}}\",\n  \"cardNumberLast4\": \"4242\",\n  \"cardExpiry\": \"12/28\",\n  \"cvvProvided\": true\n}"
+              "raw": "{\n  \"paymentStatus\": \"FAILED\",\n  \"paymentId\": {{paymentId}}\n}"
             },
             "url": {
-              "raw": "{{baseUrl}}/api/v1/payment-channel-webhooks/test",
-              "protocol": "http",
-              "host": ["localhost"],
-              "port": "8080",
-              "path": ["api", "v1", "payment-channel-webhooks", "test"]
+              "raw": "{{baseUrl}}/webhook/v1/payment-channel-webhooks/test",
+              "host": ["{{baseUrl}}"],
+              "path": ["webhook", "v1", "payment-channel-webhooks", "test"]
             },
-            "description": "Same endpoint with FAILED payload sample. Response is still fixed by current controller implementation."
+            "description": "Same handler with FAILED status sample."
           },
           "response": []
         }
@@ -151,20 +146,396 @@
       "name": "UI API",
       "item": [
         {
-          "name": "Test (placeholder)",
-          "request": {
-            "method": "GET",
-            "header": [],
-            "url": {
-              "raw": "{{baseUrl}}/api/v1/ui/test",
-              "protocol": "http",
-              "host": ["localhost"],
-              "port": "8080",
-              "path": ["api", "v1", "ui", "test"]
+          "name": "Auth",
+          "description": "No Bearer required on these routes (JWT filter skips them).",
+          "item": [
+            {
+              "name": "Login (email)",
+              "request": {
+                "method": "POST",
+                "header": [{ "key": "Content-Type", "value": "application/json" }],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"email\": \"user@example.com\",\n  \"password\": \"password123\"\n}"
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/ui/auth/login",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["api", "v1", "ui", "auth", "login"]
+                },
+                "description": "`AuthLoginRequest` → `AuthLoginResponse`. Copy `accessToken` / `refreshToken` into collection variables if needed."
+              },
+              "response": []
             },
-            "description": "Placeholder endpoint from `UiController`."
-          },
-          "response": []
+            {
+              "name": "Login mobile — request OTP",
+              "request": {
+                "method": "POST",
+                "header": [{ "key": "Content-Type", "value": "application/json" }],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"mobileNumber\": \"+14155552671\"\n}"
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/ui/auth/login/mobile/request-otp",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["api", "v1", "ui", "auth", "login", "mobile", "request-otp"]
+                },
+                "description": "`AuthMobileOtpRequest` (E.164 mobile). Returns `AuthOtpRequestResponse`."
+              },
+              "response": []
+            },
+            {
+              "name": "Login mobile — verify OTP",
+              "request": {
+                "method": "POST",
+                "header": [{ "key": "Content-Type", "value": "application/json" }],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"mobileNumber\": \"+14155552671\",\n  \"otp\": \"123456\"\n}"
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/ui/auth/login/mobile/verify-otp",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["api", "v1", "ui", "auth", "login", "mobile", "verify-otp"]
+                },
+                "description": "`AuthMobileVerifyOtpRequest` (6-digit otp)."
+              },
+              "response": []
+            },
+            {
+              "name": "Refresh token",
+              "request": {
+                "method": "POST",
+                "header": [{ "key": "Content-Type", "value": "application/json" }],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"refreshToken\": \"{{refreshToken}}\"\n}"
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/ui/auth/refresh",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["api", "v1", "ui", "auth", "refresh"]
+                },
+                "description": "`AuthRefreshRequest`."
+              },
+              "response": []
+            },
+            {
+              "name": "Logout",
+              "request": {
+                "method": "POST",
+                "header": [{ "key": "Content-Type", "value": "application/json" }],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"refreshToken\": \"{{refreshToken}}\"\n}"
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/ui/auth/logout",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["api", "v1", "ui", "auth", "logout"]
+                },
+                "description": "`AuthLogoutRequest`. 204 No Content."
+              },
+              "response": []
+            }
+          ]
+        },
+        {
+          "name": "Users",
+          "item": [
+            {
+              "name": "Create user",
+              "request": {
+                "method": "POST",
+                "header": [{ "key": "Content-Type", "value": "application/json" }],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"email\": \"newuser@example.com\",\n  \"password\": \"password123\",\n  \"name\": \"New User\",\n  \"mobileNumber\": \"+14155552671\"\n}"
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/ui/users",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["api", "v1", "ui", "users"]
+                },
+                "description": "`UserCreateRequest` (mobileNumber optional; E.164 if set). Public (no Bearer)."
+              },
+              "response": []
+            },
+            {
+              "name": "List users",
+              "request": {
+                "method": "GET",
+                "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }],
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/ui/users",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["api", "v1", "ui", "users"]
+                },
+                "description": "Currently returns 501 Not Implemented."
+              },
+              "response": []
+            },
+            {
+              "name": "Get user",
+              "request": {
+                "method": "GET",
+                "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }],
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/ui/users/{{userId}}",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["api", "v1", "ui", "users", "{{userId}}"]
+                },
+                "description": "501 Not Implemented."
+              },
+              "response": []
+            },
+            {
+              "name": "Patch user",
+              "request": {
+                "method": "PATCH",
+                "header": [
+                  { "key": "Content-Type", "value": "application/json" },
+                  { "key": "Authorization", "value": "Bearer {{accessToken}}" }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"name\": \"Updated Name\"\n}"
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/ui/users/{{userId}}",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["api", "v1", "ui", "users", "{{userId}}"]
+                },
+                "description": "501 Not Implemented; body is generic JSON map in controller."
+              },
+              "response": []
+            },
+            {
+              "name": "Delete user",
+              "request": {
+                "method": "DELETE",
+                "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }],
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/ui/users/{{userId}}",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["api", "v1", "ui", "users", "{{userId}}"]
+                },
+                "description": "Soft-deactivates user via `UserService`."
+              },
+              "response": []
+            }
+          ]
+        },
+        {
+          "name": "Merchants",
+          "item": [
+            {
+              "name": "Create merchant",
+              "request": {
+                "method": "POST",
+                "header": [
+                  { "key": "Content-Type", "value": "application/json" },
+                  { "key": "Authorization", "value": "Bearer {{accessToken}}" }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"name\": \"Acme Corp\",\n  \"currency\": \"USD\",\n  \"webhookUrl\": \"https://merchant.example/hooks\"\n}"
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/ui/merchants",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["api", "v1", "ui", "merchants"]
+                },
+                "description": "`MerchantRegistrationRequest` (currency optional 3-letter ISO 4217; webhookUrl optional). Requires Bearer per security rules."
+              },
+              "response": []
+            },
+            {
+              "name": "List merchants",
+              "request": {
+                "method": "GET",
+                "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }],
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/ui/merchants",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["api", "v1", "ui", "merchants"]
+                },
+                "description": "501 Not Implemented."
+              },
+              "response": []
+            },
+            {
+              "name": "Get merchant",
+              "request": {
+                "method": "GET",
+                "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }],
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/ui/merchants/{{merchantId}}",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["api", "v1", "ui", "merchants", "{{merchantId}}"]
+                },
+                "description": "501 Not Implemented."
+              },
+              "response": []
+            },
+            {
+              "name": "Patch merchant",
+              "request": {
+                "method": "PATCH",
+                "header": [
+                  { "key": "Content-Type", "value": "application/json" },
+                  { "key": "Authorization", "value": "Bearer {{accessToken}}" }
+                ],
+                "body": { "mode": "raw", "raw": "{}" },
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/ui/merchants/{{merchantId}}",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["api", "v1", "ui", "merchants", "{{merchantId}}"]
+                },
+                "description": "501 Not Implemented."
+              },
+              "response": []
+            },
+            {
+              "name": "Delete merchant",
+              "request": {
+                "method": "DELETE",
+                "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }],
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/ui/merchants/{{merchantId}}",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["api", "v1", "ui", "merchants", "{{merchantId}}"]
+                },
+                "description": "Deactivates merchant via `MerchantService`."
+              },
+              "response": []
+            },
+            {
+              "name": "Create payment channel config",
+              "request": {
+                "method": "POST",
+                "header": [
+                  { "key": "Content-Type", "value": "application/json" },
+                  { "key": "Authorization", "value": "Bearer {{accessToken}}" }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"paymentChannelId\": 1,\n  \"paymentChannelName\": \"TEST\",\n  \"isActive\": true,\n  \"configJson\": \"{}\"\n}"
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/ui/merchants/{{merchantId}}/payment-channel-configs",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["api", "v1", "ui", "merchants", "{{merchantId}}", "payment-channel-configs"]
+                },
+                "description": "`MerchantPaymentChannelConfigCreateRequest`. `paymentChannelName` is `PaymentChannelNameEnum` (XPLORPAY, PAYMOB, STRIPE, RAZORPAY, TEST)."
+              },
+              "response": []
+            },
+            {
+              "name": "List payment channel configs",
+              "request": {
+                "method": "GET",
+                "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }],
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/ui/merchants/{{merchantId}}/payment-channel-configs",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["api", "v1", "ui", "merchants", "{{merchantId}}", "payment-channel-configs"]
+                },
+                "description": "501 Not Implemented."
+              },
+              "response": []
+            },
+            {
+              "name": "Get payment channel config",
+              "request": {
+                "method": "GET",
+                "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }],
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/ui/merchants/{{merchantId}}/payment-channel-configs/{{configId}}",
+                  "host": ["{{baseUrl}}"],
+                  "path": [
+                    "api",
+                    "v1",
+                    "ui",
+                    "merchants",
+                    "{{merchantId}}",
+                    "payment-channel-configs",
+                    "{{configId}}"
+                  ]
+                },
+                "description": "501 Not Implemented."
+              },
+              "response": []
+            },
+            {
+              "name": "Patch payment channel config",
+              "request": {
+                "method": "PATCH",
+                "header": [
+                  { "key": "Content-Type", "value": "application/json" },
+                  { "key": "Authorization", "value": "Bearer {{accessToken}}" }
+                ],
+                "body": { "mode": "raw", "raw": "{}" },
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/ui/merchants/{{merchantId}}/payment-channel-configs/{{configId}}",
+                  "host": ["{{baseUrl}}"],
+                  "path": [
+                    "api",
+                    "v1",
+                    "ui",
+                    "merchants",
+                    "{{merchantId}}",
+                    "payment-channel-configs",
+                    "{{configId}}"
+                  ]
+                },
+                "description": "501 Not Implemented."
+              },
+              "response": []
+            },
+            {
+              "name": "Delete payment channel config",
+              "request": {
+                "method": "DELETE",
+                "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }],
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/ui/merchants/{{merchantId}}/payment-channel-configs/{{configId}}",
+                  "host": ["{{baseUrl}}"],
+                  "path": [
+                    "api",
+                    "v1",
+                    "ui",
+                    "merchants",
+                    "{{merchantId}}",
+                    "payment-channel-configs",
+                    "{{configId}}"
+                  ]
+                },
+                "description": "Deactivates config via `MerchantService`."
+              },
+              "response": []
+            }
+          ]
+        },
+        {
+          "name": "Misc",
+          "item": [
+            {
+              "name": "UI test",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/ui/test",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["api", "v1", "ui", "test"]
+                },
+                "description": "`UiController` placeholder; permit-all."
+              },
+              "response": []
+            }
+          ]
         }
       ]
     }
