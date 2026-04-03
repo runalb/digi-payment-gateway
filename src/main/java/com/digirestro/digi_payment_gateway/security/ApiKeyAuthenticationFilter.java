@@ -56,7 +56,7 @@ public class ApiKeyAuthenticationFilter extends OncePerRequestFilter {
         }
 
         var auth = new UsernamePasswordAuthenticationToken(
-                "merchant:" + merchant.getId(),
+                merchant,
                 null,
                 List.of(new SimpleGrantedAuthority("ROLE_INTEGRATION")));
         SecurityContextHolder.getContext().setAuthentication(auth);
