@@ -8,4 +8,6 @@ public interface MerchantPaymentChannelConfigRepository extends JpaRepository<Me
     Optional<MerchantPaymentChannelConfigEntity> findFirstByMerchant_IdAndIsActiveTrue(Long merchantId);
 
     boolean existsByMerchant_IdAndPaymentChannel_Id(Long merchantId, Long paymentChannelId);
+
+    Optional<MerchantPaymentChannelConfigEntity> findByIdAndMerchant_Id(Long id, Long merchantId);
 }

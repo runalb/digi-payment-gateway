@@ -56,10 +56,11 @@ public class MerchantController {
                 .body("Update merchant endpoint is not implemented yet.");
     }
 
+    // implement userid check in future - user is mapped to merchant
     @DeleteMapping("/{merchantId}")
-    public ResponseEntity<String> deleteMerchant(@PathVariable("merchantId") Long merchantId) {
-        return ResponseEntity.status(HttpStatus.NOT_IMPLEMENTED)
-                .body("Delete merchant endpoint is not implemented yet.");
+    public ResponseEntity<Void> deleteMerchant(@PathVariable("merchantId") Long merchantId) {
+        merchantService.deactivateMerchant(merchantId);
+        return ResponseEntity.noContent().build();
     }
 
     // Merchant payment channel configs
@@ -95,12 +96,13 @@ public class MerchantController {
                 .body("Update merchant payment channel config endpoint is not implemented yet.");
     }
 
+    // implement userid check in future - user is mapped to merchant
     @DeleteMapping("/{merchantId}/payment-channel-configs/{configId}")
-    public ResponseEntity<String> deleteMerchantPaymentChannelConfig(
+    public ResponseEntity<Void> deleteMerchantPaymentChannelConfig(
             @PathVariable("merchantId") Long merchantId,
             @PathVariable("configId") Long configId) {
-        return ResponseEntity.status(HttpStatus.NOT_IMPLEMENTED)
-                .body("Delete merchant payment channel config endpoint is not implemented yet.");
+        merchantService.deactivateMerchantPaymentChannelConfig(merchantId, configId);
+        return ResponseEntity.noContent().build();
     }
 
 }

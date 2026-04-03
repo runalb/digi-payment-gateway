@@ -99,4 +99,23 @@ public class MerchantService {
                 entity.getIsActive(),
                 entity.getConfigJson());
     }
+
+    @Transactional
+    public void deactivateMerchant(Long merchantId) {
+        MerchantEntity merchant = merchantRepository
+                .findById(merchantId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Merchant not found"));
+        merchant.setIsActive(false);
+        merchantRepository.save(merchant);
+    }
+
+    @Transactional
+    public void deactivateMerchantPaymentChannelConfig(Long merchantId, Long configId) {
+        MerchantPaymentChannelConfigEntity config = merchantPaymentChannelConfigRepository
+                .findByIdAndMerchant_Id(configId, merchantId)
+                .orElseThrow(() -> new ResponseStatusException(
+                        HttpStatus.NOT_FOUND, "Merchant payment channel config not found"));
+        config.setIsActive(false);
+        merchantPaymentChannelConfigRepository.save(config);
+    }
 }
