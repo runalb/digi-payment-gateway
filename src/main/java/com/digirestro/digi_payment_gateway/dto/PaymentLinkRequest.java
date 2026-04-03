@@ -6,7 +6,6 @@ import jakarta.validation.constraints.NotNull;
 import java.math.BigDecimal;
 
 public record PaymentLinkRequest(
-        @NotNull Long merchantId,
         @NotBlank String merchantReferencePaymentId,
         @NotNull @DecimalMin("0.01") BigDecimal amount,
         String merchantMetadataJson) {}

@@ -5,10 +5,10 @@ import com.digirestro.digi_payment_gateway.dto.PaymentDetailsResponse;
 import com.digirestro.digi_payment_gateway.dto.PaymentLinkRequest;
 import com.digirestro.digi_payment_gateway.dto.PaymentLinkResponse;
 import com.digirestro.digi_payment_gateway.dto.adaptor.AdapterPaymentLinkResponse;
+import com.digirestro.digi_payment_gateway.entity.MerchantEntity;
 import com.digirestro.digi_payment_gateway.entity.PaymentEntity;
 import com.digirestro.digi_payment_gateway.repository.MerchantPaymentChannelConfigRepository;
 import com.digirestro.digi_payment_gateway.repository.MerchantConfigRepository;
-import com.digirestro.digi_payment_gateway.repository.MerchantRepository;
 import com.digirestro.digi_payment_gateway.repository.PaymentRepository;
 
 import jakarta.persistence.EntityNotFoundException;
@@ -20,19 +20,16 @@ import org.springframework.transaction.annotation.Transactional;
 @Service
 public class PaymentOrchestrationService {
 
-    private final MerchantRepository merchantRepository;
     private final MerchantConfigRepository merchantConfigRepository;
     private final MerchantPaymentChannelConfigRepository merchantPaymentChannelConfigRepository;
     private final PaymentRepository paymentRepository;
     private final List<PaymentChannelAdapter> adapters;
 
     public PaymentOrchestrationService(
-            MerchantRepository merchantRepository,
             MerchantConfigRepository merchantConfigRepository,
             MerchantPaymentChannelConfigRepository merchantPaymentChannelConfigRepository,
             PaymentRepository paymentRepository,
             List<PaymentChannelAdapter> adapters) {
-        this.merchantRepository = merchantRepository;
         this.merchantConfigRepository = merchantConfigRepository;
         this.merchantPaymentChannelConfigRepository = merchantPaymentChannelConfigRepository;
         this.paymentRepository = paymentRepository;
@@ -40,17 +37,16 @@ public class PaymentOrchestrationService {
     }
 
     @Transactional
-    public PaymentLinkResponse generatePaymentLink(PaymentLinkRequest request) {
-        var merchant = merchantRepository.findById(request.merchantId())
-                        .orElseThrow(() -> new EntityNotFoundException("Merchant not found"));
+    public PaymentLinkResponse generatePaymentLink(MerchantEntity merchant, PaymentLinkRequest request) {
+        Long merchantId = merchant.getId();
 
         var merchantPaymentChannelConfig = merchantPaymentChannelConfigRepository
-                        .findFirstByMerchant_IdAndIsActiveTrue(request.merchantId())
+                        .findFirstByMerchant_IdAndIsActiveTrue(merchantId)
                         .orElseThrow(() -> new EntityNotFoundException(
                                         "Active merchant payment channel configuration not found"));
 
         var merchantConfig = merchantConfigRepository
-                        .findByMerchant_Id(request.merchantId())
+                        .findByMerchant_Id(merchantId)
                         .orElseThrow(() -> new EntityNotFoundException("Merchant configuration not found"));
 
         var adapter = adapters.stream()
@@ -84,9 +80,22 @@ public class PaymentOrchestrationService {
     }
 
     @Transactional(readOnly = true)
-    public PaymentDetailsResponse getPaymentDetails(Long paymentId) {
-        PaymentEntity payment = paymentRepository.findById(paymentId)
+    public PaymentDetailsResponse getPaymentDetails(Long paymentId, Long merchantId) {
+        PaymentEntity payment = paymentRepository
+                .findByIdAndMerchant_Id(paymentId, merchantId)
                 .orElseThrow(() -> new EntityNotFoundException("Payment not found"));
+        return toPaymentDetailsResponse(payment);
+    }
+
+    @Transactional(readOnly = true)
+    public List<PaymentDetailsResponse> listPaymentDetails(Long merchantId) {
+        return paymentRepository.findAllByMerchant_IdOrderByCreatedDateTimeDesc(merchantId)
+                .stream()
+                .map(this::toPaymentDetailsResponse)
+                .toList();
+    }
+
+    private PaymentDetailsResponse toPaymentDetailsResponse(PaymentEntity payment) {
         return new PaymentDetailsResponse(
                 payment.getId(),
                 payment.getAmount(),
