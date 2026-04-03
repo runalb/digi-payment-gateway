@@ -203,10 +203,10 @@
         </div>
       </div>
 
-      <p style="margin: 0 0 0.5rem; font-size: 0.85rem; color: var(--muted);">Simulated outcome after Pay:</p>
+      <p style="margin: 0 0 0.5rem; font-size: 0.85rem; color: var(--muted);">Simulated payment status after Pay:</p>
       <div class="outcomes">
-        <label><input type="radio" name="outcome" value="SUCCESS" checked /> Transaction success</label>
-        <label><input type="radio" name="outcome" value="FAILED" /> Transaction failed</label>
+        <label><input type="radio" name="paymentStatus" value="SUCCESS" checked /> Transaction success</label>
+        <label><input type="radio" name="paymentStatus" value="FAILED" /> Transaction failed</label>
       </div>
 
       <button type="submit" id="payBtn">Pay</button>
@@ -227,7 +227,7 @@
       const resultEl = document.getElementById('result');
       const payBtn = document.getElementById('payBtn');
       const apiBaseUrl = 'http://localhost:8080';
-      const webhookPath = '/api/v1/payment-channel-webhooks/test';
+      const webhookPath = '/webhook/v1/payment-channel-webhooks/test';
       const paymentLinkUrl = apiBaseUrl + '/test-payment-link.html?paymentId={ID}&merchantId={MERCHANT_ID}';
       const paymentLinkUrlEl = document.getElementById('paymentLinkUrl');
       paymentLinkUrlEl.textContent = paymentLinkUrl;
@@ -361,24 +361,26 @@
         const digits = digitsOnly(cardRaw);
         const expiry = document.getElementById('cardExpiry').value.trim();
         const cvv = document.getElementById('cvv').value;
-        const outcome = document.querySelector('input[name="outcome"]:checked').value;
-        const paymentIdParsed =
-          paymentIdFromUrl == null || String(paymentIdFromUrl).trim() === ''
-            ? null
-            : Number(String(paymentIdFromUrl).trim());
+        const paymentStatus = document.querySelector('input[name="paymentStatus"]:checked').value;
+        const paymentIdParsed = paymentIdTrim == null ? null : Number(paymentIdTrim);
         const merchantId =
           merchantIdFromUrl == null || String(merchantIdFromUrl).trim() === ''
             ? null
             : String(merchantIdFromUrl).trim();
 
         const payload = {
-          outcome: outcome,
+          paymentStatus: paymentStatus,
           paymentId: Number.isFinite(paymentIdParsed) ? paymentIdParsed : null,
           merchantId: merchantId,
           cardNumberLast4: digits.length >= 4 ? digits.slice(-4) : (digits || null),
           cardExpiry: expiry || null,
           cvvProvided: cvv.length > 0,
         };
+
+        if (payload.paymentId == null) {
+          showResult(false, 'Missing paymentId in URL. Open page with ?paymentId=<ID>&merchantId=<MERCHANT_ID>');
+          return;
+        }
 
         payBtn.disabled = true;
         try {
