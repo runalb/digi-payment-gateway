@@ -51,6 +51,15 @@ public class UserService {
                 user.getIsVerified());
     }
 
+    @Transactional
+    public void deactivateUser(Long userId) {
+        UserEntity user = userRepository
+                .findById(userId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "User not found"));
+        user.setIsActive(false);
+        userRepository.save(user);
+    }
+
     private String normalizeMobile(String mobileNumber) {
         if (!StringUtils.hasText(mobileNumber)) {
             return null;

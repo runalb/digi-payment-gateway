@@ -53,8 +53,8 @@ public class UserController {
     }
 
     @DeleteMapping("/{userId}")
-    public ResponseEntity<String> deleteUser(@PathVariable("userId") Long userId) {
-        return ResponseEntity.status(HttpStatus.NOT_IMPLEMENTED)
-                .body("Delete user endpoint is not implemented yet.");
+    public ResponseEntity<Void> deleteUser(@PathVariable("userId") Long userId) {
+        userService.deactivateUser(userId);
+        return ResponseEntity.noContent().build();
     }
 }
