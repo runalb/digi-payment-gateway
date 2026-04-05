@@ -5,7 +5,7 @@ import com.digirestro.digi_payment_gateway.dto.AuthLoginResponse;
 import com.digirestro.digi_payment_gateway.dto.AuthLogoutRequest;
 import com.digirestro.digi_payment_gateway.dto.AuthMobileOtpRequest;
 import com.digirestro.digi_payment_gateway.dto.AuthMobileVerifyOtpRequest;
-import com.digirestro.digi_payment_gateway.dto.AuthOtpRequestResponse;
+import com.digirestro.digi_payment_gateway.dto.AuthMobileOtpRequestResponse;
 import com.digirestro.digi_payment_gateway.dto.AuthRefreshRequest;
 import com.digirestro.digi_payment_gateway.service.AuthService;
 import jakarta.validation.Valid;
@@ -31,7 +31,7 @@ public class AuthController {
     }
 
     @PostMapping("/login/mobile/request-otp")
-    public ResponseEntity<AuthOtpRequestResponse> requestMobileOtp(@Valid @RequestBody AuthMobileOtpRequest request) {
+    public ResponseEntity<AuthMobileOtpRequestResponse> requestMobileOtp(@Valid @RequestBody AuthMobileOtpRequest request) {
         return ResponseEntity.ok(authService.requestMobileOtp(request));
     }
 
