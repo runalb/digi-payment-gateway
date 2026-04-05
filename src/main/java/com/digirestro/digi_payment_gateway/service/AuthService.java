@@ -10,7 +10,6 @@ import com.digirestro.digi_payment_gateway.dto.AuthRefreshRequest;
 import com.digirestro.digi_payment_gateway.entity.RefreshTokenEntity;
 import com.digirestro.digi_payment_gateway.entity.UserEntity;
 import com.digirestro.digi_payment_gateway.repository.RefreshTokenRepository;
-import com.digirestro.digi_payment_gateway.repository.UserRepository;
 import com.digirestro.digi_payment_gateway.security.JwtService;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
@@ -39,7 +38,7 @@ public class AuthService {
     private static final long OTP_EXPIRATION_SECONDS = 300;
     private final Map<String, OtpSession> otpSessions = new ConcurrentHashMap<>();
 
-    private final UserRepository userRepository;
+    private final UserService userService;
     private final RefreshTokenRepository refreshTokenRepository;
     private final PasswordEncoder passwordEncoder;
     private final JwtService jwtService;
@@ -47,13 +46,13 @@ public class AuthService {
     private final long otpResendCooldownSeconds;
 
     public AuthService(
-            UserRepository userRepository,
+            UserService userService,
             RefreshTokenRepository refreshTokenRepository,
             PasswordEncoder passwordEncoder,
             JwtService jwtService,
             @Value("${security.jwt.refresh-expiration-seconds:1209600}") long refreshExpirationSeconds,
             @Value("${security.otp.resend-cooldown-seconds:45}") long otpResendCooldownSeconds) {
-        this.userRepository = userRepository;
+        this.userService = userService;
         this.refreshTokenRepository = refreshTokenRepository;
         this.passwordEncoder = passwordEncoder;
         this.jwtService = jwtService;
@@ -64,13 +63,7 @@ public class AuthService {
     @Transactional
     public AuthLoginResponse login(AuthLoginRequest request) {
         String normalizedEmail = request.email().trim().toLowerCase();
-        var user = userRepository
-                .findByEmail(normalizedEmail)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Invalid credentials"));
-
-        if (!Boolean.TRUE.equals(user.getIsActive())) {
-            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "User is inactive");
-        }
+        var user = userService.findActiveUserByEmail(normalizedEmail);
 
         if (!passwordEncoder.matches(request.password(), user.getPasswordHash())) {
             throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Invalid credentials");
@@ -82,13 +75,7 @@ public class AuthService {
     @Transactional(readOnly = true)
     public AuthOtpRequestResponse requestMobileOtp(AuthMobileOtpRequest request) {
         String mobileNumber = normalizeMobile(request.mobileNumber());
-        UserEntity user = userRepository
-                .findByMobileNumber(mobileNumber)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Mobile number not registered"));
-
-        if (!Boolean.TRUE.equals(user.getIsActive())) {
-            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "User is inactive");
-        }
+        userService.findActiveUserByMobile(mobileNumber);
 
         LocalDateTime now = LocalDateTime.now();
         OtpSession existingSession = otpSessions.get(mobileNumber);
@@ -115,13 +102,7 @@ public class AuthService {
     @Transactional
     public AuthLoginResponse verifyMobileOtp(AuthMobileVerifyOtpRequest request) {
         String mobileNumber = normalizeMobile(request.mobileNumber());
-        UserEntity user = userRepository
-                .findByMobileNumber(mobileNumber)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Invalid mobile OTP"));
-
-        if (!Boolean.TRUE.equals(user.getIsActive())) {
-            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "User is inactive");
-        }
+        UserEntity user = userService.findActiveUserByMobile(mobileNumber);
 
         OtpSession otpSession = otpSessions.get(mobileNumber);
         if (otpSession == null || otpSession.expiresAt().isBefore(LocalDateTime.now())) {

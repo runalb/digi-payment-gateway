@@ -4,6 +4,9 @@ import com.digirestro.digi_payment_gateway.dto.UserCreateRequest;
 import com.digirestro.digi_payment_gateway.dto.UserResponse;
 import com.digirestro.digi_payment_gateway.entity.UserEntity;
 import com.digirestro.digi_payment_gateway.repository.UserRepository;
+
+import jakarta.persistence.EntityNotFoundException;
+
 import org.springframework.http.HttpStatus;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
@@ -49,6 +52,26 @@ public class UserService {
                 user.getName(),
                 user.getIsActive(),
                 user.getIsVerified());
+    }
+
+    @Transactional(readOnly = true)
+    public UserEntity findActiveUserByEmail(String email) {
+        UserEntity user = userRepository.findByEmail(email)
+                .orElseThrow(() -> new EntityNotFoundException("User not found for email: " + email));
+        if (!Boolean.TRUE.equals(user.getIsActive())) {
+            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "User is deleted");
+        }
+        return user;
+    }
+
+    @Transactional(readOnly = true)
+    public UserEntity findActiveUserByMobile(String mobileNumber) {
+        UserEntity user = userRepository.findByMobileNumber(mobileNumber)
+                .orElseThrow(() -> new EntityNotFoundException("User not found for mobile number: " + mobileNumber));
+        if (!Boolean.TRUE.equals(user.getIsActive())) {
+            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "User is deleted");
+        }
+        return user;
     }
 
     @Transactional
