@@ -7,9 +7,10 @@ import com.digirestro.digi_payment_gateway.dto.MerchantPaymentChannelConfigRespo
 import com.digirestro.digi_payment_gateway.entity.MerchantPaymentChannelConfigEntity;
 import com.digirestro.digi_payment_gateway.entity.MerchantConfigEntity;
 import com.digirestro.digi_payment_gateway.entity.MerchantEntity;
-import com.digirestro.digi_payment_gateway.repository.MerchantPaymentChannelConfigRepository;
 import com.digirestro.digi_payment_gateway.repository.MerchantConfigRepository;
+import com.digirestro.digi_payment_gateway.repository.MerchantPaymentChannelConfigRepository;
 import com.digirestro.digi_payment_gateway.repository.MerchantRepository;
+import jakarta.persistence.EntityNotFoundException;
 import java.util.UUID;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
@@ -35,6 +36,21 @@ public class MerchantService {
         this.merchantConfigRepository = merchantConfigRepository;
         this.paymentChannelService = paymentChannelService;
         this.merchantPaymentChannelConfigRepository = merchantPaymentChannelConfigRepository;
+    }
+
+    @Transactional(readOnly = true)
+    public MerchantConfigEntity findMerchantConfigByMerchantId(Long merchantId) {
+        return merchantConfigRepository
+                .findByMerchant_Id(merchantId)
+                .orElseThrow(() -> new EntityNotFoundException("Merchant configuration not found"));
+    }
+
+    @Transactional(readOnly = true)
+    public MerchantPaymentChannelConfigEntity findActivePaymentChannelConfigByMerchantId(Long merchantId) {
+        return merchantPaymentChannelConfigRepository
+                .findFirstByMerchant_IdAndIsActiveTrue(merchantId)
+                .orElseThrow(() -> new EntityNotFoundException(
+                        "Active merchant payment channel configuration not found"));
     }
 
     @Transactional

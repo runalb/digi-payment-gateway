@@ -7,10 +7,6 @@ import com.digirestro.digi_payment_gateway.dto.PaymentLinkResponse;
 import com.digirestro.digi_payment_gateway.dto.adaptor.AdapterPaymentLinkResponse;
 import com.digirestro.digi_payment_gateway.entity.MerchantEntity;
 import com.digirestro.digi_payment_gateway.entity.PaymentEntity;
-import com.digirestro.digi_payment_gateway.repository.MerchantPaymentChannelConfigRepository;
-import com.digirestro.digi_payment_gateway.repository.MerchantConfigRepository;
-
-import jakarta.persistence.EntityNotFoundException;
 import java.util.List;
 import java.util.Objects;
 import org.springframework.stereotype.Service;
@@ -19,18 +15,15 @@ import org.springframework.transaction.annotation.Transactional;
 @Service
 public class PaymentOrchestrationService {
 
-    private final MerchantConfigRepository merchantConfigRepository;
-    private final MerchantPaymentChannelConfigRepository merchantPaymentChannelConfigRepository;
+    private final MerchantService merchantService;
     private final PaymentService paymentService;
     private final List<PaymentChannelAdapter> adapters;
 
     public PaymentOrchestrationService(
-            MerchantConfigRepository merchantConfigRepository,
-            MerchantPaymentChannelConfigRepository merchantPaymentChannelConfigRepository,
+            MerchantService merchantService,
             PaymentService paymentService,
             List<PaymentChannelAdapter> adapters) {
-        this.merchantConfigRepository = merchantConfigRepository;
-        this.merchantPaymentChannelConfigRepository = merchantPaymentChannelConfigRepository;
+        this.merchantService = merchantService;
         this.paymentService = paymentService;
         this.adapters = adapters;
     }
@@ -39,14 +32,8 @@ public class PaymentOrchestrationService {
     public PaymentLinkResponse generatePaymentLink(MerchantEntity merchant, PaymentLinkRequest request) {
         Long merchantId = merchant.getId();
 
-        var merchantPaymentChannelConfig = merchantPaymentChannelConfigRepository
-                        .findFirstByMerchant_IdAndIsActiveTrue(merchantId)
-                        .orElseThrow(() -> new EntityNotFoundException(
-                                        "Active merchant payment channel configuration not found"));
-
-        var merchantConfig = merchantConfigRepository
-                        .findByMerchant_Id(merchantId)
-                        .orElseThrow(() -> new EntityNotFoundException("Merchant configuration not found"));
+        var merchantConfig = merchantService.findMerchantConfigByMerchantId(merchantId);
+        var merchantPaymentChannelConfig = merchantService.findActivePaymentChannelConfigByMerchantId(merchantId);
 
         var adapter = adapters.stream()
                         .filter(a -> Objects.equals(a.getChannel().getName(), merchantPaymentChannelConfig.getPaymentChannel().getName()))
