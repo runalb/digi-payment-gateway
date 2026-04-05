@@ -1,15 +1,15 @@
-package com.digirestro.digi_payment_gateway.controller.ui;
+package com.digirestro.digi_payment_gateway.auth.controller;
 
-import com.digirestro.digi_payment_gateway.dto.AuthEmailOtpRequest;
-import com.digirestro.digi_payment_gateway.dto.AuthEmailVerifyOtpRequest;
-import com.digirestro.digi_payment_gateway.dto.AuthLoginRequest;
-import com.digirestro.digi_payment_gateway.dto.AuthLoginResponse;
-import com.digirestro.digi_payment_gateway.dto.AuthLogoutRequest;
-import com.digirestro.digi_payment_gateway.dto.AuthMobileOtpRequest;
-import com.digirestro.digi_payment_gateway.dto.AuthMobileVerifyOtpRequest;
-import com.digirestro.digi_payment_gateway.dto.AuthOtpRequestResponse;
-import com.digirestro.digi_payment_gateway.dto.AuthRefreshRequest;
-import com.digirestro.digi_payment_gateway.service.AuthService;
+import com.digirestro.digi_payment_gateway.auth.dto.AuthEmailOtpRequest;
+import com.digirestro.digi_payment_gateway.auth.dto.AuthEmailVerifyOtpRequest;
+import com.digirestro.digi_payment_gateway.auth.dto.AuthLoginRequest;
+import com.digirestro.digi_payment_gateway.auth.dto.AuthLoginResponse;
+import com.digirestro.digi_payment_gateway.auth.dto.AuthLogoutRequest;
+import com.digirestro.digi_payment_gateway.auth.dto.AuthMobileOtpRequest;
+import com.digirestro.digi_payment_gateway.auth.dto.AuthMobileVerifyOtpRequest;
+import com.digirestro.digi_payment_gateway.auth.dto.AuthOtpRequestResponse;
+import com.digirestro.digi_payment_gateway.auth.dto.AuthRefreshRequest;
+import com.digirestro.digi_payment_gateway.auth.service.AuthService;
 import jakarta.validation.Valid;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.PostMapping;

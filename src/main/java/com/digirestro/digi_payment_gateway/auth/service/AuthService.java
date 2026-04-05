@@ -1,18 +1,19 @@
-package com.digirestro.digi_payment_gateway.service;
+package com.digirestro.digi_payment_gateway.auth.service;
 
-import com.digirestro.digi_payment_gateway.dto.AuthEmailOtpRequest;
-import com.digirestro.digi_payment_gateway.dto.AuthEmailVerifyOtpRequest;
-import com.digirestro.digi_payment_gateway.dto.AuthLoginRequest;
-import com.digirestro.digi_payment_gateway.dto.AuthLoginResponse;
-import com.digirestro.digi_payment_gateway.dto.AuthLogoutRequest;
-import com.digirestro.digi_payment_gateway.dto.AuthMobileOtpRequest;
-import com.digirestro.digi_payment_gateway.dto.AuthMobileVerifyOtpRequest;
-import com.digirestro.digi_payment_gateway.dto.AuthOtpRequestResponse;
-import com.digirestro.digi_payment_gateway.dto.AuthRefreshRequest;
-import com.digirestro.digi_payment_gateway.entity.RefreshTokenEntity;
+import com.digirestro.digi_payment_gateway.auth.dto.AuthEmailOtpRequest;
+import com.digirestro.digi_payment_gateway.auth.dto.AuthEmailVerifyOtpRequest;
+import com.digirestro.digi_payment_gateway.auth.dto.AuthLoginRequest;
+import com.digirestro.digi_payment_gateway.auth.dto.AuthLoginResponse;
+import com.digirestro.digi_payment_gateway.auth.dto.AuthLogoutRequest;
+import com.digirestro.digi_payment_gateway.auth.dto.AuthMobileOtpRequest;
+import com.digirestro.digi_payment_gateway.auth.dto.AuthMobileVerifyOtpRequest;
+import com.digirestro.digi_payment_gateway.auth.dto.AuthOtpRequestResponse;
+import com.digirestro.digi_payment_gateway.auth.dto.AuthRefreshRequest;
+import com.digirestro.digi_payment_gateway.auth.entity.AuthRefreshTokenEntity;
+import com.digirestro.digi_payment_gateway.auth.repository.AuthRefreshTokenRepository;
 import com.digirestro.digi_payment_gateway.entity.UserEntity;
-import com.digirestro.digi_payment_gateway.repository.RefreshTokenRepository;
 import com.digirestro.digi_payment_gateway.security.JwtService;
+import com.digirestro.digi_payment_gateway.service.UserService;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
@@ -42,7 +43,7 @@ public class AuthService {
     private final Map<String, OtpSession> emailOtpSessions = new ConcurrentHashMap<>();
 
     private final UserService userService;
-    private final RefreshTokenRepository refreshTokenRepository;
+    private final AuthRefreshTokenRepository authRefreshTokenRepository;
     private final PasswordEncoder passwordEncoder;
     private final JwtService jwtService;
     private final long refreshExpirationSeconds;
@@ -50,13 +51,13 @@ public class AuthService {
 
     public AuthService(
             UserService userService,
-            RefreshTokenRepository refreshTokenRepository,
+            AuthRefreshTokenRepository authRefreshTokenRepository,
             PasswordEncoder passwordEncoder,
             JwtService jwtService,
             @Value("${security.jwt.refresh-expiration-seconds:1209600}") long refreshExpirationSeconds,
             @Value("${security.otp.resend-cooldown-seconds:45}") long otpResendCooldownSeconds) {
         this.userService = userService;
-        this.refreshTokenRepository = refreshTokenRepository;
+        this.authRefreshTokenRepository = authRefreshTokenRepository;
         this.passwordEncoder = passwordEncoder;
         this.jwtService = jwtService;
         this.refreshExpirationSeconds = refreshExpirationSeconds;
@@ -170,13 +171,13 @@ public class AuthService {
     @Transactional
     public AuthLoginResponse refresh(AuthRefreshRequest request) {
         String hashedToken = hashToken(request.refreshToken().trim());
-        RefreshTokenEntity existing = refreshTokenRepository
+        AuthRefreshTokenEntity existing = authRefreshTokenRepository
                 .findByTokenHashAndRevokedAtIsNull(hashedToken)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Invalid refresh token"));
 
         if (existing.getExpiresAt().isBefore(LocalDateTime.now())) {
             existing.setRevokedAt(LocalDateTime.now());
-            refreshTokenRepository.save(existing);
+            authRefreshTokenRepository.save(existing);
             throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Refresh token expired");
         }
 
@@ -186,16 +187,16 @@ public class AuthService {
         }
 
         existing.setRevokedAt(LocalDateTime.now());
-        refreshTokenRepository.save(existing);
+        authRefreshTokenRepository.save(existing);
         return issueTokens(user);
     }
 
     @Transactional
     public void logout(AuthLogoutRequest request) {
         String hashedToken = hashToken(request.refreshToken().trim());
-        refreshTokenRepository.findByTokenHashAndRevokedAtIsNull(hashedToken).ifPresent(token -> {
+        authRefreshTokenRepository.findByTokenHashAndRevokedAtIsNull(hashedToken).ifPresent(token -> {
             token.setRevokedAt(LocalDateTime.now());
-            refreshTokenRepository.save(token);
+            authRefreshTokenRepository.save(token);
         });
     }
 
@@ -210,11 +211,11 @@ public class AuthService {
         String accessToken = jwtService.generateToken(user.getEmail());
         String refreshToken = generateRefreshToken();
 
-        RefreshTokenEntity refreshTokenEntity = new RefreshTokenEntity();
+        AuthRefreshTokenEntity refreshTokenEntity = new AuthRefreshTokenEntity();
         refreshTokenEntity.setUser(user);
         refreshTokenEntity.setTokenHash(hashToken(refreshToken));
         refreshTokenEntity.setExpiresAt(LocalDateTime.now().plusSeconds(refreshExpirationSeconds));
-        refreshTokenRepository.save(refreshTokenEntity);
+        authRefreshTokenRepository.save(refreshTokenEntity);
 
         return new AuthLoginResponse(
                 accessToken,
