@@ -26,6 +26,8 @@ public class UserController {
         this.userService = userService;
     }
 
+    // TODO:  authenticated user via JWT - Security checks for all endpoints - user is mapped to merchant then only allow to modify user settings else show you are not authorized to access this resource
+
     @PostMapping
     public ResponseEntity<UserResponse> createUser(@Valid @RequestBody UserCreateRequest request) {
         UserResponse response = userService.createUser(request);

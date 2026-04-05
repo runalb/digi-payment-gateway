@@ -28,6 +28,8 @@ public class MerchantController {
         this.merchantService = merchantService;
     }
 
+    // TODO:  authenticated user via JWT - Security checks for all endpoints - user is mapped to merchant then only allow to modifty merchant settings else show you are not authorized to access this resource
+
     // Merchants
     @PostMapping
     public ResponseEntity<MerchantRegistrationResponse> createMerchant(
