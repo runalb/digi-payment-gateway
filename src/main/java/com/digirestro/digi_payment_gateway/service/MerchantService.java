@@ -10,7 +10,6 @@ import com.digirestro.digi_payment_gateway.entity.MerchantEntity;
 import com.digirestro.digi_payment_gateway.repository.MerchantPaymentChannelConfigRepository;
 import com.digirestro.digi_payment_gateway.repository.MerchantConfigRepository;
 import com.digirestro.digi_payment_gateway.repository.MerchantRepository;
-import com.digirestro.digi_payment_gateway.repository.PaymentChannelRepository;
 import java.util.UUID;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
@@ -24,17 +23,17 @@ public class MerchantService {
 
     private final MerchantRepository merchantRepository;
     private final MerchantConfigRepository merchantConfigRepository;
-    private final PaymentChannelRepository paymentChannelRepository;
+    private final PaymentChannelService paymentChannelService;
     private final MerchantPaymentChannelConfigRepository merchantPaymentChannelConfigRepository;
 
     public MerchantService(
             MerchantRepository merchantRepository,
             MerchantConfigRepository merchantConfigRepository,
-            PaymentChannelRepository paymentChannelRepository,
+            PaymentChannelService paymentChannelService,
             MerchantPaymentChannelConfigRepository merchantPaymentChannelConfigRepository) {
         this.merchantRepository = merchantRepository;
         this.merchantConfigRepository = merchantConfigRepository;
-        this.paymentChannelRepository = paymentChannelRepository;
+        this.paymentChannelService = paymentChannelService;
         this.merchantPaymentChannelConfigRepository = merchantPaymentChannelConfigRepository;
     }
 
@@ -72,22 +71,18 @@ public class MerchantService {
                 .findById(merchantId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Merchant not found"));
 
-        var paymentChannel = paymentChannelRepository
-                .findById(request.paymentChannelId())
-                .orElseThrow(() -> new ResponseStatusException(
-                        HttpStatus.NOT_FOUND, "Payment channel not found: " + request.paymentChannelId()));
+        var paymentChannel = paymentChannelService.findById(request.paymentChannelId());
 
         if (merchantPaymentChannelConfigRepository.existsByMerchant_IdAndPaymentChannel_Id(merchantId, paymentChannel.getId())) {
             throw new ResponseStatusException(HttpStatus.CONFLICT, "Merchant already has configuration for this payment channel");
         }
 
-        boolean active = request.isActive() != null ? request.isActive() : Boolean.TRUE;
         String configJson = StringUtils.hasText(request.configJson()) ? request.configJson() : null;
 
         MerchantPaymentChannelConfigEntity entity = new MerchantPaymentChannelConfigEntity();
         entity.setMerchant(merchant);
         entity.setPaymentChannel(paymentChannel);
-        entity.setIsActive(active);
+        entity.setIsActive(Boolean.TRUE);
         entity.setConfigJson(configJson);
         entity = merchantPaymentChannelConfigRepository.save(entity);
 

@@ -19,6 +19,12 @@ public class PaymentChannelService {
     }
 
     @Transactional(readOnly = true)
+    public PaymentChannelEntity findById(Long id) {
+        return paymentChannelRepository.findById(id)
+                .orElseThrow(() -> new EntityNotFoundException("Payment channel not found: " + id));
+    }
+
+    @Transactional(readOnly = true)
     public PaymentChannelEntity findByName(PaymentChannelNameEnum name) {
         return paymentChannelRepository.findByName(name)
                 .orElseThrow(() -> new EntityNotFoundException("Payment channel " + name + " not found in database"));

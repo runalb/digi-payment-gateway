@@ -7,5 +7,4 @@ import jakarta.validation.constraints.NotNull;
 public record MerchantPaymentChannelConfigCreateRequest(
         @NotNull Long paymentChannelId,
         PaymentChannelNameEnum paymentChannelName,
-        Boolean isActive,
         String configJson) {}
