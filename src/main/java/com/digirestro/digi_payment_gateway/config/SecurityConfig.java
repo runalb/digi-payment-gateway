@@ -37,6 +37,8 @@ public class SecurityConfig {
                         .requestMatchers("/webhook/**").permitAll()
                         .requestMatchers(HttpMethod.POST, "/api/v1/ui/users").permitAll()
                         .requestMatchers(HttpMethod.POST, "/api/v1/ui/auth/login").permitAll()
+                        .requestMatchers(HttpMethod.POST, "/api/v1/ui/auth/login/email/request-otp").permitAll()
+                        .requestMatchers(HttpMethod.POST, "/api/v1/ui/auth/login/email/verify-otp").permitAll()
                         .requestMatchers(HttpMethod.POST, "/api/v1/ui/auth/login/mobile/request-otp").permitAll()
                         .requestMatchers(HttpMethod.POST, "/api/v1/ui/auth/login/mobile/verify-otp").permitAll()
                         .requestMatchers(HttpMethod.POST, "/api/v1/ui/auth/refresh").permitAll()

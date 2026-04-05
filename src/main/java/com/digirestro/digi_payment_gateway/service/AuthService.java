@@ -1,11 +1,13 @@
 package com.digirestro.digi_payment_gateway.service;
 
+import com.digirestro.digi_payment_gateway.dto.AuthEmailOtpRequest;
+import com.digirestro.digi_payment_gateway.dto.AuthEmailVerifyOtpRequest;
 import com.digirestro.digi_payment_gateway.dto.AuthLoginRequest;
 import com.digirestro.digi_payment_gateway.dto.AuthLoginResponse;
 import com.digirestro.digi_payment_gateway.dto.AuthLogoutRequest;
 import com.digirestro.digi_payment_gateway.dto.AuthMobileOtpRequest;
 import com.digirestro.digi_payment_gateway.dto.AuthMobileVerifyOtpRequest;
-import com.digirestro.digi_payment_gateway.dto.AuthMobileOtpRequestResponse;
+import com.digirestro.digi_payment_gateway.dto.AuthOtpRequestResponse;
 import com.digirestro.digi_payment_gateway.dto.AuthRefreshRequest;
 import com.digirestro.digi_payment_gateway.entity.RefreshTokenEntity;
 import com.digirestro.digi_payment_gateway.entity.UserEntity;
@@ -36,7 +38,8 @@ public class AuthService {
     private static final SecureRandom SECURE_RANDOM = new SecureRandom();
     private static final int OTP_LENGTH = 6;
     private static final long OTP_EXPIRATION_SECONDS = 300;
-    private final Map<String, OtpSession> otpSessions = new ConcurrentHashMap<>();
+    private final Map<String, OtpSession> mobileOtpSessions = new ConcurrentHashMap<>();
+    private final Map<String, OtpSession> emailOtpSessions = new ConcurrentHashMap<>();
 
     private final UserService userService;
     private final RefreshTokenRepository refreshTokenRepository;
@@ -73,12 +76,12 @@ public class AuthService {
     }
 
     @Transactional(readOnly = true)
-    public AuthMobileOtpRequestResponse requestMobileOtp(AuthMobileOtpRequest request) {
-        String mobileNumber = normalizeMobile(request.mobileNumber());
-        userService.findActiveUserByMobile(mobileNumber);
+    public AuthOtpRequestResponse requestEmailOtp(AuthEmailOtpRequest request) {
+        String normalizedEmail = request.email().trim().toLowerCase();
+        userService.findActiveUserByEmail(normalizedEmail);
 
         LocalDateTime now = LocalDateTime.now();
-        OtpSession existingSession = otpSessions.get(mobileNumber);
+        OtpSession existingSession = emailOtpSessions.get(normalizedEmail);
         if (existingSession != null && existingSession.expiresAt().isAfter(now)) {
             LocalDateTime allowedAt = existingSession.requestedAt().plusSeconds(otpResendCooldownSeconds);
             if (allowedAt.isAfter(now)) {
@@ -92,11 +95,57 @@ public class AuthService {
         String otp = generateOtp();
         String otpHash = hashToken(otp);
         LocalDateTime expiresAt = now.plusSeconds(OTP_EXPIRATION_SECONDS);
-        otpSessions.put(mobileNumber, new OtpSession(otpHash, now, expiresAt));
+        emailOtpSessions.put(normalizedEmail, new OtpSession(otpHash, now, expiresAt));
+
+        // Placeholder: wire this to an email provider integration later.
+        log.info("Generated OTP for email {}: {}", normalizedEmail, otp);
+        return new AuthOtpRequestResponse("OTP sent successfully.");
+    }
+
+    @Transactional
+    public AuthLoginResponse verifyEmailOtp(AuthEmailVerifyOtpRequest request) {
+        String normalizedEmail = request.email().trim().toLowerCase();
+        UserEntity user = userService.findActiveUserByEmail(normalizedEmail);
+
+        OtpSession otpSession = emailOtpSessions.get(normalizedEmail);
+        if (otpSession == null || otpSession.expiresAt().isBefore(LocalDateTime.now())) {
+            emailOtpSessions.remove(normalizedEmail);
+            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "OTP expired or not requested");
+        }
+
+        if (!otpSession.otpHash().equals(hashToken(request.otp().trim()))) {
+            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Invalid email OTP");
+        }
+
+        emailOtpSessions.remove(normalizedEmail);
+        return issueTokens(user);
+    }
+
+    @Transactional(readOnly = true)
+    public AuthOtpRequestResponse requestMobileOtp(AuthMobileOtpRequest request) {
+        String mobileNumber = normalizeMobile(request.mobileNumber());
+        userService.findActiveUserByMobile(mobileNumber);
+
+        LocalDateTime now = LocalDateTime.now();
+        OtpSession existingSession = mobileOtpSessions.get(mobileNumber);
+        if (existingSession != null && existingSession.expiresAt().isAfter(now)) {
+            LocalDateTime allowedAt = existingSession.requestedAt().plusSeconds(otpResendCooldownSeconds);
+            if (allowedAt.isAfter(now)) {
+                long retryAfterSeconds = Math.max(1, Duration.between(now, allowedAt).getSeconds());
+                throw new ResponseStatusException(
+                        HttpStatus.TOO_MANY_REQUESTS,
+                        "OTP requested too frequently. Try again in " + retryAfterSeconds + " seconds.");
+            }
+        }
+
+        String otp = generateOtp();
+        String otpHash = hashToken(otp);
+        LocalDateTime expiresAt = now.plusSeconds(OTP_EXPIRATION_SECONDS);
+        mobileOtpSessions.put(mobileNumber, new OtpSession(otpHash, now, expiresAt));
 
         // Placeholder: wire this to an SMS provider integration later.
         log.info("Generated OTP for mobile {}: {}", mobileNumber, otp);
-        return new AuthMobileOtpRequestResponse("OTP sent successfully.");
+        return new AuthOtpRequestResponse("OTP sent successfully.");
     }
 
     @Transactional
@@ -104,9 +153,9 @@ public class AuthService {
         String mobileNumber = normalizeMobile(request.mobileNumber());
         UserEntity user = userService.findActiveUserByMobile(mobileNumber);
 
-        OtpSession otpSession = otpSessions.get(mobileNumber);
+        OtpSession otpSession = mobileOtpSessions.get(mobileNumber);
         if (otpSession == null || otpSession.expiresAt().isBefore(LocalDateTime.now())) {
-            otpSessions.remove(mobileNumber);
+            mobileOtpSessions.remove(mobileNumber);
             throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "OTP expired or not requested");
         }
 
@@ -114,7 +163,7 @@ public class AuthService {
             throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Invalid mobile OTP");
         }
 
-        otpSessions.remove(mobileNumber);
+        mobileOtpSessions.remove(mobileNumber);
         return issueTokens(user);
     }
 
@@ -153,7 +202,8 @@ public class AuthService {
     @Scheduled(fixedDelayString = "${security.otp.cleanup-interval-ms:60000}")
     public void removeExpiredOtpSessions() {
         LocalDateTime now = LocalDateTime.now();
-        otpSessions.entrySet().removeIf(entry -> entry.getValue().expiresAt().isBefore(now));
+        mobileOtpSessions.entrySet().removeIf(entry -> entry.getValue().expiresAt().isBefore(now));
+        emailOtpSessions.entrySet().removeIf(entry -> entry.getValue().expiresAt().isBefore(now));
     }
 
     private AuthLoginResponse issueTokens(UserEntity user) {
