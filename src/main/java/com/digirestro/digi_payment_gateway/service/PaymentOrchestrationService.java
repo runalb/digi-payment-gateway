@@ -9,7 +9,6 @@ import com.digirestro.digi_payment_gateway.entity.MerchantEntity;
 import com.digirestro.digi_payment_gateway.entity.PaymentEntity;
 import com.digirestro.digi_payment_gateway.repository.MerchantPaymentChannelConfigRepository;
 import com.digirestro.digi_payment_gateway.repository.MerchantConfigRepository;
-import com.digirestro.digi_payment_gateway.repository.PaymentRepository;
 
 import jakarta.persistence.EntityNotFoundException;
 import java.util.List;
@@ -22,17 +21,17 @@ public class PaymentOrchestrationService {
 
     private final MerchantConfigRepository merchantConfigRepository;
     private final MerchantPaymentChannelConfigRepository merchantPaymentChannelConfigRepository;
-    private final PaymentRepository paymentRepository;
+    private final PaymentService paymentService;
     private final List<PaymentChannelAdapter> adapters;
 
     public PaymentOrchestrationService(
             MerchantConfigRepository merchantConfigRepository,
             MerchantPaymentChannelConfigRepository merchantPaymentChannelConfigRepository,
-            PaymentRepository paymentRepository,
+            PaymentService paymentService,
             List<PaymentChannelAdapter> adapters) {
         this.merchantConfigRepository = merchantConfigRepository;
         this.merchantPaymentChannelConfigRepository = merchantPaymentChannelConfigRepository;
-        this.paymentRepository = paymentRepository;
+        this.paymentService = paymentService;
         this.adapters = adapters;
     }
 
@@ -62,14 +61,14 @@ public class PaymentOrchestrationService {
         payment.setAmount(request.amount());
         payment.setMerchantReferencePaymentId(request.merchantReferencePaymentId());
         payment.setMerchantMetadataJson(request.merchantMetadataJson());
-        payment = paymentRepository.save(payment);
+        payment = paymentService.save(payment);
 
         // adapter will return the payment with the payment link url and payment details
         AdapterPaymentLinkResponse adapterResponse = adapter.createPaymentLink(payment);
         payment.setPaymentLinkUrl(adapterResponse.payment().getPaymentLinkUrl());
         payment.setPaymentChannelTxnId(adapterResponse.payment().getPaymentChannelTxnId());
         payment.setStatus(adapterResponse.payment().getStatus());
-        payment = paymentRepository.save(payment);
+        payment = paymentService.save(payment);
 
         return new PaymentLinkResponse(
                 payment.getId(),
@@ -81,15 +80,13 @@ public class PaymentOrchestrationService {
 
     @Transactional(readOnly = true)
     public PaymentDetailsResponse getPaymentDetails(Long paymentId, Long merchantId) {
-        PaymentEntity payment = paymentRepository
-                .findByIdAndMerchant_Id(paymentId, merchantId)
-                .orElseThrow(() -> new EntityNotFoundException("Payment not found"));
+        PaymentEntity payment = paymentService.findByIdAndMerchant_Id(paymentId, merchantId);
         return toPaymentDetailsResponse(payment);
     }
 
     @Transactional(readOnly = true)
     public List<PaymentDetailsResponse> listPaymentDetails(Long merchantId) {
-        return paymentRepository.findAllByMerchant_IdOrderByCreatedDateTimeDesc(merchantId)
+        return paymentService.findAllByMerchant_IdOrderByCreatedDateTimeDesc(merchantId)
                 .stream()
                 .map(this::toPaymentDetailsResponse)
                 .toList();

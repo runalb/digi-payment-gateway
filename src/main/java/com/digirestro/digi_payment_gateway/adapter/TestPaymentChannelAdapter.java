@@ -7,11 +7,10 @@ import com.digirestro.digi_payment_gateway.entity.PaymentEntity;
 import com.digirestro.digi_payment_gateway.enums.PaymentChannelNameEnum;
 import com.digirestro.digi_payment_gateway.enums.PaymentStatusEnum;
 import com.digirestro.digi_payment_gateway.repository.PaymentChannelRepository;
-import com.digirestro.digi_payment_gateway.repository.PaymentRepository;
+import com.digirestro.digi_payment_gateway.service.PaymentService;
 
 import java.util.Map;
 import java.util.UUID;
-import jakarta.persistence.EntityNotFoundException;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -22,13 +21,13 @@ import lombok.extern.slf4j.Slf4j;
 public class TestPaymentChannelAdapter implements PaymentChannelAdapter {
 
     private final PaymentChannelEntity channel;
-    private final PaymentRepository paymentRepository;
+    private final PaymentService paymentService;
 
-    public TestPaymentChannelAdapter(PaymentChannelRepository paymentChannelRepository, PaymentRepository paymentRepository) {
+    public TestPaymentChannelAdapter(PaymentChannelRepository paymentChannelRepository, PaymentService paymentService) {
         this.channel = paymentChannelRepository
                 .findByName(PaymentChannelNameEnum.TEST)
                 .orElseThrow(() -> new IllegalStateException("Payment channel TEST not found in database"));
-        this.paymentRepository = paymentRepository;
+        this.paymentService = paymentService;
     }
 
     @Override
@@ -62,11 +61,10 @@ public class TestPaymentChannelAdapter implements PaymentChannelAdapter {
         }
         var paymentId = paymentIdValue.longValue();
 
-        var payment = paymentRepository.findById(paymentId)
-                .orElseThrow(() -> new EntityNotFoundException("Payment not found for paymentId: " + paymentId));
-
+        var payment = paymentService.findById(paymentId);
         payment.setStatus(paymentStatus);
-        var updatedPayment = paymentRepository.save(payment);
+        
+        var updatedPayment = paymentService.save(payment);
 
         return new AdaptorWebhookResponse(
                 updatedPayment.getStatus(),
