@@ -6,7 +6,7 @@ import com.digirestro.digi_payment_gateway.entity.PaymentChannelEntity;
 import com.digirestro.digi_payment_gateway.entity.PaymentEntity;
 import com.digirestro.digi_payment_gateway.enums.PaymentChannelNameEnum;
 import com.digirestro.digi_payment_gateway.enums.PaymentStatusEnum;
-import com.digirestro.digi_payment_gateway.repository.PaymentChannelRepository;
+import com.digirestro.digi_payment_gateway.service.PaymentChannelService;
 import com.digirestro.digi_payment_gateway.service.PaymentService;
 
 import java.util.Map;
@@ -23,10 +23,8 @@ public class TestPaymentChannelAdapter implements PaymentChannelAdapter {
     private final PaymentChannelEntity channel;
     private final PaymentService paymentService;
 
-    public TestPaymentChannelAdapter(PaymentChannelRepository paymentChannelRepository, PaymentService paymentService) {
-        this.channel = paymentChannelRepository
-                .findByName(PaymentChannelNameEnum.TEST)
-                .orElseThrow(() -> new IllegalStateException("Payment channel TEST not found in database"));
+    public TestPaymentChannelAdapter(PaymentChannelService paymentChannelService, PaymentService paymentService) {
+        this.channel = paymentChannelService.findByName(PaymentChannelNameEnum.TEST);
         this.paymentService = paymentService;
     }
 
@@ -63,7 +61,7 @@ public class TestPaymentChannelAdapter implements PaymentChannelAdapter {
 
         var payment = paymentService.findById(paymentId);
         payment.setStatus(paymentStatus);
-        
+
         var updatedPayment = paymentService.save(payment);
 
         return new AdaptorWebhookResponse(
