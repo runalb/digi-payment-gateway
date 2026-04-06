@@ -1,6 +1,8 @@
 package com.digirestro.digi_payment_gateway.integration.service;
 
 import com.digirestro.digi_payment_gateway.entity.MerchantEntity;
+import com.digirestro.digi_payment_gateway.entity.MerchantPaymentChannelConfigEntity;
+import com.digirestro.digi_payment_gateway.entity.MerchantConfigEntity;
 import com.digirestro.digi_payment_gateway.entity.PaymentEntity;
 import com.digirestro.digi_payment_gateway.integration.adapter.PaymentChannelAdapter;
 import com.digirestro.digi_payment_gateway.integration.dto.PaymentDetailsResponse;
@@ -11,7 +13,7 @@ import com.digirestro.digi_payment_gateway.service.MerchantService;
 import com.digirestro.digi_payment_gateway.service.PaymentService;
 
 import java.util.List;
-import java.util.Objects;
+
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -20,28 +22,24 @@ public class PaymentOrchestrationService {
 
     private final MerchantService merchantService;
     private final PaymentService paymentService;
-    private final List<PaymentChannelAdapter> adapters;
+    private final PaymentChannelAdapterResolver adapterResolver;
 
     public PaymentOrchestrationService(
             MerchantService merchantService,
             PaymentService paymentService,
-            List<PaymentChannelAdapter> adapters) {
+            PaymentChannelAdapterResolver adapterResolver) {
         this.merchantService = merchantService;
         this.paymentService = paymentService;
-        this.adapters = adapters;
+        this.adapterResolver = adapterResolver;
     }
 
     @Transactional
     public PaymentLinkResponse generatePaymentLink(MerchantEntity merchant, PaymentLinkRequest request) {
         Long merchantId = merchant.getId();
 
-        var merchantConfig = merchantService.findMerchantConfigByMerchantId(merchantId);
-        var merchantPaymentChannelConfig = merchantService.findActivePaymentChannelConfigByMerchantId(merchantId);
-
-        var adapter = adapters.stream()
-                        .filter(a -> Objects.equals(a.getChannel().getName(), merchantPaymentChannelConfig.getPaymentChannel().getName()))
-                        .findFirst()
-                        .orElseThrow(() -> new IllegalStateException("No adapter found for channel"));
+        MerchantPaymentChannelConfigEntity merchantPaymentChannelConfig = merchantService.findActivePaymentChannelConfigByMerchantId(merchantId);
+        PaymentChannelAdapter adapter = adapterResolver.requireByChannelName(merchantPaymentChannelConfig.getPaymentChannel().getName());
+        MerchantConfigEntity merchantConfig = merchantService.findMerchantConfigByMerchantId(merchantId);
 
         PaymentEntity payment = new PaymentEntity();
         payment.setMerchant(merchant);
