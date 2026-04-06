@@ -1,8 +1,7 @@
-package com.digirestro.digi_payment_gateway.controller.webhooks;
+package com.digirestro.digi_payment_gateway.integration.webhooks;
 
-import com.digirestro.digi_payment_gateway.adapter.TestPaymentChannelAdapter;
-import com.digirestro.digi_payment_gateway.dto.adaptor.AdaptorWebhookResponse;
-
+import com.digirestro.digi_payment_gateway.integration.adapter.TestPaymentChannelAdapter;
+import com.digirestro.digi_payment_gateway.integration.dto.adaptor.AdaptorWebhookResponse;
 import java.util.Map;
 
 import org.springframework.http.HttpStatus;

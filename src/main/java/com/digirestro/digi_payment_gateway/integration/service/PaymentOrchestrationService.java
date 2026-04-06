@@ -1,12 +1,15 @@
-package com.digirestro.digi_payment_gateway.service;
+package com.digirestro.digi_payment_gateway.integration.service;
 
-import com.digirestro.digi_payment_gateway.adapter.PaymentChannelAdapter;
-import com.digirestro.digi_payment_gateway.dto.PaymentDetailsResponse;
-import com.digirestro.digi_payment_gateway.dto.PaymentLinkRequest;
-import com.digirestro.digi_payment_gateway.dto.PaymentLinkResponse;
-import com.digirestro.digi_payment_gateway.dto.adaptor.AdapterPaymentLinkResponse;
 import com.digirestro.digi_payment_gateway.entity.MerchantEntity;
 import com.digirestro.digi_payment_gateway.entity.PaymentEntity;
+import com.digirestro.digi_payment_gateway.integration.adapter.PaymentChannelAdapter;
+import com.digirestro.digi_payment_gateway.integration.dto.PaymentDetailsResponse;
+import com.digirestro.digi_payment_gateway.integration.dto.PaymentLinkRequest;
+import com.digirestro.digi_payment_gateway.integration.dto.PaymentLinkResponse;
+import com.digirestro.digi_payment_gateway.integration.dto.adaptor.AdapterPaymentLinkResponse;
+import com.digirestro.digi_payment_gateway.service.MerchantService;
+import com.digirestro.digi_payment_gateway.service.PaymentService;
+
 import java.util.List;
 import java.util.Objects;
 import org.springframework.stereotype.Service;
@@ -50,7 +53,6 @@ public class PaymentOrchestrationService {
         payment.setMerchantMetadataJson(request.merchantMetadataJson());
         payment = paymentService.save(payment);
 
-        // adapter will return the payment with the payment link url and payment details
         AdapterPaymentLinkResponse adapterResponse = adapter.createPaymentLink(payment);
         payment.setPaymentLinkUrl(adapterResponse.payment().getPaymentLinkUrl());
         payment.setPaymentChannelTxnId(adapterResponse.payment().getPaymentChannelTxnId());

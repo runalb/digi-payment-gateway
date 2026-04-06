@@ -1,6 +1,6 @@
 package com.digirestro.digi_payment_gateway.config;
 
-import com.digirestro.digi_payment_gateway.security.ApiKeyAuthenticationFilter;
+import com.digirestro.digi_payment_gateway.integration.security.ApiKeyAuthenticationFilter;
 import com.digirestro.digi_payment_gateway.security.JwtAuthenticationFilter;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;

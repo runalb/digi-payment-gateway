@@ -1,4 +1,4 @@
-package com.digirestro.digi_payment_gateway.dto;
+package com.digirestro.digi_payment_gateway.integration.dto;
 
 import jakarta.validation.constraints.DecimalMin;
 import jakarta.validation.constraints.NotBlank;

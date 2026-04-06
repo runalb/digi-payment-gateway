@@ -1,4 +1,4 @@
-package com.digirestro.digi_payment_gateway.service;
+package com.digirestro.digi_payment_gateway.integration.service;
 
 import com.digirestro.digi_payment_gateway.entity.MerchantEntity;
 import org.springframework.http.HttpStatus;

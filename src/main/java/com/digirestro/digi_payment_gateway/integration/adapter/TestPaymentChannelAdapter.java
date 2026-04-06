@@ -1,20 +1,19 @@
-package com.digirestro.digi_payment_gateway.adapter;
+package com.digirestro.digi_payment_gateway.integration.adapter;
 
-import com.digirestro.digi_payment_gateway.dto.adaptor.AdapterPaymentLinkResponse;
-import com.digirestro.digi_payment_gateway.dto.adaptor.AdaptorWebhookResponse;
 import com.digirestro.digi_payment_gateway.entity.PaymentChannelEntity;
 import com.digirestro.digi_payment_gateway.entity.PaymentEntity;
 import com.digirestro.digi_payment_gateway.enums.PaymentChannelNameEnum;
 import com.digirestro.digi_payment_gateway.enums.PaymentStatusEnum;
+import com.digirestro.digi_payment_gateway.integration.dto.adaptor.AdapterPaymentLinkResponse;
+import com.digirestro.digi_payment_gateway.integration.dto.adaptor.AdaptorWebhookResponse;
 import com.digirestro.digi_payment_gateway.service.PaymentChannelService;
 import com.digirestro.digi_payment_gateway.service.PaymentService;
 
 import java.util.Map;
 import java.util.UUID;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
-
-import lombok.extern.slf4j.Slf4j;
 
 @Component
 @Slf4j
@@ -37,7 +36,7 @@ public class TestPaymentChannelAdapter implements PaymentChannelAdapter {
     public AdapterPaymentLinkResponse createPaymentLink(PaymentEntity payment) {
         String paymentChannelTxnId = "TEST-TXN-" + UUID.randomUUID();
         String paymentUrl = "http://localhost:8080/test-payment-link.html?paymentId=" + payment.getId() + "&merchantId=" + payment.getMerchant().getId();
-        
+
         if (!paymentChannelTxnId.isEmpty() && !paymentUrl.isEmpty()) {
             payment.setPaymentChannelTxnId(paymentChannelTxnId);
             payment.setPaymentLinkUrl(paymentUrl);

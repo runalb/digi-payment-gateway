@@ -1,4 +1,4 @@
-package com.digirestro.digi_payment_gateway.dto.adaptor;
+package com.digirestro.digi_payment_gateway.integration.dto.adaptor;
 
 import com.digirestro.digi_payment_gateway.enums.PaymentStatusEnum;
 

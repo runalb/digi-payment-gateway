@@ -1,9 +1,9 @@
-package com.digirestro.digi_payment_gateway.controller.integration;
+package com.digirestro.digi_payment_gateway.integration.controller;
 
-import com.digirestro.digi_payment_gateway.dto.PaymentDetailsResponse;
 import com.digirestro.digi_payment_gateway.entity.MerchantEntity;
-import com.digirestro.digi_payment_gateway.service.IntegrationAuthenticationService;
-import com.digirestro.digi_payment_gateway.service.PaymentOrchestrationService;
+import com.digirestro.digi_payment_gateway.integration.dto.PaymentDetailsResponse;
+import com.digirestro.digi_payment_gateway.integration.service.IntegrationAuthenticationService;
+import com.digirestro.digi_payment_gateway.integration.service.PaymentOrchestrationService;
 import java.util.List;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
