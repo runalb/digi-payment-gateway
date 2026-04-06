@@ -2,7 +2,7 @@
   "info": {
     "_postman_id": "d4c8e2a0-9b1f-4e2d-8c7a-digi-payment-gateway",
     "name": "Digi Payment Gateway",
-    "description": "REST endpoints aligned with the Spring Boot app. Integration routes require header `X-API-Key` (merchant API key; merchant is resolved from the key—do not send `merchantId` in `PaymentLinkRequest`). Most `/api/v1/ui/**` routes require `Authorization: Bearer {{accessToken}}` except user signup and auth endpoints (see `SecurityConfig` / `JwtAuthenticationFilter`). Webhooks under `/webhook/**` are permit-all. Default `baseUrl`: `http://localhost:8080`.",
+    "description": "REST endpoints aligned with the Spring Boot app. Integration routes require header `X-API-Key` (merchant API key; merchant is resolved from the key—do not send `merchantId` in `PaymentLinkRequest`). `/api/v1/portal/**` routes require `Authorization: Bearer {{accessToken}}` except user signup (`POST /api/v1/portal/users`). Auth routes under `/api/v1/auth/**` are public (see `SecurityConfig` / `JwtAuthenticationFilter`). Webhooks under `/webhook/**` are permit-all. Default `baseUrl`: `http://localhost:8080`.",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "variable": [
@@ -159,9 +159,9 @@
                   "raw": "{\n  \"email\": \"user@example.com\",\n  \"password\": \"password123\"\n}"
                 },
                 "url": {
-                  "raw": "{{baseUrl}}/api/v1/ui/auth/login",
+                  "raw": "{{baseUrl}}/api/v1/auth/login",
                   "host": ["{{baseUrl}}"],
-                  "path": ["api", "v1", "ui", "auth", "login"]
+                  "path": ["api", "v1", "auth", "login"]
                 },
                 "description": "`AuthLoginRequest` → `AuthLoginResponse`. Copy `accessToken` / `refreshToken` into collection variables if needed."
               },
@@ -177,9 +177,9 @@
                   "raw": "{\n  \"mobileNumber\": \"+14155552671\"\n}"
                 },
                 "url": {
-                  "raw": "{{baseUrl}}/api/v1/ui/auth/login/mobile/request-otp",
+                  "raw": "{{baseUrl}}/api/v1/auth/login/mobile/request-otp",
                   "host": ["{{baseUrl}}"],
-                  "path": ["api", "v1", "ui", "auth", "login", "mobile", "request-otp"]
+                  "path": ["api", "v1", "auth", "login", "mobile", "request-otp"]
                 },
                 "description": "`AuthMobileOtpRequest` (E.164 mobile). Returns `AuthOtpRequestResponse`."
               },
@@ -195,9 +195,9 @@
                   "raw": "{\n  \"mobileNumber\": \"+14155552671\",\n  \"otp\": \"123456\"\n}"
                 },
                 "url": {
-                  "raw": "{{baseUrl}}/api/v1/ui/auth/login/mobile/verify-otp",
+                  "raw": "{{baseUrl}}/api/v1/auth/login/mobile/verify-otp",
                   "host": ["{{baseUrl}}"],
-                  "path": ["api", "v1", "ui", "auth", "login", "mobile", "verify-otp"]
+                  "path": ["api", "v1", "auth", "login", "mobile", "verify-otp"]
                 },
                 "description": "`AuthMobileVerifyOtpRequest` (6-digit otp)."
               },
@@ -213,9 +213,9 @@
                   "raw": "{\n  \"refreshToken\": \"{{refreshToken}}\"\n}"
                 },
                 "url": {
-                  "raw": "{{baseUrl}}/api/v1/ui/auth/refresh",
+                  "raw": "{{baseUrl}}/api/v1/auth/refresh",
                   "host": ["{{baseUrl}}"],
-                  "path": ["api", "v1", "ui", "auth", "refresh"]
+                  "path": ["api", "v1", "auth", "refresh"]
                 },
                 "description": "`AuthRefreshRequest`."
               },
@@ -231,9 +231,9 @@
                   "raw": "{\n  \"refreshToken\": \"{{refreshToken}}\"\n}"
                 },
                 "url": {
-                  "raw": "{{baseUrl}}/api/v1/ui/auth/logout",
+                  "raw": "{{baseUrl}}/api/v1/auth/logout",
                   "host": ["{{baseUrl}}"],
-                  "path": ["api", "v1", "ui", "auth", "logout"]
+                  "path": ["api", "v1", "auth", "logout"]
                 },
                 "description": "`AuthLogoutRequest`. 204 No Content."
               },
@@ -254,9 +254,9 @@
                   "raw": "{\n  \"email\": \"newuser@example.com\",\n  \"password\": \"password123\",\n  \"name\": \"New User\",\n  \"mobileNumber\": \"+14155552671\"\n}"
                 },
                 "url": {
-                  "raw": "{{baseUrl}}/api/v1/ui/users",
+                  "raw": "{{baseUrl}}/api/v1/portal/users",
                   "host": ["{{baseUrl}}"],
-                  "path": ["api", "v1", "ui", "users"]
+                  "path": ["api", "v1", "portal", "users"]
                 },
                 "description": "`UserCreateRequest` (mobileNumber optional; E.164 if set). Public (no Bearer)."
               },
@@ -268,9 +268,9 @@
                 "method": "GET",
                 "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }],
                 "url": {
-                  "raw": "{{baseUrl}}/api/v1/ui/users",
+                  "raw": "{{baseUrl}}/api/v1/portal/users",
                   "host": ["{{baseUrl}}"],
-                  "path": ["api", "v1", "ui", "users"]
+                  "path": ["api", "v1", "portal", "users"]
                 },
                 "description": "Currently returns 501 Not Implemented."
               },
@@ -282,9 +282,9 @@
                 "method": "GET",
                 "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }],
                 "url": {
-                  "raw": "{{baseUrl}}/api/v1/ui/users/{{userId}}",
+                  "raw": "{{baseUrl}}/api/v1/portal/users/{{userId}}",
                   "host": ["{{baseUrl}}"],
-                  "path": ["api", "v1", "ui", "users", "{{userId}}"]
+                  "path": ["api", "v1", "portal", "users", "{{userId}}"]
                 },
                 "description": "501 Not Implemented."
               },
@@ -303,9 +303,9 @@
                   "raw": "{\n  \"name\": \"Updated Name\"\n}"
                 },
                 "url": {
-                  "raw": "{{baseUrl}}/api/v1/ui/users/{{userId}}",
+                  "raw": "{{baseUrl}}/api/v1/portal/users/{{userId}}",
                   "host": ["{{baseUrl}}"],
-                  "path": ["api", "v1", "ui", "users", "{{userId}}"]
+                  "path": ["api", "v1", "portal", "users", "{{userId}}"]
                 },
                 "description": "501 Not Implemented; body is generic JSON map in controller."
               },
@@ -317,9 +317,9 @@
                 "method": "DELETE",
                 "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }],
                 "url": {
-                  "raw": "{{baseUrl}}/api/v1/ui/users/{{userId}}",
+                  "raw": "{{baseUrl}}/api/v1/portal/users/{{userId}}",
                   "host": ["{{baseUrl}}"],
-                  "path": ["api", "v1", "ui", "users", "{{userId}}"]
+                  "path": ["api", "v1", "portal", "users", "{{userId}}"]
                 },
                 "description": "Soft-deactivates user via `UserService`."
               },
@@ -343,9 +343,9 @@
                   "raw": "{\n  \"name\": \"Acme Corp\",\n  \"currency\": \"USD\",\n  \"webhookUrl\": \"https://merchant.example/hooks\"\n}"
                 },
                 "url": {
-                  "raw": "{{baseUrl}}/api/v1/ui/merchants",
+                  "raw": "{{baseUrl}}/api/v1/portal/merchants",
                   "host": ["{{baseUrl}}"],
-                  "path": ["api", "v1", "ui", "merchants"]
+                  "path": ["api", "v1", "portal", "merchants"]
                 },
                 "description": "`MerchantRegistrationRequest` (currency optional 3-letter ISO 4217; webhookUrl optional). Requires Bearer per security rules."
               },
@@ -357,9 +357,9 @@
                 "method": "GET",
                 "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }],
                 "url": {
-                  "raw": "{{baseUrl}}/api/v1/ui/merchants",
+                  "raw": "{{baseUrl}}/api/v1/portal/merchants",
                   "host": ["{{baseUrl}}"],
-                  "path": ["api", "v1", "ui", "merchants"]
+                  "path": ["api", "v1", "portal", "merchants"]
                 },
                 "description": "501 Not Implemented."
               },
@@ -371,9 +371,9 @@
                 "method": "GET",
                 "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }],
                 "url": {
-                  "raw": "{{baseUrl}}/api/v1/ui/merchants/{{merchantId}}",
+                  "raw": "{{baseUrl}}/api/v1/portal/merchants/{{merchantId}}",
                   "host": ["{{baseUrl}}"],
-                  "path": ["api", "v1", "ui", "merchants", "{{merchantId}}"]
+                  "path": ["api", "v1", "portal", "merchants", "{{merchantId}}"]
                 },
                 "description": "501 Not Implemented."
               },
@@ -389,9 +389,9 @@
                 ],
                 "body": { "mode": "raw", "raw": "{}" },
                 "url": {
-                  "raw": "{{baseUrl}}/api/v1/ui/merchants/{{merchantId}}",
+                  "raw": "{{baseUrl}}/api/v1/portal/merchants/{{merchantId}}",
                   "host": ["{{baseUrl}}"],
-                  "path": ["api", "v1", "ui", "merchants", "{{merchantId}}"]
+                  "path": ["api", "v1", "portal", "merchants", "{{merchantId}}"]
                 },
                 "description": "501 Not Implemented."
               },
@@ -403,9 +403,9 @@
                 "method": "DELETE",
                 "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }],
                 "url": {
-                  "raw": "{{baseUrl}}/api/v1/ui/merchants/{{merchantId}}",
+                  "raw": "{{baseUrl}}/api/v1/portal/merchants/{{merchantId}}",
                   "host": ["{{baseUrl}}"],
-                  "path": ["api", "v1", "ui", "merchants", "{{merchantId}}"]
+                  "path": ["api", "v1", "portal", "merchants", "{{merchantId}}"]
                 },
                 "description": "Deactivates merchant via `MerchantService`."
               },
@@ -424,9 +424,9 @@
                   "raw": "{\n  \"paymentChannelId\": 1,\n  \"paymentChannelName\": \"TEST\",\n  \"isActive\": true,\n  \"configJson\": \"{}\"\n}"
                 },
                 "url": {
-                  "raw": "{{baseUrl}}/api/v1/ui/merchants/{{merchantId}}/payment-channel-configs",
+                  "raw": "{{baseUrl}}/api/v1/portal/merchants/{{merchantId}}/payment-channel-configs",
                   "host": ["{{baseUrl}}"],
-                  "path": ["api", "v1", "ui", "merchants", "{{merchantId}}", "payment-channel-configs"]
+                  "path": ["api", "v1", "portal", "merchants", "{{merchantId}}", "payment-channel-configs"]
                 },
                 "description": "`MerchantPaymentChannelConfigCreateRequest`. `paymentChannelName` is `PaymentChannelNameEnum` (XPLORPAY, PAYMOB, STRIPE, RAZORPAY, TEST)."
               },
@@ -438,9 +438,9 @@
                 "method": "GET",
                 "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }],
                 "url": {
-                  "raw": "{{baseUrl}}/api/v1/ui/merchants/{{merchantId}}/payment-channel-configs",
+                  "raw": "{{baseUrl}}/api/v1/portal/merchants/{{merchantId}}/payment-channel-configs",
                   "host": ["{{baseUrl}}"],
-                  "path": ["api", "v1", "ui", "merchants", "{{merchantId}}", "payment-channel-configs"]
+                  "path": ["api", "v1", "portal", "merchants", "{{merchantId}}", "payment-channel-configs"]
                 },
                 "description": "501 Not Implemented."
               },
@@ -452,12 +452,12 @@
                 "method": "GET",
                 "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }],
                 "url": {
-                  "raw": "{{baseUrl}}/api/v1/ui/merchants/{{merchantId}}/payment-channel-configs/{{configId}}",
+                  "raw": "{{baseUrl}}/api/v1/portal/merchants/{{merchantId}}/payment-channel-configs/{{configId}}",
                   "host": ["{{baseUrl}}"],
                   "path": [
                     "api",
                     "v1",
-                    "ui",
+                    "portal",
                     "merchants",
                     "{{merchantId}}",
                     "payment-channel-configs",
@@ -478,12 +478,12 @@
                 ],
                 "body": { "mode": "raw", "raw": "{}" },
                 "url": {
-                  "raw": "{{baseUrl}}/api/v1/ui/merchants/{{merchantId}}/payment-channel-configs/{{configId}}",
+                  "raw": "{{baseUrl}}/api/v1/portal/merchants/{{merchantId}}/payment-channel-configs/{{configId}}",
                   "host": ["{{baseUrl}}"],
                   "path": [
                     "api",
                     "v1",
-                    "ui",
+                    "portal",
                     "merchants",
                     "{{merchantId}}",
                     "payment-channel-configs",
@@ -500,12 +500,12 @@
                 "method": "DELETE",
                 "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }],
                 "url": {
-                  "raw": "{{baseUrl}}/api/v1/ui/merchants/{{merchantId}}/payment-channel-configs/{{configId}}",
+                  "raw": "{{baseUrl}}/api/v1/portal/merchants/{{merchantId}}/payment-channel-configs/{{configId}}",
                   "host": ["{{baseUrl}}"],
                   "path": [
                     "api",
                     "v1",
-                    "ui",
+                    "portal",
                     "merchants",
                     "{{merchantId}}",
                     "payment-channel-configs",
@@ -513,25 +513,6 @@
                   ]
                 },
                 "description": "Deactivates config via `MerchantService`."
-              },
-              "response": []
-            }
-          ]
-        },
-        {
-          "name": "Misc",
-          "item": [
-            {
-              "name": "UI test",
-              "request": {
-                "method": "GET",
-                "header": [],
-                "url": {
-                  "raw": "{{baseUrl}}/api/v1/ui/test",
-                  "host": ["{{baseUrl}}"],
-                  "path": ["api", "v1", "ui", "test"]
-                },
-                "description": "`UiController` placeholder; permit-all."
               },
               "response": []
             }
