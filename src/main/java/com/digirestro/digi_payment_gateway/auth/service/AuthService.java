@@ -67,7 +67,7 @@ public class AuthService {
     @Transactional
     public AuthLoginResponse login(AuthLoginRequest request) {
         String normalizedEmail = request.email().trim().toLowerCase();
-        var user = userService.findActiveUserByEmail(normalizedEmail);
+        UserEntity user = userService.findActiveUserByEmail(normalizedEmail);
 
         if (!passwordEncoder.matches(request.password(), user.getPasswordHash())) {
             throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Invalid credentials");

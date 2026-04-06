@@ -4,9 +4,10 @@ import com.digirestro.digi_payment_gateway.dto.MerchantRegistrationRequest;
 import com.digirestro.digi_payment_gateway.dto.MerchantRegistrationResponse;
 import com.digirestro.digi_payment_gateway.dto.MerchantPaymentChannelConfigCreateRequest;
 import com.digirestro.digi_payment_gateway.dto.MerchantPaymentChannelConfigResponse;
-import com.digirestro.digi_payment_gateway.entity.MerchantPaymentChannelConfigEntity;
 import com.digirestro.digi_payment_gateway.entity.MerchantConfigEntity;
 import com.digirestro.digi_payment_gateway.entity.MerchantEntity;
+import com.digirestro.digi_payment_gateway.entity.MerchantPaymentChannelConfigEntity;
+import com.digirestro.digi_payment_gateway.entity.PaymentChannelEntity;
 import com.digirestro.digi_payment_gateway.repository.MerchantConfigRepository;
 import com.digirestro.digi_payment_gateway.repository.MerchantPaymentChannelConfigRepository;
 import com.digirestro.digi_payment_gateway.repository.MerchantRepository;
@@ -83,11 +84,11 @@ public class MerchantService {
 
     @Transactional
     public MerchantPaymentChannelConfigResponse createMerchantPaymentChannelConfig(Long merchantId, MerchantPaymentChannelConfigCreateRequest request) {
-        var merchant = merchantRepository
+        MerchantEntity merchant = merchantRepository
                 .findById(merchantId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Merchant not found"));
 
-        var paymentChannel = paymentChannelService.findById(request.paymentChannelId());
+        PaymentChannelEntity paymentChannel = paymentChannelService.findById(request.paymentChannelId());
 
         if (merchantPaymentChannelConfigRepository.existsByMerchant_IdAndPaymentChannel_Id(merchantId, paymentChannel.getId())) {
             throw new ResponseStatusException(HttpStatus.CONFLICT, "Merchant already has configuration for this payment channel");

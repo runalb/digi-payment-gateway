@@ -1,5 +1,6 @@
 package com.digirestro.digi_payment_gateway.integration.security;
 
+import com.digirestro.digi_payment_gateway.entity.MerchantEntity;
 import com.digirestro.digi_payment_gateway.repository.MerchantRepository;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
@@ -49,13 +50,13 @@ public class ApiKeyAuthenticationFilter extends OncePerRequestFilter {
             return;
         }
 
-        var merchant = merchantRepository.findByApiKey(apiKey.trim()).orElse(null);
+        MerchantEntity merchant = merchantRepository.findByApiKey(apiKey.trim()).orElse(null);
         if (merchant == null || !Boolean.TRUE.equals(merchant.getIsActive())) {
             unauthorized(response, "Invalid API key");
             return;
         }
 
-        var auth = new UsernamePasswordAuthenticationToken(
+        UsernamePasswordAuthenticationToken auth = new UsernamePasswordAuthenticationToken(
                 merchant,
                 null,
                 List.of(new SimpleGrantedAuthority("ROLE_INTEGRATION")));
