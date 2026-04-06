@@ -1,4 +1,4 @@
-package com.digirestro.digi_payment_gateway.controller.ui;
+package com.digirestro.digi_payment_gateway.controller.portal;
 
 import com.digirestro.digi_payment_gateway.dto.MerchantPaymentChannelConfigCreateRequest;
 import com.digirestro.digi_payment_gateway.dto.MerchantPaymentChannelConfigResponse;
@@ -19,7 +19,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 @RestController
-@RequestMapping("/api/v1/ui/merchants")
+@RequestMapping("/api/v1/portal/merchants")
 public class MerchantController {
 
     private final MerchantService merchantService;

@@ -1,4 +1,4 @@
-package com.digirestro.digi_payment_gateway.controller.ui;
+package com.digirestro.digi_payment_gateway.controller.portal;
 
 import com.digirestro.digi_payment_gateway.dto.UserCreateRequest;
 import com.digirestro.digi_payment_gateway.dto.UserResponse;
@@ -17,7 +17,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 @RestController
-@RequestMapping("/api/v1/ui/users")
+@RequestMapping("/api/v1/portal/users")
 public class UserController {
 
     private final UserService userService;
