@@ -112,12 +112,6 @@
     }
     button[type="submit"]:hover { filter: brightness(1.08); }
     button[type="submit"]:disabled { opacity: 0.5; cursor: not-allowed; }
-    .hint {
-      font-size: 0.75rem;
-      color: var(--muted);
-      margin-top: 0.5rem;
-      line-height: 1.4;
-    }
     #result {
       margin-top: 1.25rem;
       padding: 1rem;
@@ -183,6 +177,10 @@
         <span class="k">Merchant id</span>
         <span class="v" id="displayMerchantId">—</span>
       </div>
+      <div class="url-context-row">
+        <span class="k">Amount</span>
+        <span class="v" id="displayAmount">—</span>
+      </div>
     </div>
 
     <form id="payForm" novalidate>
@@ -210,12 +208,6 @@
       </div>
 
       <button type="submit" id="payBtn">Pay</button>
-      <p class="hint">
-        Example Payment URL link: <br>
-        <code id="paymentLinkUrl"></code>
-        <br><br>
-        Webhook: <br><code id="webhookUrl"></code><br>
-      </p>
     </form>
 
     <div id="result" role="status"></div>
@@ -228,18 +220,16 @@
       const payBtn = document.getElementById('payBtn');
       const apiBaseUrl = 'http://localhost:8080';
       const webhookPath = '/webhook/v1/payment-channel-webhooks/test';
-      const paymentLinkUrl = apiBaseUrl + '/test-payment-link.html?paymentId={ID}&merchantId={MERCHANT_ID}';
-      const paymentLinkUrlEl = document.getElementById('paymentLinkUrl');
-      paymentLinkUrlEl.textContent = paymentLinkUrl;
-      const webhookUrl = document.getElementById('webhookUrl');
-      webhookUrl.textContent = apiBaseUrl + webhookPath;
 
       const params = new URLSearchParams(window.location.search);
       const paymentIdFromUrl = params.get('paymentId');
       const merchantIdFromUrl = params.get('merchantId');
+      const amountFromUrl = params.get('amount');
+      const currencyFromUrl = params.get('currency');
 
       const displayPaymentId = document.getElementById('displayPaymentId');
       const displayMerchantId = document.getElementById('displayMerchantId');
+      const displayAmount = document.getElementById('displayAmount');
       const paymentIdTrim =
         paymentIdFromUrl == null || String(paymentIdFromUrl).trim() === ''
           ? null
@@ -263,6 +253,37 @@
         displayMerchantId.classList.add('missing');
       }
 
+      const amountTrim =
+        amountFromUrl == null || String(amountFromUrl).trim() === ''
+          ? null
+          : String(amountFromUrl).trim();
+      const currencyTrim =
+        currencyFromUrl == null || String(currencyFromUrl).trim() === ''
+          ? null
+          : String(currencyFromUrl).trim().toUpperCase();
+      if (amountTrim && currencyTrim) {
+        const num = Number(amountTrim);
+        if (Number.isFinite(num)) {
+          try {
+            displayAmount.textContent = new Intl.NumberFormat(undefined, {
+              style: 'currency',
+              currency: currencyTrim,
+            }).format(num);
+          } catch (_) {
+            displayAmount.textContent = amountTrim + ' ' + currencyTrim;
+          }
+        } else {
+          displayAmount.textContent = amountTrim + ' ' + currencyTrim;
+        }
+        displayAmount.classList.remove('missing');
+      } else if (amountTrim) {
+        displayAmount.textContent = amountTrim;
+        displayAmount.classList.remove('missing');
+      } else {
+        displayAmount.textContent = 'not set (add ?amount=…&currency=…)';
+        displayAmount.classList.add('missing');
+      }
+
       function digitsOnly(s) {
         return (s || '').replace(/\D/g, '');
       }
@@ -283,6 +304,33 @@
       function showResult(ok, text) {
         resultEl.className = 'show ' + (ok ? 'ok' : 'err');
         resultEl.textContent = text;
+      }
+
+      function formatFetchFailure(err, requestUrl) {
+        const lines = [];
+        lines.push('The request did not complete. Details below.');
+        lines.push('');
+        lines.push('Status code: N/A (no HTTP response — connection or CORS failed before status was received)');
+        lines.push('');
+        if (err != null) {
+          if (typeof err === 'object' && 'name' in err && err.name) {
+            lines.push('Error type: ' + err.name);
+          }
+          if (typeof err === 'object' && 'message' in err && err.message) {
+            lines.push('Message: ' + err.message);
+          } else if (typeof err !== 'object' || !err.message) {
+            lines.push('Message: ' + String(err));
+          }
+          if (typeof err === 'object' && err.cause != null) {
+            lines.push('Cause: ' + (err.cause && err.cause.message ? err.cause.message : String(err.cause)));
+          }
+        } else {
+          lines.push('Message: (unknown error)');
+        }
+        lines.push('');
+        lines.push('URL attempted:');
+        lines.push(requestUrl);
+        return lines.join('\n');
       }
 
       const cardNumberInput = document.getElementById('cardNumber');
@@ -383,8 +431,9 @@
         }
 
         payBtn.disabled = true;
+        const webhookRequestUrl = apiBaseUrl + webhookPath;
         try {
-          const res = await fetch(apiBaseUrl + webhookPath, {
+          const res = await fetch(webhookRequestUrl, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
             body: JSON.stringify(payload),
@@ -397,15 +446,27 @@
             parsed = bodyText;
           }
           if (!res.ok) {
-            showResult(false, 'HTTP ' + res.status + '\n\n' + (typeof parsed === 'string' ? parsed : JSON.stringify(parsed, null, 2)));
+            const statusLine =
+              'Status code: ' +
+              res.status +
+              (res.statusText ? ' ' + res.statusText : '') +
+              '\n\n' +
+              (typeof parsed === 'string' ? parsed : JSON.stringify(parsed, null, 2));
+            showResult(false, statusLine);
             return;
           }
           showResult(
             true,
-            'Webhook OK (' + res.status + ')\n\nSent JSON:\n' + JSON.stringify(payload, null, 2) + '\n\nResponse:\n' + JSON.stringify(parsed, null, 2)
+            'Status code: ' +
+              res.status +
+              (res.statusText ? ' ' + res.statusText : '') +
+              '\n\nWebhook OK.\n\nSent JSON:\n' +
+              JSON.stringify(payload, null, 2) +
+              '\n\nResponse:\n' +
+              JSON.stringify(parsed, null, 2)
           );
         } catch (err) {
-          showResult(false, 'Request failed: ' + (err && err.message ? err.message : String(err)));
+          showResult(false, formatFetchFailure(err, webhookRequestUrl));
         } finally {
           payBtn.disabled = false;
         }
