@@ -1,622 +1,412 @@
 # Digi Payment Gateway — Architecture Documentation
 
-## Overview
-
-The **Digi Payment Gateway** is a Common Payment Gateway Application that acts as an intermediary between consumer applications (e-commerce platforms, booking systems, ERP/POS systems) and multiple payment channels. It provides a unified API layer so consumers integrate once and can use any supported payment channel.
+This document describes the **digi-payment-gateway** service as implemented in the repository: responsibilities, layering, APIs, security, data model, and extension points. It reflects the current code (Spring Boot 4, Java 21, PostgreSQL).
 
 ---
 
-## 1. High-Level Architecture
+## 1. Purpose and scope
 
-```
-┌───────────────────────────────────────────────────────────────────────────────────────────────────┐
-│                              CONSUMER APPLICATIONS                                                │
-│  (E-commerce, Booking Systems, ERP/POS, etc.)                                                     │
-└───────────────────────────────────────────────────────────────────────────────────────────────────┘
-                                           │
-                                           │ REST API (Unified)
-                                           ▼
-┌───────────────────────────────────────────────────────────────────────────────────────────────────┐
-│                        DIGI PAYMENT GATEWAY (Spring Boot)                                         │
-│  ┌─────────────────────────────────────────────────────────────────────────────────────────────┐  │
-│  │                    Consumer API Layer (REST Controllers)                                    │  │
-│  │  /api/v1/integration/payment-links  │  /api/v1/integration/terminal-payments  │  /api/v1/ui │  │
-│  │  /webhook/v1/payment-channel-webhooks  (payment channel → gateway)                         │  │
-│  └─────────────────────────────────────────────────────────────────────────────────────────────┘  │
-│                                           │                                                       │
-│  ┌─────────────────────────────────────────────────────────────────────────────────────────────┐  │
-│  │                    Payment Orchestration Service                                            │  │
-│  │  • Channel Selection  • Request Routing  • Response Mapping  • Retry Logic                  │  │
-│  └─────────────────────────────────────────────────────────────────────────────────────────────┘  │
-│                                           │                                                       │
-│  ┌─────────────────────────────────────────────────────────────────────────────────────────────┐  │
-│  │                    Payment Channel Adapters (Strategy Pattern)                              │  │
-│  │  ┌─────────────┐  ┌─────────────┐  ┌─────────────┐  ┌─────────────┐  ┌─────────────────┐    │  │
-│  │  │ XplorPay    │  │ Paymob      │  │ Stripe      │  │ Razorpay    │  │ Future channels │    │  │
-│  │  │ Adapter     │  │ Adapter     │  │ Adapter     │  │ Adapter     │  │                 │    │  │
-│  │  └─────────────┘  └─────────────┘  └─────────────┘  └─────────────┘  └─────────────────┘    │  │
-│  └─────────────────────────────────────────────────────────────────────────────────────────────┘  │
-│                                           │                                                       │
-│  ┌─────────────────────────────────────────────────────────────────────────────────────────────┐  │
-│  │                    Webhook Processing Layer                                                 │  │
-│  │  • Payment channel webhook receivers  • Validation  • Status Update  • Consumer Forwarding  │  │
-│  └─────────────────────────────────────────────────────────────────────────────────────────────┘  │
-│                                           │                                                       │
-│  ┌─────────────────────────────────────────────────────────────────────────────────────────────┐  │
-│  │                    Configuration & Persistence                                              │  │
-│  │  • Merchant/Channel Config  • Payment Records  • Transaction Logs  • Retry Queue            │  │
-│  └─────────────────────────────────────────────────────────────────────────────────────────────┘  │
-└───────────────────────────────────────────────────────────────────────────────────────────────────┘
-                                           │
-     ┌────────────────────┬────────────────┼────────────────┬────────────────┬────────────────────┐
-     ▼                    ▼                ▼                ▼                ▼
-┌──────────┐  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐
-│PostgreSQL│  │ XplorPay API │  │  Paymob API  │  │  Stripe API  │  │ Razorpay API │
-│(Database)│  │    (1st)     │  │    (2nd)     │  │    (3rd)     │  │    (4th)     │
-└──────────┘  └──────────────┘  └──────────────┘  └──────────────┘  └──────────────┘
-```
+The service is a **backend payment orchestration API** that:
+
+- Exposes **integration APIs** for **third-party merchant systems**: those clients authenticate **only with an API key** (`X-API-Key`); they do not use JWT for integration routes.
+- Exposes **portal APIs** consumed by **our UI**: operators sign **in first** (password or OTP flows) to receive a **JWT** (and refresh token), then call protected portal endpoints with `Authorization: Bearer <token>`.
+- Provides **authentication** endpoints (login, email/mobile OTP, refresh, logout) and **user registration** as public pre-login steps where applicable.
+- Accepts **payment channel webhooks** (currently wired for a **test** adapter) to update payment status.
+- Persists merchants, users, payments, and configuration in **PostgreSQL** via **JPA/Hibernate**.
+
+It is **not** a full front-end application. Several UI merchant/user list and detail endpoints return **501 Not Implemented** with TODOs for JWT subject-to-merchant authorization.
 
 ---
 
-## 2. Component Breakdown
-
-### 2.1 Consumer API Layer
+## 2. Client access model
 
 
-| Component                             | Responsibility                         | Endpoints                                                                 |
-| ------------------------------------- | -------------------------------------- | ------------------------------------------------------------------------- |
-| **PaymentLinkIntegrationController**  | Payment links (server-to-server)       | `POST /api/v1/integration/payment-links/create`, `GET /api/v1/integration/payment-links/{id}` |
-| **TerminalPaymentIntegrationController** | Terminal payments (stub)          | `GET /api/v1/integration/terminal-payments/test`                          |
-| **PaymentChannelWebhookController**   | Inbound webhooks from payment channels | `POST /webhook/v1/payment-channel-webhooks/test` (TEST channel stub)     |
-| **UiController**                      | Management UI API (stub)               | `GET /api/v1/ui/test`                                                     |
-| **Actuator**                          | Health & readiness                     | `GET /actuator/health`                                                    |
+| Client                                                         | APIs                                                                                                                                      | Authentication                                                                                                                                           |
+| -------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Third-party client** (merchant backend, partner integration) | **Integration only** — `/api/v1/integration/`** (payment links, transactions, terminal test placeholder)                                  | **API key** in header `X-API-Key`. JWT is **not** used on these paths.                                                                                   |
+| **UI portal** (first-party admin/merchant portal)              | **Portal resource APIs** — `/api/v1/portal/`** (merchants, users, etc.). **Auth APIs** — `/api/v1/auth/`** (login, OTP, refresh, logout). | **JWT** after login: obtain access token from auth endpoints, then send `Authorization: Bearer <access_token>`. Refresh via `POST /api/v1/auth/refresh`. |
 
 
-**Key Features:**
+**Flow in practice**
 
-- Single API contract for all consumers
-- Request validation and error mapping
-- Consistent response format (JSON)
+1. **Third-party system:** Configure the merchant’s API key (issued at onboarding). Call integration endpoints server-to-server with that key only.
+2. **Portal user:** Open the UI → register or use existing account → **login** (password or OTP) → store access/refresh tokens → attach Bearer token to every subsequent portal API request until expiry, then refresh or log in again.
 
-**Authentication:**
+**Public (unauthenticated) paths** are limited to what Spring Security and `JwtAuthenticationFilter` allow without a JWT: for example user signup (`POST /api/v1/portal/users`), auth login/OTP/refresh/logout under `/api/v1/auth/`**, and `OPTIONS`. Other `/api/**` routes typically require a valid JWT.
 
-- **Target model:** **API key (`Merchant.apiKey`)** for server-to-server integration calls (e.g. header `X-API-Key`) on payment-link and related integration APIs; **JWT** for login and UI/configuration. These are not wired to endpoint rules yet.
-- **Current application:** `SecurityConfig` uses `authorizeHttpRequests(anyRequest().permitAll())` with HTTP Basic available on the filter chain — suitable for local development only. Harden before production.
+**Webhooks** (`/webhook/`**) are a separate inbound channel from payment providers; they are not called by the third-party client or the portal user browser for normal API access.
 
 ---
 
-### 2.2 Payment Orchestration Service
+## 3. Technology stack
 
 
-| Responsibility                 | Description                                                           |
-| ------------------------------ | --------------------------------------------------------------------- |
-| **Merchant config resolution** | Loads **`merchant_config`** (1:1) for **currency** on payment-link creation and **webhookUrl** when notifying the consumer |
-| **Payment channel resolution** | Resolves which payment channel to use based on **`merchant_channel_config`** |
-| **Request Routing**            | Delegates to the appropriate adapter implementation                   |
-| **Response Mapping**           | Normalizes payment channel-specific responses to a common format      |
-| **Retry Logic**                | Idempotent retries with exponential backoff for transient failures    |
-| **Logging**                    | Structured logging for audit and debugging                            |
+| Area        | Choice                                                                                     |
+| ----------- | ------------------------------------------------------------------------------------------ |
+| Runtime     | Java 21                                                                                    |
+| Framework   | Spring Boot 4.0.x (`spring-boot-starter-webmvc`, validation, security, data-jpa, actuator) |
+| Persistence | Spring Data JPA, Hibernate (`ddl-auto`: `update` in dev, `validate` in prod)               |
+| Database    | PostgreSQL                                                                                 |
+| Security    | Spring Security; custom **JWT** (HMAC-SHA256); **API key** header for integration routes   |
+| Build       | Maven (`pom.xml`)                                                                          |
+| Utilities   | Lombok                                                                                     |
 
 
 ---
 
-### 2.3 Payment Channel Adapters (Strategy Pattern)
-
-```java
-// Actual interface (package adapter)
-public interface PaymentChannelAdapter {
-    PaymentChannelEntity getChannel();
-
-    AdapterPaymentLinkResponse createPaymentLink(
-            PaymentEntity payment,
-            MerchantConfigEntity merchantConfig,
-            MerchantChannelConfigEntity channelConfig);
-
-    // Record: status, paymentId, paymentChannelTxnId, merchantReferencePaymentId
-    AdaptorWebhookResponse validateAndParseWebhook(String payload, String signature, String secret);
-}
-```
-
-
-| Adapter                    | Implementation Order | Payment channel API                        |
-| -------------------------- | -------------------- | ------------------------------------------ |
-| **TestPaymentChannelAdapter** | Implemented (dev) | In-process TEST channel (no external API)  |
-| **XplorPayAdapter**        | 1st (planned)        | XplorPay REST API                          |
-| **PaymobAdapter**          | 2nd (planned)        | Paymob REST API                            |
-| **StripeAdapter**          | 3rd (planned)        | Stripe REST API                            |
-| **RazorpayAdapter**        | 4th (planned)        | Razorpay REST API                          |
-| **Future adapters**        | Extensible           | New `@Component` implementing the interface |
-
-
-#### Outbound HTTP Standard (Direct RestTemplate)
-
-- `RestTemplate` is the standard outbound HTTP client for all payment channel API calls.
-- Adapters and outbound services inject `RestTemplate` directly and call `exchange(...)` for GET/POST/PUT operations.
-- No dedicated outbound HTTP wrapper/facade service should be introduced.
-- A shared Spring bean configuration provides timeout defaults, interceptor chain, and centralized `ResponseErrorHandler`.
-- Adapter code remains responsible for provider-specific request/response mapping and converting transport errors to domain exceptions.
-- Outbound request/response details are persisted to `payment_channel_api_log` with secrets masked or omitted.
-
-
-**Adding a new payment channel:**
-
-1. Create `XxxChannelAdapter` implementing `PaymentChannelAdapter`
-2. Register as Spring bean with `@Component`
-3. Add payment channel configuration in `merchant_channel_config` table
-4. Inject `RestTemplate` directly and implement outbound calls via `exchange(...)`
-5. Ensure outbound API logs are persisted to `payment_channel_api_log`
-6. No changes to consumer API or orchestration layer
-
----
-
-### 2.4 Webhook Processing Layer
-
-
-| Component                               | Responsibility                                                                                |
-| --------------------------------------- | --------------------------------------------------------------------------------------------- |
-| **Payment channel webhook controllers** | Receive webhooks under `/webhook/v1/payment-channel-webhooks/...` (e.g. `/test` for TEST); add per-provider paths as adapters ship |
-| **Webhook Validator**                   | Verify signature/secret per payment channel                                                   |
-| **Webhook Processor**                   | Parse payload, update payment record, trigger consumer notification                           |
-| **Consumer Notification Service**       | Forward payment result to the consumer webhook URL from `merchant_config` with retry          |
-
-
----
-
-### 2.5 Configuration & Persistence
-
-
-| Component                          | Responsibility                                                  |
-| ---------------------------------- | --------------------------------------------------------------- |
-| **MerchantConfigService**          | Manage merchant and payment channel configurations              |
-| **PaymentRepository**              | Store payment records and transaction data                      |
-| **WebhookIncomingLogRepository**   | Log incoming payment channel webhooks for audit and debugging   |
-| **PaymentChannelApiLogRepository** | Log outbound request/response for each payment channel API call |
-
-
----
-
-## 3. Webhook Flow
-
-```
-┌──────────────┐     ┌─────────────────────┐     ┌─────────────────────┐     ┌─────────────┐
-│   Payment    │     │  Digi Payment       │     │  Digi Payment       │     │   Consumer  │
-│   Channel    │     │  Gateway            │     │  Gateway            │     │   System    │
-│  (XplorPay)  │     │  (Webhook Receiver) │     │  (Processor)        │     │             │
-└──────┬───────┘     └──────────┬──────────┘     └──────────┬──────────┘     └─────┬───────┘
-       │                        │                           │                      │
-       │ 1. POST /webhook/v1/   │                           │                      │
-       │    payment-channel-    │                           │                      │
-       │    webhooks/…          │                           │                      │
-       │  (payment status)      │                           │                      │
-       │───────────────────────>│                           │                      │
-       │                        │                           │                      │
-       │                        │ 2. Validate signature     │                      │
-       │                        │    (HMAC/secret)          │                      │
-       │                        │                           │                      │
-       │                        │ 3. Parse & store          │                      │
-       │                        │──────────────────────────>│                      │
-       │                        │                           │                      │
-       │                        │                           │ 4. Update payment    │
-       │                        │                           │    record in DB      │
-       │                        │                           │                      │
-       │                        │                           │ 5. Forward to        │
-       │                        │                           │    consumer webhook  │
-       │                        │                           │─────────────────────>│
-       │                        │                           │                      │
-       │                        │                           │ 6. 200 OK            │
-       │                        │                           │<─────────────────────│
-       │                        │                           │                      │
-       │ 7. 200 OK              │                           │                      │
-       │<───────────────────────│                           │                      │
-       │                        │                           │                      │
-       │                        │  (If consumer fails: retry with backoff)         │
-       │                        │                           │                      │
-```
-
-### Webhook Steps
-
-1. **Receive** — Payment channel sends HTTP POST to `POST /webhook/v1/payment-channel-webhooks/...` (today: `/test` for the TEST adapter; future providers get dedicated subpaths).
-2. **Validate** — Verify signature/secret using payment channel-specific validation (HMAC, API key, etc.).
-3. **Parse** — Extract payment ID, status, amount, payment channel transaction ID.
-4. **Store** — Update `payment` record and optionally `webhook_incoming_log`.
-5. **Forward** — Call the consumer webhook URL stored on **`merchant_config.webhookUrl`** (one row per merchant) with a normalized payload.
-6. **Retry** — If consumer webhook fails, retry with exponential backoff (configurable).
-
----
-
-## 4. Data Model (Java Entities)
-
-Primary keys are **Long**, **unique**, and identity-generated (1, 2, 3, …). Types below are Java entity field types. The model includes **UserEntity**, **MerchantEntity**, **MerchantConfigEntity**, **PaymentChannelEntity**, **MerchantChannelConfigEntity**, **PaymentEntity**, **WebhookIncomingLogEntity**, **WebhookMerchantLogEntity**, and **PaymentChannelApiLogEntity**, plus the join table **user_merchant** (UserEntity ↔ MerchantEntity, no separate entity). Java class names use the `Entity` suffix; database table names are unchanged (e.g. `users`, `merchant`, `merchant_config`, `payment_channel`, `merchant_channel_config`, `payment`, `webhook_incoming_log`, `webhook_merchant_log`, `payment_channel_api_log`).
-
-### 4.1 Entity Relationship Diagram
-
-The entity definitions in **§4.2** follow this diagram.
-
-```
-┌─────────────────────┐       ┌─────────────────────────────┐
-│ UserEntity          │       │ user_merchant (join table)  │       │ MerchantEntity      │
-│ table: users        │       │ user_id, merchant_id        │       │ table: merchant     │
-├─────────────────────┤       ├─────────────────────────────┤       ├─────────────────────┤
-│ id (Long PK)        │───┐   │ user_id (FK)                │   ┌───│ id (Long PK)        │
-│ email               │   └──>│ merchant_id (FK)            │<──┘   │ name                │
-│ passwordHash        │       └─────────────────────────────┘       │ apiKey (UUID)       │
-│ name                │                                             │ isActive            │
-│ isActive            │                                             │ createdAt           │
-│ isVerified          │                                             │ updatedAt           │
-│ createdAt           │                                             └──────────┬──────────┘
-│ updatedAt           │                                                        │ 1:1
-└─────────────────────┘                                                        ▼
-                                                                        ┌─────────────────────┐
-                                                                        │ MerchantConfigEntity │
-                                                                        │ merchant_config      │
-                                                                        ├─────────────────────┤
-                                                                        │ merchantId (FK, UQ) │
-                                                                        │ webhookUrl          │
-                                                                        │ currency (ISO 4217) │
-                                                                        └─────────────────────┘
-
-        Many-to-many: one user can manage many merchants; one merchant can have many users.
-
-┌─────────────────────┐       ┌────────────────────────────────┐       ┌─────────────────────────┐
-│ MerchantEntity      │       │ MerchantChannelConfigEntity    │       │ PaymentChannelEntity    │
-│ table: merchant     │       │ table: merchant_channel_config │       │ table: payment_channel  │
-├─────────────────────┤       ├────────────────────────────────┤       ├─────────────────────────┤
-│ id (Long PK)        │───┐   │ id (Long PK)                   │   ┌───│ id (Long PK)            │
-│ name                │   │   │ merchantId (FK)                │   │   │ name (PaymentChannelNameEnum) │
-│ apiKey (UUID)       │   └──>│ paymentChannelId (FK)          │<──┘   │ isActive                │
-│ isActive            │       │ isActive                       │       │ createdAt               │
-│ createdAt           │       │ configJson                     │       │ updatedAt               │
-│ updatedAt           │       │ createdAt                      │       └─────────────────────────┘
-                       │       │ updatedAt                      │
-└─────────────────────┘       └────────────────────────────────┘
-                                          │
-                                          │
-                              ┌───────────┴───────────┐
-                              ▼                       ▼
-┌─────────────────────┐       ┌─────────────────────────────┐       ┌────────────────────────────┐
-│ PaymentEntity       │       │ WebhookIncomingLogEntity    │       │ WebhookMerchantLogEntity   │
-│ table: payment      │       │ table: webhook_incoming_log │       │ table: webhook_merchant_log│
-├─────────────────────┤       ├─────────────────────────────┤       ├────────────────────────────┤
-│ id (Long PK)        │       │ id (Long PK)                │◄──────│ webhookIncomingLogId (FK)  │
-│ merchantId (FK)     │       │ paymentId (FK)              │       │ paymentId (FK)             │
-│ channelConfigId(FK) │       │ paymentChannelId (FK)       │       │ paymentChannelId (FK)      │
-│ paymentChannelId(FK)│       │ rawPayload                  │       │ webhookUrl                 │
-│ amount              │       │ status                      │       │ payload                    │
-│ currency            │       │ createdAt                   │       │ status                     │
-│ status              │       └─────────────────────────────┘       │ retryCount                 │
-│ paymentChannelTxnId │                                             │ lastAttemptAt              │
-│ paymentLinkUrl      │                                             │ createdAt                  │
-│ merchantReferencePaymentId   │                                    └────────────────────────────┘
-│ merchantMetadataJson│                                             
-│ createdAt           │
-│ updatedAt           │
-└─────────────────────┘
-                              │
-                              │ (outbound API calls)
-                              ▼
-                    ┌─────────────────────────────┐
-                    │ PaymentChannelApiLogEntity  │
-                    │ table: payment_channel_api_log
-                    ├─────────────────────────────┤
-                    │ id (Long PK)                │
-                    │ paymentId (FK)              │
-                    │ paymentChannelId (FK)       │
-                    │ operation                   │
-                    │ request*                    │
-                    │ response*                   │
-                    │ createdAt                   │
-                    └─────────────────────────────┘
-```
-
-### 4.2 Entity Definitions
-
-All entities use **Long id** as primary key (unique; identity/sequence: 1, 2, 3, …). Types are Java field types. Enum types use the `**Enum`** suffix (e.g. `PaymentChannelNameEnum`, `PaymentStatusEnum`).
-
-#### UserEntity (table: `users`)
-
-For application login and managing merchants. One user can manage multiple merchants; one merchant can have multiple users (many-to-many via join table user_merchant).
-
-
-| Field        | Type    | Description                      |
-| ------------ | ------- | -------------------------------- |
-| id           | Long    | PK (1, 2, 3, …)                  |
-| email        | String  | Unique login email               |
-| passwordHash | String  | Hashed password (e.g. BCrypt)    |
-| name         | String  | User display name                |
-| isActive     | Boolean | Whether account is active        |
-| isVerified   | Boolean | Whether user is verified         |
-| createdAt    | Instant | Creation time                    |
-| updatedAt    | Instant | Last update time                 |
-
-
-#### Join table `user_merchant` (UserEntity ↔ MerchantEntity, many-to-many)
-
-Join table for **UserEntity ↔ MerchantEntity** many-to-many. Which users can manage which merchants. No separate entity class when using `@ManyToMany`; the table has only the two FKs.
-
-**JPA mapping:** Use `@ManyToMany`. **UserEntity**: `@ManyToMany` with `@JoinTable(name = "user_merchant", joinColumns = @JoinColumn(name = "user_id"), inverseJoinColumns = @JoinColumn(name = "merchant_id"))`, e.g. `List<MerchantEntity> merchants`. **MerchantEntity**: `@ManyToMany(mappedBy = "merchants")`, e.g. `List<UserEntity> users`. The join table `user_merchant` has columns `user_id`, `merchant_id`.
-
-
-| Column      | Type | Description         |
-| ----------- | ---- | ------------------- |
-| user_id     | Long | FK → UserEntity     |
-| merchant_id | Long | FK → MerchantEntity |
-
-
-Unique constraint on (user_id, merchant_id). One user can be linked to the same merchant only once.
-
-#### MerchantEntity (table: `merchant`)
-
-
-| Field     | Type              | Description                                                 |
-| --------- | ----------------- | ----------------------------------------------------------- |
-| id        | Long              | PK (1, 2, 3, …)                                             |
-| name      | String            | Merchant display name                                       |
-| apiKey    | String            | Plain UUID; used only for server-to-server payment API auth |
-| config    | MerchantConfigEntity | **One-to-one** inverse mapping (`mappedBy = "merchant"`); optional until a `merchant_config` row exists |
-| isActive  | Boolean           | Whether merchant is active                                  |
-| createdAt | Instant           | Creation time                                               |
-| updatedAt | Instant           | Last update time                                            |
-
-Consumer webhook URL and default **currency** for payment operations live on **`MerchantConfigEntity`** (`merchant_config`), not on this table.
-
-
-#### MerchantConfigEntity (table: `merchant_config`)
-
-Exactly **one** row per merchant (enforced by unique `merchant_id`). Holds integration settings used by orchestration and consumer notification.
-
-
-| Field      | Type    | Description                                                                 |
-| ---------- | ------- | --------------------------------------------------------------------------- |
-| id         | Long    | PK (1, 2, 3, …)                                                             |
-| merchantId | Long    | FK → `merchant.id`, **unique** (1:1 with merchant)                          |
-| webhookUrl | String  | Consumer callback URL for payment status notifications (optional if not set) |
-| currency   | String  | ISO 4217 alphabetic code (e.g. USD); used when creating payment links         |
-| createdAt  | Instant | Creation time                                                               |
-| updatedAt  | Instant | Last update time                                                            |
-
-**JPA:** Owning side is **`MerchantConfigEntity`**: `@OneToOne` + `@JoinColumn(name = "merchant_id", nullable = false, unique = true)`. **`MerchantEntity`** uses `@OneToOne(mappedBy = "merchant", fetch = LAZY)`.
-
-**Payment link API:** The consumer request body does **not** include `currency`; orchestration loads `merchant_config` for the merchant and copies **`currency`** onto the **`payment`** row (and adapters use that resolved value).
-
-
-#### PaymentChannelEntity (table: `payment_channel`)
-
-Extends **`AuditableEntity`** (`createdDateTime`, `updatedDateTime` in JPA; physical column names depend on naming strategy — often `created_date_time` / `updated_date_time`).
-
-Channel is identified by **`name`** (`PaymentChannelNameEnum`, stored as string). Values include **XPLORPAY**, **PAYMOB**, **STRIPE**, **RAZORPAY**, **TEST**. No separate provider code column.
-
-
-| Field    | Type                   | Description                            |
-| -------- | ---------------------- | -------------------------------------- |
-| id       | Long                   | PK (1, 2, 3, …)                        |
-| name     | PaymentChannelNameEnum | Unique channel key (enum, see above)   |
-| isActive | Boolean                | Whether this payment channel is active |
-| createdAt | Instant               | From `AuditableEntity` (see note above) |
-| updatedAt | Instant               | From `AuditableEntity` (see note above) |
-
-
-#### MerchantChannelConfigEntity (table: `merchant_channel_config`)
-
-
-| Field            | Type    | Description                                      |
-| ---------------- | ------- | ------------------------------------------------ |
-| id               | Long    | PK (1, 2, 3, …)                                  |
-| merchantId       | Long    | FK → MerchantEntity                              |
-| paymentChannelId | Long    | FK → PaymentChannelEntity                        |
-| isActive         | Boolean | Whether this config is active                    |
-| configJson       | String  | Payment channel-specific config (API keys, etc.) |
-| createdAt        | Instant | Creation time                                    |
-| updatedAt        | Instant | Last update time                                 |
-
-
-#### PaymentEntity (table: `payment`)
-
-
-| Field                      | Type              | Description                                  |
-| -------------------------- | ----------------- | -------------------------------------------- |
-| id                         | Long              | PK (1, 2, 3, …)                              |
-| merchantId                 | Long              | FK → MerchantEntity                          |
-| channelConfigId            | Long              | FK → MerchantChannelConfigEntity             |
-| paymentChannelId           | Long              | FK → PaymentChannelEntity                    |
-| merchantReferencePaymentId | String            | Merchant's payment/order reference ID        |
-| paymentChannelTxnId        | String            | Payment channel's transaction ID             |
-| amount                     | BigDecimal        | Amount                                       |
-| currency                   | String            | ISO 4217 currency code (set from `merchant_config.currency` at link creation, not from consumer payload) |
-| status                     | PaymentStatusEnum | PENDING, SUCCESS, FAILED, CANCELLED, EXPIRED |
-| paymentLinkUrl             | String            | Generated payment link                       |
-| merchantMetadataJson       | String            | Merchant-provided metadata (JSON)            |
-| createdAt                  | Instant           | Creation time                                |
-| updatedAt                  | Instant           | Last update time                             |
-
-
-#### WebhookIncomingLogEntity (table: `webhook_incoming_log`)
-
-
-| Field            | Type    | Description                 |
-| ---------------- | ------- | --------------------------- |
-| id               | Long    | PK (1, 2, 3, …)             |
-| paymentId        | Long    | FK → PaymentEntity          |
-| paymentChannelId | Long    | FK → PaymentChannelEntity   |
-| rawPayload       | String  | Raw webhook body            |
-| status           | String  | RECEIVED, PROCESSED, FAILED |
-| createdAt        | Instant | Creation time               |
-
-
-#### WebhookMerchantLogEntity (table: `webhook_merchant_log`)
-
-
-| Field                | Type    | Description                              |
-| -------------------- | ------- | ---------------------------------------- |
-| id                   | Long    | PK (1, 2, 3, …)                          |
-| webhookIncomingLogId | Long    | FK → WebhookIncomingLogEntity (nullable) |
-| paymentId            | Long    | FK → PaymentEntity                       |
-| paymentChannelId     | Long    | FK → PaymentChannelEntity                |
-| webhookUrl           | String  | Consumer URL called                      |
-| payload              | String  | Payload sent (JSON)                      |
-| status               | String  | PENDING, SUCCESS, FAILED                 |
-| retryCount           | Integer | Number of retries                        |
-| lastAttemptAt        | Instant | Last attempt time                        |
-| createdAt            | Instant | Creation time                            |
-
-
-#### PaymentChannelApiLogEntity (table: `payment_channel_api_log`)
-
-Request/response log for each outbound call to a payment channel (e.g. create payment link, get status). Used for audit and debugging.
-
-
-| Field              | Type    | Description                                 |
-| ------------------ | ------- | ------------------------------------------- |
-| id                 | Long    | PK (1, 2, 3, …)                             |
-| paymentId          | Long    | FK → PaymentEntity (nullable)               |
-| paymentChannelId   | Long    | FK → PaymentChannelEntity (nullable)        |
-| channelConfigId    | Long    | FK → MerchantChannelConfigEntity (nullable) |
-| operation          | String  | e.g. CREATE_PAYMENT_LINK, GET_STATUS        |
-| requestMethod      | String  | GET, POST, PUT                              |
-| requestUrl         | String  | Payment channel endpoint called             |
-| requestHeaders     | String  | Request headers (mask secrets; JSON)        |
-| requestBody        | String  | Request body (JSON)                         |
-| responseStatusCode | Integer | HTTP status from payment channel            |
-| responseHeaders    | String  | Response headers (JSON, optional)           |
-| responseBody       | String  | Response body (JSON)                        |
-| durationMs         | Integer | Call duration in milliseconds               |
-| createdAt          | Instant | When the log row was created               |
-| updatedAt          | Instant | Last update time (from `AuditableEntity`)   |
-
-
----
-
-## 5. Sequence Diagrams
-
-### 5.1 Payment Link Generation
+## 4. High-level architecture
 
 ```mermaid
-sequenceDiagram
-    participant Consumer as Consumer App
-    participant API as Payment API
-    participant Orch as Orchestration Service
-    participant Config as Config Service
-    participant DB as Database
-    participant Adapter as XplorPay Adapter
-    participant XplorPay as XplorPay API
-
-    Consumer->>API: POST /api/v1/integration/payment-links/create
-    Note over Consumer,API: { merchantId, amount, merchantReferencePaymentId, merchantMetadata } — no currency in body
-
-    API->>API: Validate request & authenticate
-    API->>Orch: createPaymentLink(request)
-
-    Orch->>DB: Query merchant_config by merchantId
-    DB-->>Orch: currency (and webhookUrl for notifications)
-
-    Orch->>Config: getActiveChannelConfig(merchantId)
-    Config->>DB: Query merchant_channel_config
-    DB-->>Config: payment channel config (XplorPay)
-    Config-->>Orch: MerchantChannelConfig
-
-    Orch->>Orch: Resolve adapter (XplorPayAdapter)
-    Orch->>DB: Create payment record (PENDING, currency from merchant_config)
-    Orch->>Adapter: createPaymentLink(request, config)
-
-    Adapter->>XplorPay: POST /create-link (payment channel API)
-    XplorPay-->>Adapter: { payment_link_url, txn_id }
-
-    Adapter-->>Orch: PaymentLinkResponse
-
-    Orch->>DB: Update payment (link_url, payment_channel_txn_id)
-    Orch-->>API: PaymentLinkResponse
-    API-->>Consumer: 200 OK { payment_url, payment_id, status }
-```
-
-
-
-### 5.2 Webhook Processing
-
-```mermaid
-sequenceDiagram
-    participant Channel as Payment channel (XplorPay)
-    participant Webhook as Webhook Controller
-    participant Validator as Webhook Validator
-    participant Processor as Webhook Processor
-    participant DB as Database
-    participant Notifier as Consumer Notifier
-    participant Consumer as Consumer System
-
-    Channel->>Webhook: POST /webhook/v1/payment-channel-webhooks/{path}
-    Note over Channel,Webhook: { payment_id, status, signature, ... }
-
-    Webhook->>Validator: validate(payload, signature, secret)
-    Validator-->>Webhook: Valid/Invalid
-
-    alt Invalid
-        Webhook-->>Channel: 401 Unauthorized
-    else Valid
-        Webhook->>Processor: processWebhook(payload)
-
-        Processor->>DB: Find payment by payment_channel_txn_id
-        DB-->>Processor: Payment record
-
-        Processor->>DB: Update payment (status = SUCCESS/FAILED)
-        Processor->>DB: Insert webhook_incoming_log
-
-        Processor->>Notifier: notifyConsumer(payment, merchant)
-
-        Notifier->>Consumer: POST { payment_id, status, amount, ... }
-        Consumer-->>Notifier: 200 OK
-
-        Notifier->>DB: Update webhook_merchant_log (SUCCESS)
-        Processor-->>Webhook: Processed
-        Webhook-->>Channel: 200 OK
+flowchart TB
+    subgraph clients [Clients]
+        MerchantBackend[Third-party client — API key only]
+        PortalClient[Portal client — browser or app]
+        PaymentChannel[Payment channel provider]
     end
 
-    Note over Notifier,Consumer: On consumer failure: retry with backoff
+    subgraph app [digi-payment-gateway]
+        subgraph sec [Security — filter chain]
+            ApiKey[ApiKeyAuthenticationFilter<br/>integration.security]
+            Jwt[JwtAuthenticationFilter<br/>security]
+        end
+        subgraph web [Web layer — REST controllers]
+            IntCtrl["Integration API<br/>/api/v1/integration/**"]
+            PortalCtrl["Portal API<br/>controller/portal — /api/v1/portal/**"]
+            AuthCtrl["Auth API<br/>/api/v1/auth/**"]
+            WhCtrl["Webhooks<br/>/webhook/**"]
+        end
+        subgraph domain [Application services]
+            Orch[PaymentOrchestrationService<br/>integration.service]
+            PaySvc[PaymentService<br/>service — shared]
+            MerchSvc[MerchantService]
+            UserSvc[UserService]
+            AuthSvc[AuthService]
+        end
+        subgraph adapters [Channel adapters]
+            PCA[PaymentChannelAdapter implementations]
+        end
+        subgraph data [Persistence]
+            Repo[JPA repositories]
+            PG[(PostgreSQL)]
+        end
+    end
+
+    MerchantBackend -->|HTTPS + X-API-Key| ApiKey
+    ApiKey -->|valid key → MerchantEntity in context| IntCtrl
+
+    PortalClient -->|HTTPS; Bearer JWT on protected routes| Jwt
+    Jwt -->|DispatcherServlet → handler| PortalCtrl
+    Jwt -->|DispatcherServlet → handler| AuthCtrl
+
+    PaymentChannel -->|HTTPS POST callback| WhCtrl
+
+    IntCtrl --> Orch
+    PortalCtrl --> MerchSvc
+    PortalCtrl --> UserSvc
+    AuthCtrl --> AuthSvc
+    WhCtrl --> PCA
+
+    Orch --> MerchSvc
+    Orch --> PaySvc
+    Orch --> PCA
+    AuthSvc --> UserSvc
+    MerchSvc --> Repo
+    PaySvc --> Repo
+    UserSvc --> Repo
+    AuthSvc --> Repo
+    Repo --> PG
 ```
 
 
 
----
+**Request flow summary**
 
-## 6. System Requirements Summary
-
-
-| Requirement                           | Implementation                                                               |
-| ------------------------------------- | ---------------------------------------------------------------------------- |
-| **Clean design for payment channels** | Strategy pattern with `PaymentChannelAdapter` interface                      |
-| **Scalability & HA**                  | Stateless services, horizontal scaling, PostgreSQL                           |
-| **Secure webhook verification**       | Payment channel-specific HMAC/signature validation                           |
-| **Logging**                           | Structured logging (SLF4J + JSON), correlation IDs                           |
-| **Retry mechanisms**                  | Retry for payment channel API calls and consumer notifications               |
-| **Outbound HTTP standard**            | Direct `RestTemplate.exchange(...)` in adapters with shared bean configuration |
-| **Merchant / payment channel config** | `merchant`, **`merchant_config` (1:1 merchant)**, `merchant_channel_config`, `payment_channel` tables |
-| **User & merchant access**            | `users`, `user_merchant` (many-to-many); login and manage merchants           |
-| **Auth: API key vs JWT**              | API key = server-to-server payment API; JWT = login and UI app configuration |
-
+- **Integration** (`/api/v1/integration/`**) — **third-party clients only:** Every request is evaluated by `integration.security.ApiKeyAuthenticationFilter` before it reaches integration controllers; there is **no** direct client-to-controller path. The filter resolves `X-API-Key` to a `MerchantEntity` and sets `ROLE_INTEGRATION`. `JwtAuthenticationFilter` **skips** these paths, so integration APIs are **not** accessible with Bearer JWT in lieu of an API key.
+- **Portal** (`/api/v1/portal/`**) and **auth** (`/api/v1/auth/`**) — **portal after login:** `JwtAuthenticationFilter` runs on `/api/`** (except integration); it validates `Authorization: Bearer <jwt>` on protected routes. Public routes include `POST /api/v1/portal/users` (signup), auth login/OTP/refresh/logout under `/api/v1/auth/**`, as mirrored in `SecurityConfig` and `JwtAuthenticationFilter`.
+- **Webhooks** (`/webhook/`**): Permitted without authentication (verify signatures at the edge or in adapters before production use).
 
 ---
 
-## 7. Technology Stack
+## 5. Package and layer structure
+
+Root Java package is the single base namespace under `src/main/java` (aligned with the Maven `groupId` and artifact in `pom.xml`).
+
+`**integration` package (aggregate):** Holds everything specific to the **third-party integration surface**: REST controllers under `integration/controller/`, inbound `integration/webhooks/`, `integration/security.ApiKeyAuthenticationFilter`, orchestration and principal extraction in `integration/service/`, request/response types in `integration/dto/` (plus `integration/dto/adaptor/` for adapter payloads), and `integration/adapter/` for payment-channel implementations. Shared domain operations that integration also needs (e.g. `MerchantService`, `PaymentService`, `PaymentChannelService`) stay in top-level `service/`.
 
 
-| Layer           | Technology                                                                 |
-| --------------- | -------------------------------------------------------------------------- |
-| **Backend**     | Java 21, Spring Boot 4.0.3                                                 |
-| **API**         | REST (Spring Web MVC)                                                      |
-| **Outbound HTTP** | Spring `RestTemplate` (direct adapter usage with shared bean config)     |
-| **Database**    | PostgreSQL                                                                 |
-| **Security**    | Spring Security: API key (payment API, server-to-server), JWT (login & UI) |
-| **Persistence** | Spring Data JPA                                                            |
-| **Monitoring**  | Spring Boot Actuator                                                       |
+| Layer / concern      | Location                                                            | Role                                                                                                                                                             |
+| -------------------- | ------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Bootstrap            | `DigiPaymentGatewayApplication`                                     | `@SpringBootApplication`, `@EnableJpaAuditing`, `@EnableScheduling`                                                                                              |
+| Config               | `config/SecurityConfig`                                             | `SecurityFilterChain`, CORS, `PasswordEncoder`                                                                                                                   |
+| Web — integration    | `integration/controller/`, `integration/webhooks/`                  | Payment links, transactions, terminal placeholder, payment channel webhooks                                                                                      |
+| Web — portal         | `controller/portal/`                                                | Users, merchants (`UserController`, `MerchantController`)                                                                                                        |
+| Web — auth           | `auth/controller/`                                                  | Login, OTP, refresh, logout                                                                                                                                      |
+| Security             | `security/`, `integration/security/`                                | JWT creation/validation; `integration/security` — API key filter for integration routes                                                                          |
+| Domain services      | `service/`                                                          | `MerchantService`, `PaymentChannelService`, `UserService`, `PaymentService` (payment load/save/list-by-merchant; used by integration orchestration and adapters) |
+| Integration services | `integration/service/`                                              | `PaymentOrchestrationService`, `IntegrationAuthenticationService` (resolve `MerchantEntity` from API-key security context)                                       |
+| Auth domain          | `auth/service/`, `auth/entity/`, `auth/repository/`                 | Refresh tokens, OTP sessions (in-memory)                                                                                                                         |
+| Adapters             | `integration/adapter/`                                              | `PaymentChannelAdapter` + `TestPaymentChannelAdapter`                                                                                                            |
+| Persistence          | `entity/`, `repository/`                                            | JPA entities and Spring Data repositories                                                                                                                        |
+| API contracts        | `dto/`, `auth/dto/`, `integration/dto/`, `integration/dto/adaptor/` | Portal DTOs; integration request/response and adapter DTOs                                                                                                       |
+| Cross-cutting        | `exception/GlobalExceptionHandler`                                  | JSON error envelopes                                                                                                                                             |
+| Enums                | `enums/`                                                            | Payment status, channel names                                                                                                                                    |
 
 
 ---
 
-## 8. Document History
+## 6. API surface
+
+### 6.1 Integration API (third-party clients — API key only)
+
+Base path: `/api/v1/integration` (prefix configurable via `security.integration.path-prefix`, default `/api/v1/integration/`).
 
 
-| Version | Date       | Changes                                                                 |
-| ------- | ---------- | ----------------------------------------------------------------------- |
-| 1.0     | 2025-03-17 | Initial architecture documentation                                      |
-| 1.1     | 2025-03-23 | `merchant_config` (1:1): `webhookUrl` + `currency`; payment link currency from DB, not request body |
-| 1.2     | 2025-03-23 | `PaymentChannelEntity` extends `AuditableEntity`; ER diagram and field table include audit timestamps and **TEST** enum |
-| 1.3     | 2026-03-25 | Integration base paths (`/api/v1/integration/...`), webhook base (`/webhook/v1/payment-channel-webhooks`), actual controller names; `PaymentChannelAdapter` + `AdaptorWebhookResponse`; **TestPaymentChannelAdapter**; security note (permit-all dev); ER diagram duplicate row fix |
+| Method | Path                     | Auth        | Behavior                                                                                                                                |
+| ------ | ------------------------ | ----------- | --------------------------------------------------------------------------------------------------------------------------------------- |
+| POST   | `/payment-link/generate` | `X-API-Key` | Creates `PaymentEntity`, selects adapter by merchant’s **active** channel config, calls adapter, returns link + channel txn id + status |
+| GET    | `/transactions`          | `X-API-Key` | Lists payments for authenticated merchant (newest first)                                                                                |
+| GET    | `/transactions/{id}`     | `X-API-Key` | Payment details if owned by merchant                                                                                                    |
+| GET    | `/terminal-payment/test` | `X-API-Key` | Placeholder (`TerminalPaymentIntegrationController`); plain-text smoke response                                                         |
 
 
+Principal type: `MerchantEntity` (`integration.service.IntegrationAuthenticationService.extractMerchant`).
+
+### 6.2 Portal API (JWT after login)
+
+Base path: `/api/v1/portal`.
+
+These routes are for **our UI portal** (first-party app), not for third-party server integration. The portal must **complete login** (see section 6.3) and send the **Bearer access token** on protected calls; third-party systems should use **section 6.1** with an API key instead.
+
+**Merchants** (`MerchantController`, `/api/v1/portal/merchants`)
+
+- Implemented: POST merchant (generates UUID **apiKey**), POST payment-channel-config, DELETE merchant (deactivate), DELETE payment-channel-config (deactivate).
+- Not implemented: list/get/patch merchant and config endpoints (501).
+
+**Users** (`UserController`, `/api/v1/portal/users`)
+
+- Implemented: POST create user, DELETE deactivate user.
+- Not implemented: list/get/patch (501).
+
+Controllers carry **TODOs**: enforce that the JWT subject maps to a user allowed to act on the target merchant.
+
+### 6.3 Auth API (portal login — public until token issued)
+
+Base: `/api/v1/auth`.
+
+
+| Endpoint                                                     | Purpose                                              |
+| ------------------------------------------------------------ | ---------------------------------------------------- |
+| POST `/login`                                                | Email + password → access + refresh tokens           |
+| POST `/login/email/request-otp`, `/login/email/verify-otp`   | Email OTP (OTP logged in dev; no email provider yet) |
+| POST `/login/mobile/request-otp`, `/login/mobile/verify-otp` | Mobile OTP (same placeholder behavior)               |
+| POST `/refresh`                                              | New tokens from refresh token                        |
+| POST `/logout`                                               | Invalidates refresh token                            |
+
+
+JWT **subject** is the user identifier string produced by `AuthService` (user id as string). Refresh tokens are stored hashed in `auth_refresh_token` (entity `AuthRefreshTokenEntity`).
+
+OTP state lives in **in-memory** `ConcurrentHashMap` in `AuthService` (not clustered); scheduled cleanup uses `security.otp.cleanup-interval-ms`.
+
+### 6.4 Webhooks
+
+- `POST /webhook/v1/payment-channel-webhooks/test` — `integration.webhooks.PaymentChannelWebhookController` delegates to `TestPaymentChannelAdapter.validateAndParseWebhook`, updates payment status by `paymentId` in payload.
+
+---
+
+## 7. Payment orchestration and adapter pattern
+
+### 7.1 Orchestration (`integration.service.PaymentOrchestrationService`)
+
+Uses `**service.MerchantService`** for merchant/channel config and `**service.PaymentService**` for persisting and loading `PaymentEntity` rows (the same `PaymentService` is used by channel adapters, e.g. webhook handling).
+
+For **generate payment link**:
+
+1. Load `MerchantConfigEntity` (currency) and **first active** `MerchantPaymentChannelConfigEntity` for the merchant.
+2. Resolve `integration.adapter.PaymentChannelAdapter` where `adapter.getChannel().getName()` equals the config’s channel name.
+3. Persist a new `PaymentEntity` (`INITIATED`, amount, merchant reference, metadata JSON).
+4. Call `adapter.createPaymentLink(payment)`; persist returned URL, channel txn id, and status.
+5. Return `PaymentLinkResponse` (`integration.dto`).
+
+**Implication:** Exactly one “active” channel config is chosen via `findFirstByMerchant_IdAndIsActiveTrue`; ordering is repository-defined unless refined later.
+
+### 7.2 Adapter contract (`integration.adapter.PaymentChannelAdapter`)
+
+```text
+getChannel()
+createPaymentLink(PaymentEntity)
+validateAndParseWebhook(Map<String, Object>)
+```
+
+Implementations are Spring **beans**; orchestration injects `List<PaymentChannelAdapter>` and picks by channel name.
+
+**Current implementation:** `integration.adapter.TestPaymentChannelAdapter` — synthetic txn id, local test URL, webhook updates status via `service.PaymentService` from payload keys `paymentId`, `paymentStatus` (enum name).
+
+**Declared channel names** (`PaymentChannelNameEnum`): `XPLORPAY`, `PAYMOB`, `STRIPE`, `RAZORPAY`, `TEST`. Only **TEST** has an adapter class in-tree; **payment_channel** rows must exist in the database for adapters to resolve (`PaymentChannelService.findByName`).
+
+---
+
+## 8. Security model
+
+### 8.1 Spring Security (`SecurityConfig`)
+
+- **CSRF** disabled (stateless API style).
+- **CORS** allows all origin patterns, common methods, all headers, credentials false.
+- **PermitAll:** `OPTIONS /`**, `/webhook/**`, selected auth and user-registration paths.
+- **Authenticated:** `/api/v1/integration/`** and remaining `/api/**`.
+
+Filters (order): `integration.security.ApiKeyAuthenticationFilter` → `security.JwtAuthenticationFilter` → (defaults).
+
+### 8.2 API key integration (third-party → integration APIs only)
+
+- Type: `integration.security.ApiKeyAuthenticationFilter` (Spring `@Component`).
+- Header: `**X-API-Key**`.
+- Lookup: `MerchantRepository.findByApiKey`; merchant must be **active**.
+- Sets `UsernamePasswordAuthenticationToken` with principal = `MerchantEntity`, authority `ROLE_INTEGRATION`.
+
+### 8.3 JWT (portal / UI)
+
+- Custom `JwtService` (HS256, configurable `security.jwt.secret`, `security.jwt.expiration-seconds`).
+- Filter applies to `/api/`** except integration paths, webhooks, and explicitly public auth/signup routes.
+
+**Operational note:** `SecurityConfig` permits email OTP endpoints without authentication; ensure `JwtAuthenticationFilter.requiresJwtAuth` stays aligned with those paths so clients are not asked for a Bearer token on OTP steps.
+
+### 8.4 Secrets and profiles
+
+
+| Property / env                                                               | Use                                                                           |
+| ---------------------------------------------------------------------------- | ----------------------------------------------------------------------------- |
+| `security.jwt.secret`                                                        | JWT signing (dev default in `application-dev.properties`; prod: `JWT_SECRET`) |
+| `spring.datasource.`* / `DB_*`                                               | PostgreSQL                                                                    |
+| `security.jwt.expiration-seconds`, `security.jwt.refresh-expiration-seconds` | Token lifetimes                                                               |
+| `security.integration.path-prefix`                                           | Integration URL prefix for API key filter                                     |
+
+
+---
+
+## 9. Data model
+
+All persistent entities extend `AuditableEntity` (`createdDateTime`, `updatedDateTime`) with JPA auditing enabled.
+
+```mermaid
+erDiagram
+    merchant ||--o| merchant_config : has
+    merchant ||--o{ merchant_payment_channel_config : has
+    payment_channel ||--o{ merchant_payment_channel_config : referenced_by
+    merchant ||--o{ payment : owns
+    payment_channel ||--o{ payment : channel
+    merchant_payment_channel_config ||--o{ payment : used_by
+    users }o--o{ merchant : user_merchant
+    users ||--o{ auth_refresh_token : optional_refresh
+
+    merchant {
+        bigint id PK
+        string name
+        string apiKey UK
+        boolean isActive
+    }
+    merchant_config {
+        bigint id PK
+        bigint merchant_id FK UK
+        text webhookUrl
+        string currency
+    }
+    merchant_payment_channel_config {
+        bigint id PK
+        bigint merchant_id FK
+        bigint payment_channel_id FK
+        boolean isActive
+        text configJson
+    }
+    payment_channel {
+        bigint id PK
+        enum name UK
+        boolean isActive
+    }
+    payment {
+        bigint id PK
+        bigint merchant_id FK
+        bigint merchant_payment_channel_config_id FK
+        bigint payment_channel_id FK
+        string merchantReferencePaymentId
+        string paymentChannelTxnId
+        decimal amount
+        string currency
+        enum status
+        string paymentLinkUrl
+        text merchantMetadataJson
+    }
+    users {
+        bigint id PK
+        string email UK
+        string mobileNumber UK
+        string passwordHash
+        string name
+        boolean isActive
+        boolean isVerified
+    }
+```
+
+
+
+**Payment statuses** (`PaymentStatusEnum`): `INITIATED`, `PAYMENT_LINK_GENERATED`, `SUCCESS`, `FAILED`, `REFUNDED`, `VOIDED`.
+
+**Supporting / logging entities** (present in codebase): `PaymentChannelApiLogEntity`, `WebhookIncomingPaymentChannelLogEntity`, `WebhookOutgoingMerchantLogEntity` — intended for observability and outbound merchant notifications; webhook controller path shown above uses the test adapter directly.
+
+---
+
+## 10. Runtime and operations
+
+- **Actuator** is on the classpath (`spring-boot-starter-actuator`); expose/management settings can be tightened per environment (not detailed in base `application.properties`).
+- **Scheduling** enabled for OTP maintenance in `AuthService`.
+- **Dev profile** (`application-dev.properties`): local PostgreSQL URL, `ddl-auto=update`, JWT dev secret placeholder.
+- **Prod profile** (`application-prod.properties`): `ddl-auto=validate`, datasource and JWT from environment.
+
+---
+
+## 11. Error handling
+
+`GlobalExceptionHandler` returns JSON with `timestamp`, `status`, `error`, `message`, `path` for:
+
+- `IllegalArgumentException` → 400  
+- `EntityNotFoundException` → 404  
+- Other `Exception` → 500
+
+`ResponseStatusException` (used widely for 401/404/409/429) is **not** mapped explicitly; it is normally handled by Spring MVC’s default handling for that exception type. Prefer consistent handling if you standardize API errors.
+
+---
+
+## 12. Extension guidelines
+
+1. **New payment channel:** Add enum value if needed, ensure DB row in `payment_channel`, implement `integration.adapter.PaymentChannelAdapter` in `integration.adapter` as a `@Component`, store secrets/config in `merchant_payment_channel_config.configJson` (consumption is adapter-specific).
+2. **Merchant webhooks:** `merchant_config.webhookUrl` is available for future outbound notifications when payments change (wire in orchestration or a domain event handler).
+3. **Multi-channel selection:** Replace or augment `findFirstByMerchant_IdAndIsActiveTrue` with explicit channel selection in the API if merchants support multiple active channels.
+4. **UI authorization:** Implement JWT subject → `UserEntity` → allowed `MerchantEntity` checks on merchant/user mutating endpoints.
+
+---
+
+## 13. Current limitations (as of this codebase)
+
+- No `data.sql`/migration in repo for seeding `payment_channel`; TEST channel must exist for `TestPaymentChannelAdapter` to start.
+- Webhook endpoint is **unauthenticated**; production should validate provider signatures and map routes per channel.
+- OTP delivery is **log-only**; no SMS/email integration.
+- OTP sessions are **single-node** in-memory.
+- Several UI read/update endpoints are **stubs** (501).
+- Integration API trusts **API key only**; consider IP allowlists, rotating keys, and audit logging for high-risk deployments.
+
+---
+
+## 14. Related files (quick reference)
+
+
+| Topic                        | Primary types                                                                                                          |
+| ---------------------------- | ---------------------------------------------------------------------------------------------------------------------- |
+| Security chain               | `config/SecurityConfig.java`                                                                                           |
+| Integration auth             | `integration/security/ApiKeyAuthenticationFilter.java`, `integration/service/IntegrationAuthenticationService.java`    |
+| JWT                          | `security/JwtService.java`, `security/JwtAuthenticationFilter.java`                                                    |
+| Payment link flow            | `integration/service/PaymentOrchestrationService.java`, `integration/controller/PaymentLinkIntegrationController.java` |
+| Payment persistence (shared) | `service/PaymentService.java`, `repository/PaymentRepository.java`                                                     |
+| Test channel                 | `integration/adapter/TestPaymentChannelAdapter.java`, `integration/webhooks/PaymentChannelWebhookController.java`      |
+| Auth                         | `auth/service/AuthService.java`, `auth/controller/AuthController.java`                                                 |
+
+
+This document should be updated when new adapters, security rules, or API versions are added.
