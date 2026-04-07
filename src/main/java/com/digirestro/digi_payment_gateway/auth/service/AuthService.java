@@ -66,7 +66,7 @@ public class AuthService {
 
     @Transactional
     public AuthLoginResponse login(AuthLoginRequest request) {
-        String normalizedEmail = userService.normalizeEmail(request.email());
+        String normalizedEmail = normalizeEmail(request.email());
         UserEntity user = userService.findActiveUserByEmail(normalizedEmail);
 
         if (!passwordEncoder.matches(request.password(), user.getPasswordHash())) {
@@ -78,7 +78,7 @@ public class AuthService {
 
     @Transactional(readOnly = true)
     public AuthOtpRequestResponse requestEmailOtp(AuthEmailOtpRequest request) {
-        String normalizedEmail = userService.normalizeEmail(request.email());
+        String normalizedEmail = normalizeEmail(request.email());
         userService.findActiveUserByEmail(normalizedEmail);
 
         LocalDateTime now = LocalDateTime.now();
@@ -105,7 +105,7 @@ public class AuthService {
 
     @Transactional
     public AuthLoginResponse verifyEmailOtp(AuthEmailVerifyOtpRequest request) {
-        String normalizedEmail = userService.normalizeEmail(request.email());
+        String normalizedEmail = normalizeEmail(request.email());
         UserEntity user = userService.findActiveUserByEmail(normalizedEmail);
 
         OtpSession otpSession = emailOtpSessions.get(normalizedEmail);
@@ -257,6 +257,13 @@ public class AuthService {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "mobileNumber is required");
         }
         return mobileNumber.trim();
+    }
+
+    private String normalizeEmail(String email) {
+        if (!StringUtils.hasText(email)) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "email is required");
+        }
+        return email.trim().toLowerCase();
     }
 
     private record OtpSession(String otpHash, LocalDateTime requestedAt, LocalDateTime expiresAt) {}
