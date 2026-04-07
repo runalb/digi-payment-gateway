@@ -66,7 +66,7 @@ public class AuthService {
 
     @Transactional
     public AuthLoginResponse login(AuthLoginRequest request) {
-        String normalizedEmail = request.email().trim().toLowerCase();
+        String normalizedEmail = userService.normalizeEmail(request.email());
         UserEntity user = userService.findActiveUserByEmail(normalizedEmail);
 
         if (!passwordEncoder.matches(request.password(), user.getPasswordHash())) {
@@ -78,7 +78,7 @@ public class AuthService {
 
     @Transactional(readOnly = true)
     public AuthOtpRequestResponse requestEmailOtp(AuthEmailOtpRequest request) {
-        String normalizedEmail = request.email().trim().toLowerCase();
+        String normalizedEmail = userService.normalizeEmail(request.email());
         userService.findActiveUserByEmail(normalizedEmail);
 
         LocalDateTime now = LocalDateTime.now();
@@ -105,7 +105,7 @@ public class AuthService {
 
     @Transactional
     public AuthLoginResponse verifyEmailOtp(AuthEmailVerifyOtpRequest request) {
-        String normalizedEmail = request.email().trim().toLowerCase();
+        String normalizedEmail = userService.normalizeEmail(request.email());
         UserEntity user = userService.findActiveUserByEmail(normalizedEmail);
 
         OtpSession otpSession = emailOtpSessions.get(normalizedEmail);

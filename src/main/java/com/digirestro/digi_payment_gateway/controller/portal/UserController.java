@@ -26,46 +26,43 @@ public class UserController {
         this.userService = userService;
     }
 
-    
-    // open api - no authentication required
     @PostMapping
     public ResponseEntity<UserResponse> createUser(@Valid @RequestBody UserCreateRequest request) {
         UserResponse response = userService.createUser(request);
         return new ResponseEntity<>(response, HttpStatus.CREATED);
     }
-    
-    @GetMapping
-    public ResponseEntity<String> listUsers() {
-        return ResponseEntity.status(HttpStatus.NOT_IMPLEMENTED)
-        .body("List users endpoint is not implemented yet.");
-    }
-    
-    // TODO:  authenticated user via JWT - Security checks for all endpoints - request user is mapped to user then only allow to modify user settings else show you are not authorized to access this resource
-    // add jwt authentication to this endpoint
+
+    // @GetMapping
+    // public ResponseEntity<String> listUsers() {
+    //     return ResponseEntity.status(HttpStatus.NOT_IMPLEMENTED)
+    //             .body("List users endpoint is not implemented yet.");
+    // }
+
     @GetMapping("/{userId}")
     public ResponseEntity<UserResponse> getUser(@PathVariable("userId") Long userId) {
+        userService.assertAuthenticatedUserOwnsUserId(userId);
         UserResponse response = userService.getUser(userId);
         return ResponseEntity.ok(response);
     }
 
-    // add jwt authentication to this endpoint
     @PatchMapping("/{userId}")
     public ResponseEntity<UserResponse> updateUser(
             @PathVariable("userId") Long userId, @Valid @RequestBody UserUpdateRequest request) {
+        userService.assertAuthenticatedUserOwnsUserId(userId);
         UserResponse response = userService.updateUser(userId, request);
         return ResponseEntity.ok(response);
     }
 
-    // add jwt authentication to this endpoint
     @DeleteMapping("/{userId}")
     public ResponseEntity<Void> deleteUser(@PathVariable("userId") Long userId) {
+        userService.assertAuthenticatedUserOwnsUserId(userId);
         userService.deactivateUser(userId);
         return ResponseEntity.noContent().build();
     }
 
-    // add jwt authentication to this endpoint
     @PostMapping("/{userId}/reactivate")
     public ResponseEntity<UserResponse> reactivateUser(@PathVariable("userId") Long userId) {
+        userService.assertAuthenticatedUserOwnsUserId(userId);
         UserResponse response = userService.reactivateUser(userId);
         return ResponseEntity.ok(response);
     }

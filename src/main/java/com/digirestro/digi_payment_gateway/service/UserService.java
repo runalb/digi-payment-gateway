@@ -9,6 +9,8 @@ import com.digirestro.digi_payment_gateway.repository.UserRepository;
 import jakarta.persistence.EntityNotFoundException;
 
 import org.springframework.http.HttpStatus;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -28,7 +30,7 @@ public class UserService {
 
     @Transactional
     public UserResponse createUser(UserCreateRequest request) {
-        String email = request.email().trim().toLowerCase();
+        String email = normalizeEmail(request.email());
         if (userRepository.findByEmail(email).isPresent()) {
             throw new ResponseStatusException(HttpStatus.CONFLICT, "Email already registered");
         }
@@ -72,7 +74,7 @@ public class UserService {
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "User not found"));
 
         if (request.email() != null) {
-            String email = request.email().trim().toLowerCase();
+            String email = normalizeEmail(request.email());
             if (!StringUtils.hasText(email)) {
                 throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "email must not be blank");
             }
@@ -119,6 +121,25 @@ public class UserService {
     }
 
     @Transactional(readOnly = true)
+    public void assertAuthenticatedUserOwnsUserId(Long userId) {
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        if (authentication == null || !authentication.isAuthenticated()) {
+            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Not authenticated");
+        }
+        Object principal = authentication.getPrincipal();
+        if (!(principal instanceof String email) || !StringUtils.hasText(email)) {
+            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Not authenticated");
+        }
+        String normalized = normalizeEmail(email);
+        UserEntity subjectUser = userRepository
+                .findByEmail(normalized)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.UNAUTHORIZED, "User not found"));
+        if (!subjectUser.getId().equals(userId)) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "You are not authorized to access this resource");
+        }
+    }
+
+    @Transactional(readOnly = true)
     public UserEntity findActiveUserByEmail(String email) {
         UserEntity user = userRepository.findByEmail(email)
                 .orElseThrow(() -> new EntityNotFoundException("User not found for email: " + email));
@@ -155,6 +176,13 @@ public class UserService {
         user.setIsActive(true);
         user = userRepository.save(user);
         return toResponse(user);
+    }
+
+    public String normalizeEmail(String email) {
+        if (!StringUtils.hasText(email)) {
+            return null;
+        }
+        return email.trim().toLowerCase();
     }
 
     private String normalizeMobile(String mobileNumber) {
