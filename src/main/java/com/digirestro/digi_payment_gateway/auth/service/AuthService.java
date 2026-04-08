@@ -14,6 +14,7 @@ import com.digirestro.digi_payment_gateway.auth.repository.AuthRefreshTokenRepos
 import com.digirestro.digi_payment_gateway.entity.UserEntity;
 import com.digirestro.digi_payment_gateway.security.JwtService;
 import com.digirestro.digi_payment_gateway.service.UserService;
+import com.digirestro.digi_payment_gateway.util.ContactNormalizer;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
@@ -89,13 +90,13 @@ public class AuthService {
         if (!(principal instanceof String principalEmail) || !StringUtils.hasText(principalEmail)) {
             throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Not authenticated");
         }
-        String normalizedEmail = userService.normalizeEmail(principalEmail);
+        String normalizedEmail = ContactNormalizer.normalizeEmail(principalEmail);
         return userService.findActiveUserByEmail(normalizedEmail);
     }
 
     @Transactional
     public AuthLoginResponse login(AuthLoginRequest request) {
-        String normalizedEmail = normalizeEmail(request.email());
+        String normalizedEmail = ContactNormalizer.normalizeEmail(request.email());
         UserEntity user = userService.findActiveUserByEmail(normalizedEmail);
 
         if (!passwordEncoder.matches(request.password(), user.getPasswordHash())) {
@@ -107,7 +108,7 @@ public class AuthService {
 
     @Transactional(readOnly = true)
     public AuthOtpRequestResponse requestEmailOtp(AuthEmailOtpRequest request) {
-        String normalizedEmail = normalizeEmail(request.email());
+        String normalizedEmail = ContactNormalizer.normalizeEmail(request.email());
         userService.findActiveUserByEmail(normalizedEmail);
 
         LocalDateTime now = LocalDateTime.now();
@@ -134,7 +135,7 @@ public class AuthService {
 
     @Transactional
     public AuthLoginResponse verifyEmailOtp(AuthEmailVerifyOtpRequest request) {
-        String normalizedEmail = normalizeEmail(request.email());
+        String normalizedEmail = ContactNormalizer.normalizeEmail(request.email());
         UserEntity user = userService.findActiveUserByEmail(normalizedEmail);
 
         OtpSession otpSession = emailOtpSessions.get(normalizedEmail);
@@ -153,7 +154,7 @@ public class AuthService {
 
     @Transactional(readOnly = true)
     public AuthOtpRequestResponse requestMobileOtp(AuthMobileOtpRequest request) {
-        String mobileNumber = normalizeMobile(request.mobileNumber());
+        String mobileNumber = ContactNormalizer.normalizeMobile(request.mobileNumber());
         userService.findActiveUserByMobile(mobileNumber);
 
         LocalDateTime now = LocalDateTime.now();
@@ -180,7 +181,7 @@ public class AuthService {
 
     @Transactional
     public AuthLoginResponse verifyMobileOtp(AuthMobileVerifyOtpRequest request) {
-        String mobileNumber = normalizeMobile(request.mobileNumber());
+        String mobileNumber = ContactNormalizer.normalizeMobile(request.mobileNumber());
         UserEntity user = userService.findActiveUserByMobile(mobileNumber);
 
         OtpSession otpSession = mobileOtpSessions.get(mobileNumber);
@@ -279,20 +280,6 @@ public class AuthService {
         int min = max / 10;
         int otp = min + SECURE_RANDOM.nextInt(max - min);
         return String.valueOf(otp);
-    }
-
-    private String normalizeMobile(String mobileNumber) {
-        if (!StringUtils.hasText(mobileNumber)) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "mobileNumber is required");
-        }
-        return mobileNumber.trim();
-    }
-
-    private String normalizeEmail(String email) {
-        if (!StringUtils.hasText(email)) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "email is required");
-        }
-        return email.trim().toLowerCase();
     }
 
     private record OtpSession(String otpHash, LocalDateTime requestedAt, LocalDateTime expiresAt) {}

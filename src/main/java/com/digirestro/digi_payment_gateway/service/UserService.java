@@ -5,6 +5,7 @@ import com.digirestro.digi_payment_gateway.dto.UserResponse;
 import com.digirestro.digi_payment_gateway.dto.UserUpdateRequest;
 import com.digirestro.digi_payment_gateway.entity.UserEntity;
 import com.digirestro.digi_payment_gateway.repository.UserRepository;
+import com.digirestro.digi_payment_gateway.util.ContactNormalizer;
 
 import jakarta.persistence.EntityNotFoundException;
 
@@ -28,12 +29,12 @@ public class UserService {
 
     @Transactional
     public UserResponse createUser(UserCreateRequest request) {
-        String email = normalizeEmail(request.email());
+        String email = ContactNormalizer.normalizeEmail(request.email());
         if (userRepository.findByEmail(email).isPresent()) {
             throw new ResponseStatusException(HttpStatus.CONFLICT, "Email already registered");
         }
-        String mobileNumber = normalizeMobile(request.mobileNumber());
-        if (mobileNumber != null && userRepository.existsByMobileNumber(mobileNumber)) {
+        String mobileNumber = ContactNormalizer.normalizeMobile(request.mobileNumber());
+        if (userRepository.existsByMobileNumber(mobileNumber)) {
             throw new ResponseStatusException(HttpStatus.CONFLICT, "Mobile number already registered");
         }
 
@@ -72,10 +73,7 @@ public class UserService {
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "User not found"));
 
         if (request.email() != null) {
-            String email = normalizeEmail(request.email());
-            if (!StringUtils.hasText(email)) {
-                throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "email must not be blank");
-            }
+            String email = ContactNormalizer.normalizeEmail(request.email());
             userRepository
                     .findByEmail(email)
                     .filter(other -> !other.getId().equals(userId))
@@ -92,10 +90,8 @@ public class UserService {
             user.setName(name);
         }
         if (request.mobileNumber() != null) {
-            String mobile = normalizeMobile(request.mobileNumber());
-            if (mobile != null
-                    && userRepository.existsByMobileNumber(mobile)
-                    && !mobile.equals(user.getMobileNumber())) {
+            String mobile = ContactNormalizer.normalizeMobile(request.mobileNumber());
+            if (userRepository.existsByMobileNumber(mobile) && !mobile.equals(user.getMobileNumber())) {
                 throw new ResponseStatusException(HttpStatus.CONFLICT, "Mobile number already registered");
             }
             user.setMobileNumber(mobile);
@@ -155,20 +151,6 @@ public class UserService {
         user.setIsActive(true);
         user = userRepository.save(user);
         return toResponse(user);
-    }
-
-    public String normalizeEmail(String email) {
-        if (!StringUtils.hasText(email)) {
-            return null;
-        }
-        return email.trim().toLowerCase();
-    }
-
-    private String normalizeMobile(String mobileNumber) {
-        if (!StringUtils.hasText(mobileNumber)) {
-            return null;
-        }
-        return mobileNumber.trim();
     }
 
     private static UserResponse toResponse(UserEntity user) {
