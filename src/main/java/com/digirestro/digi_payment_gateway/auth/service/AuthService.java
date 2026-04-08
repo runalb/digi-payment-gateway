@@ -81,6 +81,15 @@ public class AuthService {
         }
     }
 
+    @Transactional(readOnly = true)
+    public void assertAuthenticatedUserOwnsMerchant(Long merchantId) {
+        UserEntity user = resolveAuthenticatedActiveUser();
+        if (!userService.userOwnsMerchant(user.getId(), merchantId)) {
+            throw new ResponseStatusException(
+                    HttpStatus.FORBIDDEN, "You are not authorized to access this resource");
+        }
+    }
+
     private UserEntity resolveAuthenticatedActiveUser() {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         if (authentication == null || !authentication.isAuthenticated()) {

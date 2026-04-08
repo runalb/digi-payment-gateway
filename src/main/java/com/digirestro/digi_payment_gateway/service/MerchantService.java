@@ -27,16 +27,19 @@ public class MerchantService {
     private final MerchantConfigRepository merchantConfigRepository;
     private final PaymentChannelService paymentChannelService;
     private final MerchantPaymentChannelConfigRepository merchantPaymentChannelConfigRepository;
+    private final UserService userService;
 
     public MerchantService(
             MerchantRepository merchantRepository,
             MerchantConfigRepository merchantConfigRepository,
             PaymentChannelService paymentChannelService,
-            MerchantPaymentChannelConfigRepository merchantPaymentChannelConfigRepository) {
+            MerchantPaymentChannelConfigRepository merchantPaymentChannelConfigRepository,
+            UserService userService) {
         this.merchantRepository = merchantRepository;
         this.merchantConfigRepository = merchantConfigRepository;
         this.paymentChannelService = paymentChannelService;
         this.merchantPaymentChannelConfigRepository = merchantPaymentChannelConfigRepository;
+        this.userService = userService;
     }
 
     @Transactional(readOnly = true)
@@ -55,7 +58,7 @@ public class MerchantService {
     }
 
     @Transactional
-    public MerchantRegistrationResponse createMerchant(MerchantRegistrationRequest request) {
+    public MerchantRegistrationResponse createMerchant(MerchantRegistrationRequest request, Long ownerUserId) {
         String currency = StringUtils.hasText(request.currency())
                 ? request.currency().trim().toUpperCase()
                 : DEFAULT_CURRENCY;
@@ -66,6 +69,8 @@ public class MerchantService {
         merchant.setApiKey(UUID.randomUUID().toString());
         merchant.setIsActive(true);
         merchant = merchantRepository.save(merchant);
+
+        userService.linkMerchantToUser(ownerUserId, merchant);
 
         MerchantConfigEntity config = new MerchantConfigEntity();
         config.setMerchant(merchant);

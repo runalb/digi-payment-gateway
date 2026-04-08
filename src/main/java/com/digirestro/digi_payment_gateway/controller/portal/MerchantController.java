@@ -2,6 +2,7 @@ package com.digirestro.digi_payment_gateway.controller.portal;
 
 import com.digirestro.digi_payment_gateway.dto.MerchantPaymentChannelConfigCreateRequest;
 import com.digirestro.digi_payment_gateway.dto.MerchantPaymentChannelConfigResponse;
+import com.digirestro.digi_payment_gateway.auth.service.AuthService;
 import com.digirestro.digi_payment_gateway.dto.MerchantRegistrationRequest;
 import com.digirestro.digi_payment_gateway.dto.MerchantRegistrationResponse;
 import com.digirestro.digi_payment_gateway.service.MerchantService;
@@ -23,18 +24,19 @@ import org.springframework.web.bind.annotation.RestController;
 public class MerchantController {
 
     private final MerchantService merchantService;
+    private final AuthService authService;
 
-    public MerchantController(MerchantService merchantService) {
+    public MerchantController(MerchantService merchantService, AuthService authService) {
         this.merchantService = merchantService;
+        this.authService = authService;
     }
-
-    // TODO:  authenticated user via JWT - Security checks for all endpoints - user is mapped to merchant then only allow to modifty merchant settings else show you are not authorized to access this resource
 
     // Merchants
     @PostMapping
     public ResponseEntity<MerchantRegistrationResponse> createMerchant(
             @Valid @RequestBody MerchantRegistrationRequest request) {
-        MerchantRegistrationResponse response = merchantService.createMerchant(request);
+        Long ownerUserId = authService.loadAuthenticatedActiveUser().getId();
+        MerchantRegistrationResponse response = merchantService.createMerchant(request, ownerUserId);
         return new ResponseEntity<>(response, HttpStatus.CREATED);
     }
 
@@ -58,9 +60,9 @@ public class MerchantController {
                 .body("Update merchant endpoint is not implemented yet.");
     }
 
-    // implement userid check in future - user is mapped to merchant
     @DeleteMapping("/{merchantId}")
     public ResponseEntity<Void> deleteMerchant(@PathVariable("merchantId") Long merchantId) {
+        authService.assertAuthenticatedUserOwnsMerchant(merchantId);
         merchantService.deactivateMerchant(merchantId);
         return ResponseEntity.noContent().build();
     }
@@ -70,6 +72,7 @@ public class MerchantController {
     public ResponseEntity<MerchantPaymentChannelConfigResponse> createMerchantPaymentChannelConfig(
             @PathVariable("merchantId") Long merchantId,
             @Valid @RequestBody MerchantPaymentChannelConfigCreateRequest request) {
+        authService.assertAuthenticatedUserOwnsMerchant(merchantId);
         MerchantPaymentChannelConfigResponse response = merchantService.createMerchantPaymentChannelConfig(merchantId,
                 request);
         return new ResponseEntity<>(response, HttpStatus.CREATED);
@@ -98,11 +101,11 @@ public class MerchantController {
                 .body("Update merchant payment channel config endpoint is not implemented yet.");
     }
 
-    // implement userid check in future - user is mapped to merchant
     @DeleteMapping("/{merchantId}/payment-channel-configs/{configId}")
     public ResponseEntity<Void> deleteMerchantPaymentChannelConfig(
             @PathVariable("merchantId") Long merchantId,
             @PathVariable("configId") Long configId) {
+        authService.assertAuthenticatedUserOwnsMerchant(merchantId);
         merchantService.deactivateMerchantPaymentChannelConfig(merchantId, configId);
         return ResponseEntity.noContent().build();
     }

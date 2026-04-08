@@ -3,6 +3,7 @@ package com.digirestro.digi_payment_gateway.service;
 import com.digirestro.digi_payment_gateway.dto.UserCreateRequest;
 import com.digirestro.digi_payment_gateway.dto.UserResponse;
 import com.digirestro.digi_payment_gateway.dto.UserUpdateRequest;
+import com.digirestro.digi_payment_gateway.entity.MerchantEntity;
 import com.digirestro.digi_payment_gateway.entity.UserEntity;
 import com.digirestro.digi_payment_gateway.repository.UserRepository;
 import com.digirestro.digi_payment_gateway.util.ContactNormalizer;
@@ -112,6 +113,23 @@ public class UserService {
 
         user = userRepository.save(user);
         return toResponse(user);
+    }
+
+    @Transactional(readOnly = true)
+    public boolean userOwnsMerchant(Long userId, Long merchantId) {
+        return userRepository.existsByIdAndMerchants_Id(userId, merchantId);
+    }
+
+    @Transactional
+    public void linkMerchantToUser(Long userId, MerchantEntity merchant) {
+        UserEntity user = userRepository
+                .findById(userId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "User not found"));
+        if (!Boolean.TRUE.equals(user.getIsActive())) {
+            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "User is deleted");
+        }
+        user.getMerchants().add(merchant);
+        userRepository.save(user);
     }
 
     @Transactional(readOnly = true)
