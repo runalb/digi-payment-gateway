@@ -8,8 +8,6 @@ import com.digirestro.digi_payment_gateway.entity.UserEntity;
 import com.digirestro.digi_payment_gateway.repository.UserRepository;
 import com.digirestro.digi_payment_gateway.util.ContactNormalizer;
 
-import jakarta.persistence.EntityNotFoundException;
-
 import org.springframework.http.HttpStatus;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
@@ -43,7 +41,7 @@ public class UserService {
         user.setEmail(email);
         user.setMobileNumber(mobileNumber);
         user.setPasswordHash(passwordEncoder.encode(request.password()));
-        user.setName(request.name().trim());
+        user.setName(ContactNormalizer.normalizeName(request.name()));
         user.setIsActive(true);
         user.setIsVerified(false);
         user = userRepository.save(user);
@@ -84,10 +82,7 @@ public class UserService {
             user.setEmail(email);
         }
         if (request.name() != null) {
-            String name = request.name().trim();
-            if (!StringUtils.hasText(name)) {
-                throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "name must not be blank");
-            }
+            String name = ContactNormalizer.normalizeName(request.name());
             user.setName(name);
         }
         if (request.mobileNumber() != null) {
@@ -135,7 +130,7 @@ public class UserService {
     @Transactional(readOnly = true)
     public UserEntity findActiveUserByEmail(String email) {
         UserEntity user = userRepository.findByEmail(email)
-                .orElseThrow(() -> new EntityNotFoundException("User not found for email: " + email));
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "User not found for email: " + email));
         if (!Boolean.TRUE.equals(user.getIsActive())) {
             throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "User is deleted");
         }
@@ -145,7 +140,7 @@ public class UserService {
     @Transactional(readOnly = true)
     public UserEntity findActiveUserByMobile(String mobileNumber) {
         UserEntity user = userRepository.findByMobileNumber(mobileNumber)
-                .orElseThrow(() -> new EntityNotFoundException("User not found for mobile number: " + mobileNumber));
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "User not found for mobile number: " + mobileNumber));
         if (!Boolean.TRUE.equals(user.getIsActive())) {
             throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "User is deleted");
         }
