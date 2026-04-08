@@ -310,7 +310,7 @@
                   "host": ["{{baseUrl}}"],
                   "path": ["api", "v1", "portal", "users"]
                 },
-                "description": "Currently returns 501 Not Implemented."
+                "description": "No `@GetMapping` on `/users` (list is commented out in `UserController`) — expect **404**, not 501."
               },
               "response": []
             },
@@ -324,7 +324,7 @@
                   "host": ["{{baseUrl}}"],
                   "path": ["api", "v1", "portal", "users", "{{userId}}"]
                 },
-                "description": "501 Not Implemented."
+                "description": "`AuthService.assertAuthenticatedUserOwnsUserId` — principal must match `userId`. Returns `UserResponse`."
               },
               "response": []
             },
@@ -345,7 +345,21 @@
                   "host": ["{{baseUrl}}"],
                   "path": ["api", "v1", "portal", "users", "{{userId}}"]
                 },
-                "description": "501 Not Implemented; body is generic JSON map in controller."
+                "description": "`dto.UserUpdateRequest` (self-only). Returns `UserResponse`."
+              },
+              "response": []
+            },
+            {
+              "name": "Reactivate user",
+              "request": {
+                "method": "POST",
+                "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }],
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/portal/users/{{userId}}/reactivate",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["api", "v1", "portal", "users", "{{userId}}", "reactivate"]
+                },
+                "description": "`POST .../users/{userId}/reactivate` — self-only; `UserService.reactivateUser` → `UserResponse`."
               },
               "response": []
             },
