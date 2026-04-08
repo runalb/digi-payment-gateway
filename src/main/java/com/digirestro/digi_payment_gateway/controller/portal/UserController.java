@@ -1,5 +1,6 @@
 package com.digirestro.digi_payment_gateway.controller.portal;
 
+import com.digirestro.digi_payment_gateway.auth.service.AuthService;
 import com.digirestro.digi_payment_gateway.dto.UserCreateRequest;
 import com.digirestro.digi_payment_gateway.dto.UserResponse;
 import com.digirestro.digi_payment_gateway.dto.UserUpdateRequest;
@@ -21,9 +22,11 @@ import org.springframework.web.bind.annotation.RestController;
 public class UserController {
 
     private final UserService userService;
+    private final AuthService authService;
 
-    public UserController(UserService userService) {
+    public UserController(UserService userService, AuthService authService) {
         this.userService = userService;
+        this.authService = authService;
     }
 
     @PostMapping
@@ -40,7 +43,7 @@ public class UserController {
 
     @GetMapping("/{userId}")
     public ResponseEntity<UserResponse> getUser(@PathVariable("userId") Long userId) {
-        userService.assertAuthenticatedUserOwnsUserId(userId);
+        authService.assertAuthenticatedUserOwnsUserId(userId);
         UserResponse response = userService.getUser(userId);
         return ResponseEntity.ok(response);
     }
@@ -48,21 +51,21 @@ public class UserController {
     @PatchMapping("/{userId}")
     public ResponseEntity<UserResponse> updateUser(
             @PathVariable("userId") Long userId, @Valid @RequestBody UserUpdateRequest request) {
-        userService.assertAuthenticatedUserOwnsUserId(userId);
+        authService.assertAuthenticatedUserOwnsUserId(userId);
         UserResponse response = userService.updateUser(userId, request);
         return ResponseEntity.ok(response);
     }
 
     @DeleteMapping("/{userId}")
     public ResponseEntity<Void> deleteUser(@PathVariable("userId") Long userId) {
-        userService.assertAuthenticatedUserOwnsUserId(userId);
+        authService.assertAuthenticatedUserOwnsUserId(userId);
         userService.deactivateUser(userId);
         return ResponseEntity.noContent().build();
     }
 
     @PostMapping("/{userId}/reactivate")
     public ResponseEntity<UserResponse> reactivateUser(@PathVariable("userId") Long userId) {
-        userService.assertAuthenticatedUserOwnsUserId(userId);
+        authService.assertAuthenticatedUserOwnsUserId(userId);
         UserResponse response = userService.reactivateUser(userId);
         return ResponseEntity.ok(response);
     }

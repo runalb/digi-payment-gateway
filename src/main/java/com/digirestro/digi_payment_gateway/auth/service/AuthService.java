@@ -26,6 +26,8 @@ import java.util.concurrent.ConcurrentHashMap;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.scheduling.annotation.Scheduled;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -62,6 +64,33 @@ public class AuthService {
         this.jwtService = jwtService;
         this.refreshExpirationSeconds = refreshExpirationSeconds;
         this.otpResendCooldownSeconds = otpResendCooldownSeconds;
+    }
+
+    @Transactional(readOnly = true)
+    public UserEntity loadAuthenticatedActiveUser() {
+        return resolveAuthenticatedActiveUser();
+    }
+
+    @Transactional(readOnly = true)
+    public void assertAuthenticatedUserOwnsUserId(Long userId) {
+        UserEntity authenticatedUser = resolveAuthenticatedActiveUser();
+        if (!authenticatedUser.getId().equals(userId)) {
+            throw new ResponseStatusException(
+                    HttpStatus.FORBIDDEN, "You are not authorized to access this resource");
+        }
+    }
+
+    private UserEntity resolveAuthenticatedActiveUser() {
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        if (authentication == null || !authentication.isAuthenticated()) {
+            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Not authenticated");
+        }
+        Object principal = authentication.getPrincipal();
+        if (!(principal instanceof String principalEmail) || !StringUtils.hasText(principalEmail)) {
+            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Not authenticated");
+        }
+        String normalizedEmail = userService.normalizeEmail(principalEmail);
+        return userService.findActiveUserByEmail(normalizedEmail);
     }
 
     @Transactional
