@@ -6,11 +6,11 @@ import org.springframework.http.HttpStatus;
 import org.springframework.util.StringUtils;
 import org.springframework.web.server.ResponseStatusException;
 
-public final class ContactNormalizer {
+public final class UserNormalizer {
 
     private static final Pattern WHITESPACE_RUN = Pattern.compile("\\s+");
 
-    private ContactNormalizer() {}
+    private UserNormalizer() {}
 
     public static String normalizeEmail(String email) {
         if (!StringUtils.hasText(email)) {

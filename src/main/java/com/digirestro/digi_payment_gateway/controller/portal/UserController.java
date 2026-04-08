@@ -35,6 +35,7 @@ public class UserController {
         return new ResponseEntity<>(response, HttpStatus.CREATED);
     }
 
+    // Not Required - Commented out for now
     // @GetMapping
     // public ResponseEntity<String> listUsers() {
     //     return ResponseEntity.status(HttpStatus.NOT_IMPLEMENTED)
