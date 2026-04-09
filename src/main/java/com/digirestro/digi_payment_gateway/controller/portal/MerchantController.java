@@ -40,18 +40,21 @@ public class MerchantController {
         return new ResponseEntity<>(response, HttpStatus.CREATED);
     }
 
+    // TODO: Implement listMerchants endpoint
     @GetMapping
     public ResponseEntity<String> listMerchants() {
         return ResponseEntity.status(HttpStatus.NOT_IMPLEMENTED)
                 .body("List merchants endpoint is not implemented yet.");
     }
 
+    // TODO: Implement getMerchant endpoint
     @GetMapping("/{merchantId}")
     public ResponseEntity<String> getMerchant(@PathVariable("merchantId") Long merchantId) {
         return ResponseEntity.status(HttpStatus.NOT_IMPLEMENTED)
                 .body("Get merchant endpoint is not implemented yet.");
     }
 
+    // TODO: Implement updateMerchant endpoint
     @PatchMapping("/{merchantId}")
     public ResponseEntity<String> updateMerchant(
             @PathVariable("merchantId") Long merchantId,
@@ -78,12 +81,14 @@ public class MerchantController {
         return new ResponseEntity<>(response, HttpStatus.CREATED);
     }
 
+    // TODO: Implement listMerchantPaymentChannelConfigs endpoint
     @GetMapping("/{merchantId}/payment-channel-configs")
     public ResponseEntity<String> listMerchantPaymentChannelConfigs(@PathVariable("merchantId") Long merchantId) {
         return ResponseEntity.status(HttpStatus.NOT_IMPLEMENTED)
                 .body("List merchant payment channel configs endpoint is not implemented yet.");
     }
 
+    // TODO: Implement getMerchantPaymentChannelConfig endpoint
     @GetMapping("/{merchantId}/payment-channel-configs/{configId}")
     public ResponseEntity<String> getMerchantPaymentChannelConfig(
             @PathVariable("merchantId") Long merchantId,
@@ -92,6 +97,7 @@ public class MerchantController {
                 .body("Get merchant payment channel config endpoint is not implemented yet.");
     }
 
+    // TODO: Implement updateMerchantPaymentChannelConfig endpoint
     @PatchMapping("/{merchantId}/payment-channel-configs/{configId}")
     public ResponseEntity<String> updateMerchantPaymentChannelConfig(
             @PathVariable("merchantId") Long merchantId,
