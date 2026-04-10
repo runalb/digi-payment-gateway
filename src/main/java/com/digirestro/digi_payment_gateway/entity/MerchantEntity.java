@@ -30,6 +30,9 @@ public class MerchantEntity extends AuditableEntity {
     @Column(nullable = false, unique = true)
     private String apiKey;
 
+    @Column(nullable = false, unique = true)
+    private String email;
+
     @OneToOne(mappedBy = "merchant", fetch = FetchType.LAZY)
     private MerchantConfigEntity merchantConfig;
 

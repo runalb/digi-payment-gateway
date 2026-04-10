@@ -1,5 +1,7 @@
 package com.digirestro.digi_payment_gateway.service;
 
+import com.digirestro.digi_payment_gateway.dto.MerchantConfigResponse;
+import com.digirestro.digi_payment_gateway.dto.MerchantConfigRequest;
 import com.digirestro.digi_payment_gateway.dto.MerchantRegistrationRequest;
 import com.digirestro.digi_payment_gateway.dto.MerchantRegistrationResponse;
 import com.digirestro.digi_payment_gateway.dto.MerchantPaymentChannelConfigCreateRequest;
@@ -12,6 +14,7 @@ import com.digirestro.digi_payment_gateway.repository.MerchantConfigRepository;
 import com.digirestro.digi_payment_gateway.repository.MerchantPaymentChannelConfigRepository;
 import com.digirestro.digi_payment_gateway.repository.MerchantRepository;
 import jakarta.persistence.EntityNotFoundException;
+import java.util.Locale;
 import java.util.UUID;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
@@ -21,7 +24,6 @@ import org.springframework.web.server.ResponseStatusException;
 
 @Service
 public class MerchantService {
-    private static final String DEFAULT_CURRENCY = "USD";
 
     private final MerchantRepository merchantRepository;
     private final MerchantConfigRepository merchantConfigRepository;
@@ -59,32 +61,65 @@ public class MerchantService {
 
     @Transactional
     public MerchantRegistrationResponse createMerchant(MerchantRegistrationRequest request, Long ownerUserId) {
-        String currency = StringUtils.hasText(request.currency())
-                ? request.currency().trim().toUpperCase()
-                : DEFAULT_CURRENCY;
-        String webhookUrl = StringUtils.hasText(request.webhookUrl()) ? request.webhookUrl().trim() : null;
-
         MerchantEntity merchant = new MerchantEntity();
         merchant.setName(request.name().trim());
         merchant.setApiKey(UUID.randomUUID().toString());
         merchant.setIsActive(true);
+        merchant.setEmail(UserNormalizer.normalizeEmail(request.email()));
         merchant = merchantRepository.save(merchant);
 
         userService.linkMerchantToUser(ownerUserId, merchant);
 
-        MerchantConfigEntity config = new MerchantConfigEntity();
-        config.setMerchant(merchant);
-        config.setCurrency(currency);
-        config.setWebhookUrl(webhookUrl);
-        merchantConfigRepository.save(config);
-
         return new MerchantRegistrationResponse(
-                merchant.getId(),
-                merchant.getName(),
-                merchant.getApiKey(),
-                merchant.getIsActive(),
-                currency,
-                webhookUrl);
+                merchant.getId(), merchant.getName(), merchant.getApiKey(), merchant.getIsActive());
+    }
+
+    @Transactional(readOnly = true)
+    public MerchantConfigResponse getMerchantConfig(Long merchantId) {
+        MerchantConfigEntity config = merchantConfigRepository
+                .findByMerchant_Id(merchantId)
+                .orElseThrow(() -> new ResponseStatusException(
+                        HttpStatus.NOT_FOUND, "Merchant configuration not found"));
+        return new MerchantConfigResponse(merchantId, config.getCurrency(), config.getWebhookUrl());
+    }
+
+    @Transactional
+    public MerchantConfigResponse createMerchantConfig(Long merchantId, MerchantConfigRequest request) {
+        MerchantEntity merchant = merchantRepository
+                .findById(merchantId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Merchant not found"));
+
+        if (merchantConfigRepository.findByMerchant_Id(merchantId).isPresent()) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "Merchant configuration already exists");
+        }
+
+        String currency = request.currency().toUpperCase(Locale.ROOT);
+        String webhookUrl = StringUtils.hasText(request.webhookUrl()) ? request.webhookUrl().trim() : null;
+
+        MerchantConfigEntity entity = new MerchantConfigEntity();
+        entity.setMerchant(merchant);
+        entity.setCurrency(currency);
+        entity.setWebhookUrl(webhookUrl);
+        merchantConfigRepository.save(entity);
+
+        return new MerchantConfigResponse(merchantId, currency, webhookUrl);
+    }
+
+    @Transactional
+    public MerchantConfigResponse updateMerchantConfig(Long merchantId, MerchantConfigRequest request) {
+        MerchantConfigEntity entity = merchantConfigRepository
+                .findByMerchant_Id(merchantId)
+                .orElseThrow(() -> new ResponseStatusException(
+                        HttpStatus.NOT_FOUND, "Merchant configuration not found"));
+
+        String currency = request.currency().toUpperCase(Locale.ROOT);
+        String webhookUrl = StringUtils.hasText(request.webhookUrl()) ? request.webhookUrl().trim() : null;
+
+        entity.setCurrency(currency);
+        entity.setWebhookUrl(webhookUrl);
+        merchantConfigRepository.save(entity);
+
+        return new MerchantConfigResponse(merchantId, currency, webhookUrl);
     }
 
     @Transactional
