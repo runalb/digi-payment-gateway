@@ -6,10 +6,12 @@ import com.digirestro.digi_payment_gateway.dto.MerchantConfigCreateRequest;
 import com.digirestro.digi_payment_gateway.dto.MerchantPaymentChannelConfigCreateRequest;
 import com.digirestro.digi_payment_gateway.dto.MerchantPaymentChannelConfigResponse;
 import com.digirestro.digi_payment_gateway.auth.service.AuthService;
-import com.digirestro.digi_payment_gateway.dto.MerchantRegistrationRequest;
-import com.digirestro.digi_payment_gateway.dto.MerchantRegistrationResponse;
+import com.digirestro.digi_payment_gateway.dto.MerchantCreateRequest;
+import com.digirestro.digi_payment_gateway.dto.MerchantResponse;
+import com.digirestro.digi_payment_gateway.dto.MerchantUpdateRequest;
 import com.digirestro.digi_payment_gateway.service.MerchantService;
 import jakarta.validation.Valid;
+import java.util.List;
 import java.util.Map;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -36,34 +38,34 @@ public class MerchantController {
 
     // Merchants
     @PostMapping
-    public ResponseEntity<MerchantRegistrationResponse> createMerchant(
-            @Valid @RequestBody MerchantRegistrationRequest request) {
+    public ResponseEntity<MerchantResponse> createMerchant(
+            @Valid @RequestBody MerchantCreateRequest request) {
         Long ownerUserId = authService.loadAuthenticatedActiveUser().getId();
-        MerchantRegistrationResponse response = merchantService.createMerchant(request, ownerUserId);
+        MerchantResponse response = merchantService.createMerchant(request, ownerUserId);
         return new ResponseEntity<>(response, HttpStatus.CREATED);
     }
 
-    // TODO: Implement listMerchants endpoint
     @GetMapping
-    public ResponseEntity<String> listMerchants() {
-        return ResponseEntity.status(HttpStatus.NOT_IMPLEMENTED)
-                .body("List merchants endpoint is not implemented yet.");
+    public ResponseEntity<List<MerchantResponse>> listMerchants() {
+        Long userId = authService.loadAuthenticatedActiveUser().getId();
+        List<MerchantResponse> merchants = merchantService.listMerchantsForUser(userId);
+        return new ResponseEntity<>(merchants, HttpStatus.OK);
     }
 
-    // TODO: Implement getMerchant endpoint
     @GetMapping("/{merchantId}")
-    public ResponseEntity<String> getMerchant(@PathVariable("merchantId") Long merchantId) {
-        return ResponseEntity.status(HttpStatus.NOT_IMPLEMENTED)
-                .body("Get merchant endpoint is not implemented yet.");
+    public ResponseEntity<MerchantResponse> getMerchant(@PathVariable("merchantId") Long merchantId) {
+        authService.assertAuthenticatedUserOwnsMerchant(merchantId);
+        MerchantResponse response = merchantService.getMerchant(merchantId);
+        return new ResponseEntity<>(response, HttpStatus.OK);
     }
 
-    // TODO: Implement updateMerchant endpoint
     @PatchMapping("/{merchantId}")
-    public ResponseEntity<String> updateMerchant(
+    public ResponseEntity<MerchantResponse> updateMerchant(
             @PathVariable("merchantId") Long merchantId,
-            @RequestBody Map<String, Object> request) {
-        return ResponseEntity.status(HttpStatus.NOT_IMPLEMENTED)
-                .body("Update merchant endpoint is not implemented yet.");
+            @Valid @RequestBody MerchantUpdateRequest request) {
+        authService.assertAuthenticatedUserOwnsMerchant(merchantId);
+        MerchantResponse response = merchantService.updateMerchant(merchantId, request);
+        return new ResponseEntity<>(response, HttpStatus.OK);
     }
 
     @DeleteMapping("/{merchantId}")

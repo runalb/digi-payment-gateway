@@ -3,8 +3,9 @@ package com.digirestro.digi_payment_gateway.service;
 import com.digirestro.digi_payment_gateway.dto.MerchantConfigResponse;
 import com.digirestro.digi_payment_gateway.dto.MerchantConfigUpdateRequest;
 import com.digirestro.digi_payment_gateway.dto.MerchantConfigCreateRequest;
-import com.digirestro.digi_payment_gateway.dto.MerchantRegistrationRequest;
-import com.digirestro.digi_payment_gateway.dto.MerchantRegistrationResponse;
+import com.digirestro.digi_payment_gateway.dto.MerchantCreateRequest;
+import com.digirestro.digi_payment_gateway.dto.MerchantResponse;
+import com.digirestro.digi_payment_gateway.dto.MerchantUpdateRequest;
 import com.digirestro.digi_payment_gateway.dto.MerchantPaymentChannelConfigCreateRequest;
 import com.digirestro.digi_payment_gateway.dto.MerchantPaymentChannelConfigResponse;
 import com.digirestro.digi_payment_gateway.entity.MerchantConfigEntity;
@@ -16,6 +17,7 @@ import com.digirestro.digi_payment_gateway.repository.MerchantPaymentChannelConf
 import com.digirestro.digi_payment_gateway.repository.MerchantRepository;
 import com.digirestro.digi_payment_gateway.util.StringNormalizer;
 import jakarta.persistence.EntityNotFoundException;
+import java.util.List;
 import java.util.UUID;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
@@ -61,7 +63,7 @@ public class MerchantService {
     }
 
     @Transactional
-    public MerchantRegistrationResponse createMerchant(MerchantRegistrationRequest request, Long ownerUserId) {
+    public MerchantResponse createMerchant(MerchantCreateRequest request, Long ownerUserId) {
         MerchantEntity merchant = new MerchantEntity();
         merchant.setName(StringNormalizer.normalizeName(request.name()));
         merchant.setApiKey(UUID.randomUUID().toString());
@@ -71,8 +73,59 @@ public class MerchantService {
 
         userService.linkMerchantToUser(ownerUserId, merchant);
 
-        return new MerchantRegistrationResponse(
-                merchant.getId(), merchant.getName(), merchant.getApiKey(), merchant.getIsActive());
+        return new MerchantResponse(
+                merchant.getId(), merchant.getName(), merchant.getEmail(), merchant.getApiKey(), merchant.getIsActive());
+    }
+
+    @Transactional(readOnly = true)
+    public List<MerchantResponse> listMerchantsForUser(Long userId) {
+        return merchantRepository.findByUsers_IdOrderByIdAsc(userId).stream()
+                .map(MerchantService::toMerchantResponse)
+                .toList();
+    }
+
+    @Transactional(readOnly = true)
+    public MerchantResponse getMerchant(Long merchantId) {
+        MerchantEntity merchant = merchantRepository
+                .findById(merchantId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Merchant not found"));
+        return toMerchantResponse(merchant);
+    }
+
+    @Transactional
+    public MerchantResponse updateMerchant(Long merchantId, MerchantUpdateRequest request) {
+        if (request == null
+                || (request.name() == null && request.email() == null && request.isActive() == null)) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Request body must not be empty");
+        }
+        MerchantEntity merchant = merchantRepository
+                .findById(merchantId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Merchant not found"));
+
+        if (request.name() != null) {
+            merchant.setName(StringNormalizer.normalizeName(request.name()));
+        }
+        if (request.email() != null) {
+            String email = StringNormalizer.normalizeEmail(request.email());
+            merchantRepository
+                    .findByEmail(email)
+                    .filter(other -> !other.getId().equals(merchantId))
+                    .ifPresent(other -> {
+                        throw new ResponseStatusException(HttpStatus.CONFLICT, "Email already in use");
+                    });
+            merchant.setEmail(email);
+        }
+        if (request.isActive() != null) {
+            merchant.setIsActive(request.isActive());
+        }
+
+        merchant = merchantRepository.save(merchant);
+        return toMerchantResponse(merchant);
+    }
+
+    private static MerchantResponse toMerchantResponse(MerchantEntity merchant) {
+        return new MerchantResponse(
+                merchant.getId(), merchant.getName(), merchant.getEmail(), merchant.getApiKey(), merchant.getIsActive());
     }
 
     @Transactional(readOnly = true)
