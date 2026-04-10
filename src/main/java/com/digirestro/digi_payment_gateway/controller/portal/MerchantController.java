@@ -1,7 +1,8 @@
 package com.digirestro.digi_payment_gateway.controller.portal;
 
 import com.digirestro.digi_payment_gateway.dto.MerchantConfigResponse;
-import com.digirestro.digi_payment_gateway.dto.MerchantConfigRequest;
+import com.digirestro.digi_payment_gateway.dto.MerchantConfigUpdateRequest;
+import com.digirestro.digi_payment_gateway.dto.MerchantConfigCreateRequest;
 import com.digirestro.digi_payment_gateway.dto.MerchantPaymentChannelConfigCreateRequest;
 import com.digirestro.digi_payment_gateway.dto.MerchantPaymentChannelConfigResponse;
 import com.digirestro.digi_payment_gateway.auth.service.AuthService;
@@ -17,7 +18,6 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
@@ -84,16 +84,16 @@ public class MerchantController {
     @PostMapping("/{merchantId}/config")
     public ResponseEntity<MerchantConfigResponse> createMerchantConfig(
             @PathVariable("merchantId") Long merchantId,
-            @Valid @RequestBody MerchantConfigRequest request) {
+            @Valid @RequestBody MerchantConfigCreateRequest request) {
         authService.assertAuthenticatedUserOwnsMerchant(merchantId);
         MerchantConfigResponse response = merchantService.createMerchantConfig(merchantId, request);
         return new ResponseEntity<>(response, HttpStatus.OK);
     }
 
-    @PutMapping("/{merchantId}/config")
+    @PatchMapping("/{merchantId}/config")
     public ResponseEntity<MerchantConfigResponse> updateMerchantConfig(
             @PathVariable("merchantId") Long merchantId,
-            @Valid @RequestBody MerchantConfigRequest request) {
+            @Valid @RequestBody MerchantConfigUpdateRequest request) {
         authService.assertAuthenticatedUserOwnsMerchant(merchantId);
         MerchantConfigResponse response = merchantService.updateMerchantConfig(merchantId, request);
         return new ResponseEntity<>(response, HttpStatus.OK);

@@ -1,7 +1,8 @@
 package com.digirestro.digi_payment_gateway.service;
 
 import com.digirestro.digi_payment_gateway.dto.MerchantConfigResponse;
-import com.digirestro.digi_payment_gateway.dto.MerchantConfigRequest;
+import com.digirestro.digi_payment_gateway.dto.MerchantConfigUpdateRequest;
+import com.digirestro.digi_payment_gateway.dto.MerchantConfigCreateRequest;
 import com.digirestro.digi_payment_gateway.dto.MerchantRegistrationRequest;
 import com.digirestro.digi_payment_gateway.dto.MerchantRegistrationResponse;
 import com.digirestro.digi_payment_gateway.dto.MerchantPaymentChannelConfigCreateRequest;
@@ -84,7 +85,7 @@ public class MerchantService {
     }
 
     @Transactional
-    public MerchantConfigResponse createMerchantConfig(Long merchantId, MerchantConfigRequest request) {
+    public MerchantConfigResponse createMerchantConfig(Long merchantId, MerchantConfigCreateRequest request) {
         MerchantEntity merchant = merchantRepository
                 .findById(merchantId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Merchant not found"));
@@ -106,20 +107,21 @@ public class MerchantService {
     }
 
     @Transactional
-    public MerchantConfigResponse updateMerchantConfig(Long merchantId, MerchantConfigRequest request) {
+    public MerchantConfigResponse updateMerchantConfig(Long merchantId, MerchantConfigUpdateRequest request) {
         MerchantConfigEntity entity = merchantConfigRepository
                 .findByMerchant_Id(merchantId)
                 .orElseThrow(() -> new ResponseStatusException(
                         HttpStatus.NOT_FOUND, "Merchant configuration not found"));
 
-        String currency = StringNormalizer.normalizeISO4217Currency(request.currency());
-        String webhookUrl = StringUtils.hasText(request.webhookUrl()) ? request.webhookUrl().trim() : null;
-
-        entity.setCurrency(currency);
-        entity.setWebhookUrl(webhookUrl);
+        if (StringUtils.hasText(request.currency())) {
+            entity.setCurrency(StringNormalizer.normalizeISO4217Currency(request.currency()));
+        }
+        if (request.webhookUrl() != null) {
+            entity.setWebhookUrl(StringUtils.hasText(request.webhookUrl()) ? request.webhookUrl().trim() : null);
+        }
         merchantConfigRepository.save(entity);
 
-        return new MerchantConfigResponse(merchantId, currency, webhookUrl);
+        return new MerchantConfigResponse(merchantId, entity.getCurrency(), entity.getWebhookUrl());
     }
 
     @Transactional
