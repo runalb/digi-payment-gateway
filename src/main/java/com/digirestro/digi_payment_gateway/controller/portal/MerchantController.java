@@ -1,14 +1,14 @@
 package com.digirestro.digi_payment_gateway.controller.portal;
 
-import com.digirestro.digi_payment_gateway.dto.MerchantConfigResponse;
-import com.digirestro.digi_payment_gateway.dto.MerchantConfigUpdateRequest;
-import com.digirestro.digi_payment_gateway.dto.MerchantConfigCreateRequest;
-import com.digirestro.digi_payment_gateway.dto.MerchantPaymentChannelConfigCreateRequest;
-import com.digirestro.digi_payment_gateway.dto.MerchantPaymentChannelConfigResponse;
 import com.digirestro.digi_payment_gateway.auth.service.AuthService;
-import com.digirestro.digi_payment_gateway.dto.MerchantCreateRequest;
-import com.digirestro.digi_payment_gateway.dto.MerchantResponse;
-import com.digirestro.digi_payment_gateway.dto.MerchantUpdateRequest;
+import com.digirestro.digi_payment_gateway.dto.merchant.MerchantCreateRequest;
+import com.digirestro.digi_payment_gateway.dto.merchant.MerchantResponse;
+import com.digirestro.digi_payment_gateway.dto.merchant.MerchantUpdateRequest;
+import com.digirestro.digi_payment_gateway.dto.merchantconfig.MerchantConfigCreateRequest;
+import com.digirestro.digi_payment_gateway.dto.merchantconfig.MerchantConfigResponse;
+import com.digirestro.digi_payment_gateway.dto.merchantconfig.MerchantConfigUpdateRequest;
+import com.digirestro.digi_payment_gateway.dto.merchantpaymentchannel.MerchantPaymentChannelConfigCreateRequest;
+import com.digirestro.digi_payment_gateway.dto.merchantpaymentchannel.MerchantPaymentChannelConfigResponse;
 import com.digirestro.digi_payment_gateway.service.MerchantService;
 import jakarta.validation.Valid;
 import java.util.List;

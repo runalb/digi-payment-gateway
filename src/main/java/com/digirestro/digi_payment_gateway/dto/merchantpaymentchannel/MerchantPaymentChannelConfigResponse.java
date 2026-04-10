@@ -1,4 +1,4 @@
-package com.digirestro.digi_payment_gateway.dto;
+package com.digirestro.digi_payment_gateway.dto.merchantpaymentchannel;
 
 import com.digirestro.digi_payment_gateway.enums.PaymentChannelNameEnum;
 

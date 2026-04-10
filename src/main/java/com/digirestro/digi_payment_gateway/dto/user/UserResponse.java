@@ -1,4 +1,4 @@
-package com.digirestro.digi_payment_gateway.dto;
+package com.digirestro.digi_payment_gateway.dto.user;
 
 public record UserResponse(
         Long id,

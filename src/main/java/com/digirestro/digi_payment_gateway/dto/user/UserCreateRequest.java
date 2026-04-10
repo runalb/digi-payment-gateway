@@ -1,4 +1,4 @@
-package com.digirestro.digi_payment_gateway.dto;
+package com.digirestro.digi_payment_gateway.dto.user;
 
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
