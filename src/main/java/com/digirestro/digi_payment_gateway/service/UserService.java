@@ -6,13 +6,12 @@ import com.digirestro.digi_payment_gateway.dto.UserUpdateRequest;
 import com.digirestro.digi_payment_gateway.entity.MerchantEntity;
 import com.digirestro.digi_payment_gateway.entity.UserEntity;
 import com.digirestro.digi_payment_gateway.repository.UserRepository;
-import com.digirestro.digi_payment_gateway.util.UserNormalizer;
+import com.digirestro.digi_payment_gateway.util.StringNormalizer;
 
 import org.springframework.http.HttpStatus;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.util.StringUtils;
 import org.springframework.web.server.ResponseStatusException;
 
 @Service
@@ -28,11 +27,11 @@ public class UserService {
 
     @Transactional
     public UserResponse createUser(UserCreateRequest request) {
-        String email = UserNormalizer.normalizeEmail(request.email());
+        String email = StringNormalizer.normalizeEmail(request.email());
         if (userRepository.findByEmail(email).isPresent()) {
             throw new ResponseStatusException(HttpStatus.CONFLICT, "Email already registered");
         }
-        String mobileNumber = UserNormalizer.normalizeMobile(request.mobileNumber());
+        String mobileNumber = StringNormalizer.normalizeMobile(request.mobileNumber());
         if (userRepository.existsByMobileNumber(mobileNumber)) {
             throw new ResponseStatusException(HttpStatus.CONFLICT, "Mobile number already registered");
         }
@@ -41,7 +40,7 @@ public class UserService {
         user.setEmail(email);
         user.setMobileNumber(mobileNumber);
         user.setPasswordHash(passwordEncoder.encode(request.password()));
-        user.setName(UserNormalizer.normalizeName(request.name()));
+        user.setName(StringNormalizer.normalizeName(request.name()));
         user.setIsActive(true);
         user.setIsVerified(false);
         user = userRepository.save(user);
@@ -72,7 +71,7 @@ public class UserService {
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "User not found"));
 
         if (request.email() != null) {
-            String email = UserNormalizer.normalizeEmail(request.email());
+            String email = StringNormalizer.normalizeEmail(request.email());
             userRepository
                     .findByEmail(email)
                     .filter(other -> !other.getId().equals(userId))
@@ -82,11 +81,11 @@ public class UserService {
             user.setEmail(email);
         }
         if (request.name() != null) {
-            String name = UserNormalizer.normalizeName(request.name());
+            String name = StringNormalizer.normalizeName(request.name());
             user.setName(name);
         }
         if (request.mobileNumber() != null) {
-            String mobile = UserNormalizer.normalizeMobile(request.mobileNumber());
+            String mobile = StringNormalizer.normalizeMobile(request.mobileNumber());
             if (userRepository.existsByMobileNumber(mobile) && !mobile.equals(user.getMobileNumber())) {
                 throw new ResponseStatusException(HttpStatus.CONFLICT, "Mobile number already registered");
             }

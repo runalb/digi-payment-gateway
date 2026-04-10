@@ -1,16 +1,18 @@
 package com.digirestro.digi_payment_gateway.util;
 
+import java.util.Locale;
 import java.util.regex.Pattern;
 
 import org.springframework.http.HttpStatus;
 import org.springframework.util.StringUtils;
 import org.springframework.web.server.ResponseStatusException;
 
-public final class UserNormalizer {
+public final class StringNormalizer {
 
     private static final Pattern WHITESPACE_RUN = Pattern.compile("\\s+");
+    private static final Pattern ISO_4217_CURRENCY = Pattern.compile("[A-Za-z]{3}");
 
-    private UserNormalizer() {}
+    private StringNormalizer() {}
 
     public static String normalizeEmail(String email) {
         if (!StringUtils.hasText(email)) {
@@ -35,5 +37,17 @@ public final class UserNormalizer {
             return trimmed;
         }
         return WHITESPACE_RUN.matcher(trimmed).replaceAll(" ");
+    }
+
+    public static String normalizeISO4217Currency(String currency) {
+        if (!StringUtils.hasText(currency)) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "currency is required");
+        }
+        String trimmed = currency.trim();
+        if (!ISO_4217_CURRENCY.matcher(trimmed).matches()) {
+            throw new ResponseStatusException(
+                    HttpStatus.BAD_REQUEST, "currency must be a 3-letter ISO 4217 code");
+        }
+        return trimmed.toUpperCase(Locale.ROOT);
     }
 }

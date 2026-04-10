@@ -13,8 +13,8 @@ import com.digirestro.digi_payment_gateway.entity.PaymentChannelEntity;
 import com.digirestro.digi_payment_gateway.repository.MerchantConfigRepository;
 import com.digirestro.digi_payment_gateway.repository.MerchantPaymentChannelConfigRepository;
 import com.digirestro.digi_payment_gateway.repository.MerchantRepository;
+import com.digirestro.digi_payment_gateway.util.StringNormalizer;
 import jakarta.persistence.EntityNotFoundException;
-import java.util.Locale;
 import java.util.UUID;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
@@ -62,10 +62,10 @@ public class MerchantService {
     @Transactional
     public MerchantRegistrationResponse createMerchant(MerchantRegistrationRequest request, Long ownerUserId) {
         MerchantEntity merchant = new MerchantEntity();
-        merchant.setName(request.name().trim());
+        merchant.setName(StringNormalizer.normalizeName(request.name()));
         merchant.setApiKey(UUID.randomUUID().toString());
         merchant.setIsActive(true);
-        merchant.setEmail(UserNormalizer.normalizeEmail(request.email()));
+        merchant.setEmail(StringNormalizer.normalizeEmail(request.email()));
         merchant = merchantRepository.save(merchant);
 
         userService.linkMerchantToUser(ownerUserId, merchant);
@@ -93,7 +93,7 @@ public class MerchantService {
             throw new ResponseStatusException(HttpStatus.CONFLICT, "Merchant configuration already exists");
         }
 
-        String currency = request.currency().toUpperCase(Locale.ROOT);
+        String currency = StringNormalizer.normalizeISO4217Currency(request.currency());
         String webhookUrl = StringUtils.hasText(request.webhookUrl()) ? request.webhookUrl().trim() : null;
 
         MerchantConfigEntity entity = new MerchantConfigEntity();
@@ -112,7 +112,7 @@ public class MerchantService {
                 .orElseThrow(() -> new ResponseStatusException(
                         HttpStatus.NOT_FOUND, "Merchant configuration not found"));
 
-        String currency = request.currency().toUpperCase(Locale.ROOT);
+        String currency = StringNormalizer.normalizeISO4217Currency(request.currency());
         String webhookUrl = StringUtils.hasText(request.webhookUrl()) ? request.webhookUrl().trim() : null;
 
         entity.setCurrency(currency);
