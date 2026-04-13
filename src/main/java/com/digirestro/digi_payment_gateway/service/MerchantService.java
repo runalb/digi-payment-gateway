@@ -8,6 +8,7 @@ import com.digirestro.digi_payment_gateway.dto.merchantconfig.MerchantConfigResp
 import com.digirestro.digi_payment_gateway.dto.merchantconfig.MerchantConfigUpdateRequest;
 import com.digirestro.digi_payment_gateway.dto.merchantpaymentchannel.MerchantPaymentChannelConfigCreateRequest;
 import com.digirestro.digi_payment_gateway.dto.merchantpaymentchannel.MerchantPaymentChannelConfigResponse;
+import com.digirestro.digi_payment_gateway.dto.merchantpaymentchannel.MerchantPaymentChannelConfigUpdateRequest;
 import com.digirestro.digi_payment_gateway.entity.MerchantConfigEntity;
 import com.digirestro.digi_payment_gateway.entity.MerchantEntity;
 import com.digirestro.digi_payment_gateway.entity.MerchantPaymentChannelConfigEntity;
@@ -198,9 +199,55 @@ public class MerchantService {
         entity.setConfigJson(configJson);
         entity = merchantPaymentChannelConfigRepository.save(entity);
 
+        return toMerchantPaymentChannelConfigResponse(entity);
+    }
+
+    @Transactional(readOnly = true)
+    public List<MerchantPaymentChannelConfigResponse> listMerchantPaymentChannelConfigs(Long merchantId) {
+        if (!merchantRepository.existsById(merchantId)) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Merchant not found");
+        }
+        return merchantPaymentChannelConfigRepository.findByMerchant_IdOrderByIdAsc(merchantId).stream()
+                .map(MerchantService::toMerchantPaymentChannelConfigResponse)
+                .toList();
+    }
+
+    @Transactional(readOnly = true)
+    public MerchantPaymentChannelConfigResponse getMerchantPaymentChannelConfig(Long merchantId, Long configId) {
+        MerchantPaymentChannelConfigEntity entity = merchantPaymentChannelConfigRepository
+                .findByIdAndMerchant_Id(configId, merchantId)
+                .orElseThrow(() -> new ResponseStatusException(
+                        HttpStatus.NOT_FOUND, "Merchant payment channel config not found"));
+        return toMerchantPaymentChannelConfigResponse(entity);
+    }
+
+    @Transactional
+    public MerchantPaymentChannelConfigResponse updateMerchantPaymentChannelConfig(
+            Long merchantId, Long configId, MerchantPaymentChannelConfigUpdateRequest request) {
+        if (request == null || (request.isActive() == null && request.configJson() == null)) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Request body must not be empty");
+        }
+        MerchantPaymentChannelConfigEntity entity = merchantPaymentChannelConfigRepository
+                .findByIdAndMerchant_Id(configId, merchantId)
+                .orElseThrow(() -> new ResponseStatusException(
+                        HttpStatus.NOT_FOUND, "Merchant payment channel config not found"));
+
+        if (request.isActive() != null) {
+            entity.setIsActive(request.isActive());
+        }
+        if (request.configJson() != null) {
+            entity.setConfigJson(StringUtils.hasText(request.configJson()) ? request.configJson() : null);
+        }
+        entity = merchantPaymentChannelConfigRepository.save(entity);
+        return toMerchantPaymentChannelConfigResponse(entity);
+    }
+
+    private static MerchantPaymentChannelConfigResponse toMerchantPaymentChannelConfigResponse(
+            MerchantPaymentChannelConfigEntity entity) {
+        PaymentChannelEntity paymentChannel = entity.getPaymentChannel();
         return new MerchantPaymentChannelConfigResponse(
                 entity.getId(),
-                merchant.getId(),
+                entity.getMerchant().getId(),
                 paymentChannel.getId(),
                 paymentChannel.getName(),
                 entity.getIsActive(),

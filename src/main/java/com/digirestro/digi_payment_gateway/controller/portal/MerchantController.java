@@ -9,10 +9,10 @@ import com.digirestro.digi_payment_gateway.dto.merchantconfig.MerchantConfigResp
 import com.digirestro.digi_payment_gateway.dto.merchantconfig.MerchantConfigUpdateRequest;
 import com.digirestro.digi_payment_gateway.dto.merchantpaymentchannel.MerchantPaymentChannelConfigCreateRequest;
 import com.digirestro.digi_payment_gateway.dto.merchantpaymentchannel.MerchantPaymentChannelConfigResponse;
+import com.digirestro.digi_payment_gateway.dto.merchantpaymentchannel.MerchantPaymentChannelConfigUpdateRequest;
 import com.digirestro.digi_payment_gateway.service.MerchantService;
 import jakarta.validation.Valid;
 import java.util.List;
-import java.util.Map;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.DeleteMapping;
@@ -112,30 +112,34 @@ public class MerchantController {
         return new ResponseEntity<>(response, HttpStatus.CREATED);
     }
 
-    // TODO: Implement listMerchantPaymentChannelConfigs endpoint
     @GetMapping("/{merchantId}/payment-channel-configs")
-    public ResponseEntity<String> listMerchantPaymentChannelConfigs(@PathVariable("merchantId") Long merchantId) {
-        return ResponseEntity.status(HttpStatus.NOT_IMPLEMENTED)
-                .body("List merchant payment channel configs endpoint is not implemented yet.");
+    public ResponseEntity<List<MerchantPaymentChannelConfigResponse>> listMerchantPaymentChannelConfigs(
+            @PathVariable("merchantId") Long merchantId) {
+        authService.assertAuthenticatedUserOwnsMerchant(merchantId);
+        List<MerchantPaymentChannelConfigResponse> response =
+                merchantService.listMerchantPaymentChannelConfigs(merchantId);
+        return new ResponseEntity<>(response, HttpStatus.OK);
     }
 
-    // TODO: Implement getMerchantPaymentChannelConfig endpoint
     @GetMapping("/{merchantId}/payment-channel-configs/{configId}")
-    public ResponseEntity<String> getMerchantPaymentChannelConfig(
+    public ResponseEntity<MerchantPaymentChannelConfigResponse> getMerchantPaymentChannelConfig(
             @PathVariable("merchantId") Long merchantId,
             @PathVariable("configId") Long configId) {
-        return ResponseEntity.status(HttpStatus.NOT_IMPLEMENTED)
-                .body("Get merchant payment channel config endpoint is not implemented yet.");
+        authService.assertAuthenticatedUserOwnsMerchant(merchantId);
+        MerchantPaymentChannelConfigResponse response =
+                merchantService.getMerchantPaymentChannelConfig(merchantId, configId);
+        return new ResponseEntity<>(response, HttpStatus.OK);
     }
 
-    // TODO: Implement updateMerchantPaymentChannelConfig endpoint
     @PatchMapping("/{merchantId}/payment-channel-configs/{configId}")
-    public ResponseEntity<String> updateMerchantPaymentChannelConfig(
+    public ResponseEntity<MerchantPaymentChannelConfigResponse> updateMerchantPaymentChannelConfig(
             @PathVariable("merchantId") Long merchantId,
             @PathVariable("configId") Long configId,
-            @RequestBody Map<String, Object> request) {
-        return ResponseEntity.status(HttpStatus.NOT_IMPLEMENTED)
-                .body("Update merchant payment channel config endpoint is not implemented yet.");
+            @Valid @RequestBody MerchantPaymentChannelConfigUpdateRequest request) {
+        authService.assertAuthenticatedUserOwnsMerchant(merchantId);
+        MerchantPaymentChannelConfigResponse response =
+                merchantService.updateMerchantPaymentChannelConfig(merchantId, configId, request);
+        return new ResponseEntity<>(response, HttpStatus.OK);
     }
 
     @DeleteMapping("/{merchantId}/payment-channel-configs/{configId}")
