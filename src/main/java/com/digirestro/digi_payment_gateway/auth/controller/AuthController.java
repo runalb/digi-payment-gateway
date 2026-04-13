@@ -2,6 +2,7 @@ package com.digirestro.digi_payment_gateway.auth.controller;
 
 import com.digirestro.digi_payment_gateway.auth.dto.AuthEmailOtpRequest;
 import com.digirestro.digi_payment_gateway.auth.dto.AuthEmailVerifyOtpRequest;
+import com.digirestro.digi_payment_gateway.auth.dto.AuthForgotPasswordResetRequest;
 import com.digirestro.digi_payment_gateway.auth.dto.AuthLoginRequest;
 import com.digirestro.digi_payment_gateway.auth.dto.AuthLoginResponse;
 import com.digirestro.digi_payment_gateway.auth.dto.AuthLogoutRequest;
@@ -41,6 +42,19 @@ public class AuthController {
     public ResponseEntity<AuthLoginResponse> verifyEmailOtp(
             @Valid @RequestBody AuthEmailVerifyOtpRequest request) {
         return ResponseEntity.ok(authService.verifyEmailOtp(request));
+    }
+
+    @PostMapping("/forgot-password/email/request-otp")
+    public ResponseEntity<AuthOtpRequestResponse> requestForgotPasswordEmailOtp(
+            @Valid @RequestBody AuthEmailOtpRequest request) {
+        return ResponseEntity.ok(authService.requestForgotPasswordEmailOtp(request));
+    }
+
+    @PostMapping("/forgot-password/email/reset-password")
+    public ResponseEntity<Void> resetPasswordWithForgotPasswordEmailOtp(
+            @Valid @RequestBody AuthForgotPasswordResetRequest request) {
+        authService.resetPasswordWithForgotPasswordEmailOtp(request);
+        return ResponseEntity.noContent().build();
     }
 
     @PostMapping("/login/mobile/request-otp")

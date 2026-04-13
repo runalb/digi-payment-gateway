@@ -82,6 +82,12 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         if (HttpMethod.POST.matches(method) && "/api/v1/auth/login/email/verify-otp".equals(path)) {
             return false;
         }
+        if (HttpMethod.POST.matches(method) && "/api/v1/auth/forgot-password/email/request-otp".equals(path)) {
+            return false;
+        }
+        if (HttpMethod.POST.matches(method) && "/api/v1/auth/forgot-password/email/reset-password".equals(path)) {
+            return false;
+        }
         if (HttpMethod.POST.matches(method) && "/api/v1/auth/login/mobile/request-otp".equals(path)) {
             return false;
         }

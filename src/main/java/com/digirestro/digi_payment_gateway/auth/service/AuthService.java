@@ -2,6 +2,7 @@ package com.digirestro.digi_payment_gateway.auth.service;
 
 import com.digirestro.digi_payment_gateway.auth.dto.AuthEmailOtpRequest;
 import com.digirestro.digi_payment_gateway.auth.dto.AuthEmailVerifyOtpRequest;
+import com.digirestro.digi_payment_gateway.auth.dto.AuthForgotPasswordResetRequest;
 import com.digirestro.digi_payment_gateway.auth.dto.AuthLoginRequest;
 import com.digirestro.digi_payment_gateway.auth.dto.AuthLoginResponse;
 import com.digirestro.digi_payment_gateway.auth.dto.AuthLogoutRequest;
@@ -44,6 +45,7 @@ public class AuthService {
     private static final long OTP_EXPIRATION_SECONDS = 300;
     private final Map<String, OtpSession> mobileOtpSessions = new ConcurrentHashMap<>();
     private final Map<String, OtpSession> emailOtpSessions = new ConcurrentHashMap<>();
+    private final Map<String, OtpSession> forgotPasswordEmailOtpSessions = new ConcurrentHashMap<>();
 
     private final UserService userService;
     private final AuthRefreshTokenRepository authRefreshTokenRepository;
@@ -162,6 +164,50 @@ public class AuthService {
     }
 
     @Transactional(readOnly = true)
+    public AuthOtpRequestResponse requestForgotPasswordEmailOtp(AuthEmailOtpRequest request) {
+        String normalizedEmail = StringNormalizer.normalizeEmail(request.email());
+        userService.findActiveUserByEmail(normalizedEmail);
+
+        LocalDateTime now = LocalDateTime.now();
+        OtpSession existingSession = forgotPasswordEmailOtpSessions.get(normalizedEmail);
+        if (existingSession != null && existingSession.expiresAt().isAfter(now)) {
+            LocalDateTime allowedAt = existingSession.requestedAt().plusSeconds(otpResendCooldownSeconds);
+            if (allowedAt.isAfter(now)) {
+                long retryAfterSeconds = Math.max(1, Duration.between(now, allowedAt).getSeconds());
+                throw new ResponseStatusException(
+                        HttpStatus.TOO_MANY_REQUESTS,
+                        "OTP requested too frequently. Try again in " + retryAfterSeconds + " seconds.");
+            }
+        }
+
+        String otp = generateOtp();
+        String otpHash = hashToken(otp);
+        LocalDateTime expiresAt = now.plusSeconds(OTP_EXPIRATION_SECONDS);
+        forgotPasswordEmailOtpSessions.put(normalizedEmail, new OtpSession(otpHash, now, expiresAt));
+
+        log.info("Forgot-password OTP for email {}: {}", normalizedEmail, otp);
+        return new AuthOtpRequestResponse("OTP sent successfully.");
+    }
+
+    @Transactional
+    public void resetPasswordWithForgotPasswordEmailOtp(AuthForgotPasswordResetRequest request) {
+        String normalizedEmail = StringNormalizer.normalizeEmail(request.email());
+
+        OtpSession otpSession = forgotPasswordEmailOtpSessions.get(normalizedEmail);
+        if (otpSession == null || otpSession.expiresAt().isBefore(LocalDateTime.now())) {
+            forgotPasswordEmailOtpSessions.remove(normalizedEmail);
+            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "OTP expired or not requested");
+        }
+
+        if (!otpSession.otpHash().equals(hashToken(request.otp().trim()))) {
+            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Invalid email OTP");
+        }
+
+        forgotPasswordEmailOtpSessions.remove(normalizedEmail);
+        userService.updatePasswordForActiveUser(normalizedEmail, request.newPassword());
+    }
+
+    @Transactional(readOnly = true)
     public AuthOtpRequestResponse requestMobileOtp(AuthMobileOtpRequest request) {
         String mobileNumber = StringNormalizer.normalizeMobile(request.mobileNumber());
         userService.findActiveUserByMobile(mobileNumber);
@@ -244,6 +290,7 @@ public class AuthService {
         LocalDateTime now = LocalDateTime.now();
         mobileOtpSessions.entrySet().removeIf(entry -> entry.getValue().expiresAt().isBefore(now));
         emailOtpSessions.entrySet().removeIf(entry -> entry.getValue().expiresAt().isBefore(now));
+        forgotPasswordEmailOtpSessions.entrySet().removeIf(entry -> entry.getValue().expiresAt().isBefore(now));
     }
 
     private AuthLoginResponse issueTokens(UserEntity user) {

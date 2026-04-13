@@ -12,6 +12,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.util.StringUtils;
 import org.springframework.web.server.ResponseStatusException;
 
 @Service
@@ -147,6 +148,16 @@ public class UserService {
             throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "User is deleted");
         }
         return user;
+    }
+
+    @Transactional
+    public void updatePasswordForActiveUser(String normalizedEmail, String newPassword) {
+        if (!StringUtils.hasText(newPassword) || newPassword.length() < 8 || newPassword.length() > 128) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "password must be between 8 and 128 characters");
+        }
+        UserEntity user = findActiveUserByEmail(normalizedEmail);
+        user.setPasswordHash(passwordEncoder.encode(newPassword));
+        userRepository.save(user);
     }
 
     @Transactional
