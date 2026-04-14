@@ -2,7 +2,7 @@ package com.digirestro.digi_payment_gateway.integration.api.controller;
 
 import com.digirestro.digi_payment_gateway.integration.api.dto.PaymentLinkRequest;
 import com.digirestro.digi_payment_gateway.integration.api.dto.PaymentLinkResponse;
-import com.digirestro.digi_payment_gateway.integration.api.security.IntegrationAuthenticationService;
+import com.digirestro.digi_payment_gateway.auth.service.IntegrationAuthService;
 import com.digirestro.digi_payment_gateway.integration.channel.service.PaymentOrchestrationService;
 import com.digirestro.digi_payment_gateway.portal.merchant.entity.MerchantEntity;
 
@@ -20,20 +20,20 @@ import org.springframework.web.bind.annotation.RestController;
 public class PaymentLinkIntegrationController {
 
     private final PaymentOrchestrationService paymentOrchestrationService;
-    private final IntegrationAuthenticationService integrationAuthenticationService;
+    private final IntegrationAuthService integrationAuthService;
 
     public PaymentLinkIntegrationController(
             PaymentOrchestrationService paymentOrchestrationService,
-            IntegrationAuthenticationService integrationAuthenticationService) {
+            IntegrationAuthService integrationAuthService) {
         this.paymentOrchestrationService = paymentOrchestrationService;
-        this.integrationAuthenticationService = integrationAuthenticationService;
+        this.integrationAuthService = integrationAuthService;
     }
 
     @PostMapping("/generate")
     public ResponseEntity<PaymentLinkResponse> generatePaymentLink(
             Authentication authentication,
             @Valid @RequestBody PaymentLinkRequest request) {
-        MerchantEntity merchant = integrationAuthenticationService.extractMerchant(authentication);
+        MerchantEntity merchant = integrationAuthService.extractMerchant(authentication);
         PaymentLinkResponse response = paymentOrchestrationService.generatePaymentLink(merchant, request);
         return new ResponseEntity<>(response, HttpStatus.CREATED);
     }

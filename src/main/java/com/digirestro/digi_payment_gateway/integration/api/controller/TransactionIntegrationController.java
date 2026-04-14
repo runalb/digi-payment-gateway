@@ -1,7 +1,7 @@
 package com.digirestro.digi_payment_gateway.integration.api.controller;
 
 import com.digirestro.digi_payment_gateway.integration.api.dto.PaymentDetailsResponse;
-import com.digirestro.digi_payment_gateway.integration.api.security.IntegrationAuthenticationService;
+import com.digirestro.digi_payment_gateway.auth.service.IntegrationAuthService;
 import com.digirestro.digi_payment_gateway.integration.channel.service.PaymentOrchestrationService;
 import com.digirestro.digi_payment_gateway.portal.merchant.entity.MerchantEntity;
 
@@ -19,18 +19,18 @@ import org.springframework.web.bind.annotation.RestController;
 public class TransactionIntegrationController {
 
     private final PaymentOrchestrationService paymentOrchestrationService;
-    private final IntegrationAuthenticationService integrationAuthenticationService;
+    private final IntegrationAuthService integrationAuthService;
 
     public TransactionIntegrationController(
             PaymentOrchestrationService paymentOrchestrationService,
-            IntegrationAuthenticationService integrationAuthenticationService) {
+            IntegrationAuthService integrationAuthService) {
         this.paymentOrchestrationService = paymentOrchestrationService;
-        this.integrationAuthenticationService = integrationAuthenticationService;
+        this.integrationAuthService = integrationAuthService;
     }
 
     @GetMapping
     public ResponseEntity<List<PaymentDetailsResponse>> listTransactions(Authentication authentication) {
-        MerchantEntity merchant = integrationAuthenticationService.extractMerchant(authentication);
+        MerchantEntity merchant = integrationAuthService.extractMerchant(authentication);
         List<PaymentDetailsResponse> response = paymentOrchestrationService.listPaymentDetails(merchant.getId());
         return new ResponseEntity<>(response, HttpStatus.OK);
     }
@@ -39,7 +39,7 @@ public class TransactionIntegrationController {
     public ResponseEntity<PaymentDetailsResponse> getPaymentDetails(
             Authentication authentication,
             @PathVariable("id") Long id) {
-        MerchantEntity merchant = integrationAuthenticationService.extractMerchant(authentication);
+        MerchantEntity merchant = integrationAuthService.extractMerchant(authentication);
         PaymentDetailsResponse response = paymentOrchestrationService.getPaymentDetails(id, merchant.getId());
         return new ResponseEntity<>(response, HttpStatus.OK);
     }

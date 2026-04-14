@@ -1,4 +1,4 @@
-package com.digirestro.digi_payment_gateway.integration.api.security;
+package com.digirestro.digi_payment_gateway.auth.service;
 
 import org.springframework.http.HttpStatus;
 import org.springframework.security.core.Authentication;
@@ -8,7 +8,7 @@ import org.springframework.web.server.ResponseStatusException;
 import com.digirestro.digi_payment_gateway.portal.merchant.entity.MerchantEntity;
 
 @Service
-public class IntegrationAuthenticationService {
+public class IntegrationAuthService {
 
     public MerchantEntity extractMerchant(Authentication authentication) {
         if (authentication == null || authentication.getPrincipal() == null) {
