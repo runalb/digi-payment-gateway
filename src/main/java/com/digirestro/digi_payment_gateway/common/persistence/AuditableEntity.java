@@ -1,4 +1,4 @@
-package com.digirestro.digi_payment_gateway.entity;
+package com.digirestro.digi_payment_gateway.common.persistence;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.EntityListeners;

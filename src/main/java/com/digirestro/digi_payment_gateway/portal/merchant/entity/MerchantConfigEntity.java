@@ -1,6 +1,6 @@
 package com.digirestro.digi_payment_gateway.portal.merchant.entity;
 
-import com.digirestro.digi_payment_gateway.entity.AuditableEntity;
+import com.digirestro.digi_payment_gateway.common.persistence.AuditableEntity;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
