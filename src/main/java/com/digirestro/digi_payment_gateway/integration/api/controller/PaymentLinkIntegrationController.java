@@ -1,9 +1,9 @@
-package com.digirestro.digi_payment_gateway.integration.controller;
+package com.digirestro.digi_payment_gateway.integration.api.controller;
 
-import com.digirestro.digi_payment_gateway.integration.dto.PaymentLinkRequest;
-import com.digirestro.digi_payment_gateway.integration.dto.PaymentLinkResponse;
-import com.digirestro.digi_payment_gateway.integration.service.IntegrationAuthenticationService;
-import com.digirestro.digi_payment_gateway.integration.service.PaymentOrchestrationService;
+import com.digirestro.digi_payment_gateway.integration.api.dto.PaymentLinkRequest;
+import com.digirestro.digi_payment_gateway.integration.api.dto.PaymentLinkResponse;
+import com.digirestro.digi_payment_gateway.integration.api.security.IntegrationAuthenticationService;
+import com.digirestro.digi_payment_gateway.integration.channel.service.PaymentOrchestrationService;
 import com.digirestro.digi_payment_gateway.portal.merchant.entity.MerchantEntity;
 
 import jakarta.validation.Valid;

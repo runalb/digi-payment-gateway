@@ -1,4 +1,4 @@
-package com.digirestro.digi_payment_gateway.integration.service;
+package com.digirestro.digi_payment_gateway.integration.api.security;
 
 import org.springframework.http.HttpStatus;
 import org.springframework.security.core.Authentication;

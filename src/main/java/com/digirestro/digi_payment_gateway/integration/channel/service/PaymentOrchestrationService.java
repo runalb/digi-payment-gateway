@@ -1,11 +1,11 @@
-package com.digirestro.digi_payment_gateway.integration.service;
+package com.digirestro.digi_payment_gateway.integration.channel.service;
 
 import com.digirestro.digi_payment_gateway.entity.PaymentEntity;
-import com.digirestro.digi_payment_gateway.integration.adapter.PaymentChannelAdapter;
-import com.digirestro.digi_payment_gateway.integration.dto.PaymentDetailsResponse;
-import com.digirestro.digi_payment_gateway.integration.dto.PaymentLinkRequest;
-import com.digirestro.digi_payment_gateway.integration.dto.PaymentLinkResponse;
-import com.digirestro.digi_payment_gateway.integration.dto.adaptor.AdapterPaymentLinkResponse;
+import com.digirestro.digi_payment_gateway.integration.api.dto.PaymentDetailsResponse;
+import com.digirestro.digi_payment_gateway.integration.api.dto.PaymentLinkRequest;
+import com.digirestro.digi_payment_gateway.integration.api.dto.PaymentLinkResponse;
+import com.digirestro.digi_payment_gateway.integration.channel.adapter.PaymentChannelAdapter;
+import com.digirestro.digi_payment_gateway.integration.channel.dto.PaymentLinkAdapterResponse;
 import com.digirestro.digi_payment_gateway.portal.merchant.entity.MerchantConfigEntity;
 import com.digirestro.digi_payment_gateway.portal.merchant.entity.MerchantEntity;
 import com.digirestro.digi_payment_gateway.portal.merchant.entity.MerchantPaymentChannelConfigEntity;
@@ -51,7 +51,7 @@ public class PaymentOrchestrationService {
         payment.setMerchantMetadataJson(request.merchantMetadataJson());
         payment = paymentService.save(payment);
 
-        AdapterPaymentLinkResponse adapterResponse = adapter.createPaymentLink(payment);
+        PaymentLinkAdapterResponse adapterResponse = adapter.createPaymentLink(payment);
         payment.setPaymentLinkUrl(adapterResponse.payment().getPaymentLinkUrl());
         payment.setPaymentChannelTxnId(adapterResponse.payment().getPaymentChannelTxnId());
         payment.setStatus(adapterResponse.payment().getStatus());

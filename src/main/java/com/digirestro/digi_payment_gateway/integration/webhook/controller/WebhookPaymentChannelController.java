@@ -1,9 +1,10 @@
 package com.digirestro.digi_payment_gateway.integration.webhook.controller;
 
 import com.digirestro.digi_payment_gateway.enums.PaymentChannelNameEnum;
-import com.digirestro.digi_payment_gateway.integration.adapter.PaymentChannelAdapter;
-import com.digirestro.digi_payment_gateway.integration.dto.adaptor.AdaptorWebhookResponse;
-import com.digirestro.digi_payment_gateway.integration.service.PaymentChannelAdapterResolver;
+import com.digirestro.digi_payment_gateway.integration.channel.adapter.PaymentChannelAdapter;
+import com.digirestro.digi_payment_gateway.integration.channel.dto.WebhookAdapterResponse;
+import com.digirestro.digi_payment_gateway.integration.channel.service.PaymentChannelAdapterResolver;
+
 import java.util.Locale;
 import java.util.Map;
 
@@ -43,7 +44,7 @@ public class WebhookPaymentChannelController {
      * @return The response of the webhook
      */
     @PostMapping("/{channelKey}")
-    public ResponseEntity<AdaptorWebhookResponse> receiveWebhook(
+    public ResponseEntity<WebhookAdapterResponse> receiveWebhook(
         @PathVariable String channelKey, @RequestBody Map<String, Object> webhookPayload) {
         log.info("Received {} webhook: {}", channelKey, webhookPayload);
 
@@ -52,7 +53,7 @@ public class WebhookPaymentChannelController {
 
         PaymentChannelAdapter adapter = adapterResolver.requireByChannelName(channelName);
 
-        AdaptorWebhookResponse response = adapter.validateAndParseWebhook(webhookPayload);
+        WebhookAdapterResponse response = adapter.validateAndParseWebhook(webhookPayload);
         return new ResponseEntity<>(response, HttpStatus.OK);
     }
 

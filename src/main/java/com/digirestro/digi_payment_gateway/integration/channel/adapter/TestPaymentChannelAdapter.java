@@ -1,11 +1,11 @@
-package com.digirestro.digi_payment_gateway.integration.adapter;
+package com.digirestro.digi_payment_gateway.integration.channel.adapter;
 
 import com.digirestro.digi_payment_gateway.entity.PaymentChannelEntity;
 import com.digirestro.digi_payment_gateway.entity.PaymentEntity;
 import com.digirestro.digi_payment_gateway.enums.PaymentChannelNameEnum;
 import com.digirestro.digi_payment_gateway.enums.PaymentStatusEnum;
-import com.digirestro.digi_payment_gateway.integration.dto.adaptor.AdapterPaymentLinkResponse;
-import com.digirestro.digi_payment_gateway.integration.dto.adaptor.AdaptorWebhookResponse;
+import com.digirestro.digi_payment_gateway.integration.channel.dto.PaymentLinkAdapterResponse;
+import com.digirestro.digi_payment_gateway.integration.channel.dto.WebhookAdapterResponse;
 import com.digirestro.digi_payment_gateway.service.PaymentChannelService;
 import com.digirestro.digi_payment_gateway.service.PaymentService;
 
@@ -38,7 +38,7 @@ public class TestPaymentChannelAdapter implements PaymentChannelAdapter {
     }
 
     @Override
-    public AdapterPaymentLinkResponse createPaymentLink(PaymentEntity payment) {
+    public PaymentLinkAdapterResponse createPaymentLink(PaymentEntity payment) {
         String paymentChannelTxnId = "TEST-TXN-" + UUID.randomUUID();
         String amountParam = URLEncoder.encode(payment.getAmount().toPlainString(), StandardCharsets.UTF_8);
         String currencyParam = URLEncoder.encode(payment.getCurrency(), StandardCharsets.UTF_8);
@@ -53,12 +53,12 @@ public class TestPaymentChannelAdapter implements PaymentChannelAdapter {
             payment.setStatus(PaymentStatusEnum.PAYMENT_LINK_GENERATED);
         }
 
-        return new AdapterPaymentLinkResponse(payment);
+        return new PaymentLinkAdapterResponse(payment);
     }
 
     @Override
     @Transactional
-    public AdaptorWebhookResponse validateAndParseWebhook(Map<String, Object> webhookPayload) {
+    public WebhookAdapterResponse validateAndParseWebhook(Map<String, Object> webhookPayload) {
         log.info("Validating and parsing webhook payload: {}", webhookPayload);
 
         PaymentStatusEnum paymentStatus = PaymentStatusEnum.valueOf((String) webhookPayload.get("paymentStatus"));
@@ -72,7 +72,7 @@ public class TestPaymentChannelAdapter implements PaymentChannelAdapter {
 
         payment = paymentService.save(payment);
 
-        return new AdaptorWebhookResponse(
+        return new WebhookAdapterResponse(
                 payment.getStatus(),
                 payment.getId(),
                 payment.getPaymentChannelTxnId(),

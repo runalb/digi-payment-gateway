@@ -1,7 +1,7 @@
-package com.digirestro.digi_payment_gateway.integration.service;
+package com.digirestro.digi_payment_gateway.integration.channel.service;
 
 import com.digirestro.digi_payment_gateway.enums.PaymentChannelNameEnum;
-import com.digirestro.digi_payment_gateway.integration.adapter.PaymentChannelAdapter;
+import com.digirestro.digi_payment_gateway.integration.channel.adapter.PaymentChannelAdapter;
 
 import java.util.List;
 import java.util.Objects;
