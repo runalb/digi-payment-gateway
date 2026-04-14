@@ -1,4 +1,4 @@
-package com.digirestro.digi_payment_gateway.enums;
+package com.digirestro.digi_payment_gateway.payment.enums;
 
 public enum PaymentStatusEnum {
     INITIATED,

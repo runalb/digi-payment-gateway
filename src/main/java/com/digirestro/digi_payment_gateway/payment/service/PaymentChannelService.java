@@ -1,8 +1,8 @@
-package com.digirestro.digi_payment_gateway.service;
+package com.digirestro.digi_payment_gateway.payment.service;
 
-import com.digirestro.digi_payment_gateway.entity.PaymentChannelEntity;
-import com.digirestro.digi_payment_gateway.enums.PaymentChannelNameEnum;
-import com.digirestro.digi_payment_gateway.repository.PaymentChannelRepository;
+import com.digirestro.digi_payment_gateway.payment.entity.PaymentChannelEntity;
+import com.digirestro.digi_payment_gateway.payment.enums.PaymentChannelNameEnum;
+import com.digirestro.digi_payment_gateway.payment.repository.PaymentChannelRepository;
 
 import jakarta.persistence.EntityNotFoundException;
 

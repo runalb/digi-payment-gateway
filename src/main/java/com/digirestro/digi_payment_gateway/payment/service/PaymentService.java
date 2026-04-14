@@ -1,7 +1,8 @@
-package com.digirestro.digi_payment_gateway.service;
+package com.digirestro.digi_payment_gateway.payment.service;
 
-import com.digirestro.digi_payment_gateway.entity.PaymentEntity;
-import com.digirestro.digi_payment_gateway.repository.PaymentRepository;
+import com.digirestro.digi_payment_gateway.payment.entity.PaymentEntity;
+import com.digirestro.digi_payment_gateway.payment.repository.PaymentRepository;
+
 import jakarta.persistence.EntityNotFoundException;
 import java.util.List;
 import org.springframework.stereotype.Service;

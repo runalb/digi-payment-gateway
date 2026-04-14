@@ -1,6 +1,6 @@
 package com.digirestro.digi_payment_gateway.portal.merchant.dto.merchantpaymentchannel;
 
-import com.digirestro.digi_payment_gateway.enums.PaymentChannelNameEnum;
+import com.digirestro.digi_payment_gateway.payment.enums.PaymentChannelNameEnum;
 
 import jakarta.validation.constraints.NotNull;
 

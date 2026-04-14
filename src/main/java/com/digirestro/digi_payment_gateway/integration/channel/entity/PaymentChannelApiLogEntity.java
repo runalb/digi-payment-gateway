@@ -1,5 +1,8 @@
-package com.digirestro.digi_payment_gateway.entity;
+package com.digirestro.digi_payment_gateway.integration.channel.entity;
 
+import com.digirestro.digi_payment_gateway.entity.AuditableEntity;
+import com.digirestro.digi_payment_gateway.payment.entity.PaymentChannelEntity;
+import com.digirestro.digi_payment_gateway.payment.entity.PaymentEntity;
 import com.digirestro.digi_payment_gateway.portal.merchant.entity.MerchantEntity;
 import com.digirestro.digi_payment_gateway.portal.merchant.entity.MerchantPaymentChannelConfigEntity;
 

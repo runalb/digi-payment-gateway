@@ -1,6 +1,7 @@
-package com.digirestro.digi_payment_gateway.entity;
+package com.digirestro.digi_payment_gateway.payment.entity;
 
-import com.digirestro.digi_payment_gateway.enums.PaymentStatusEnum;
+import com.digirestro.digi_payment_gateway.entity.AuditableEntity;
+import com.digirestro.digi_payment_gateway.payment.enums.PaymentStatusEnum;
 import com.digirestro.digi_payment_gateway.portal.merchant.entity.MerchantEntity;
 import com.digirestro.digi_payment_gateway.portal.merchant.entity.MerchantPaymentChannelConfigEntity;
 

@@ -1,9 +1,9 @@
 package com.digirestro.digi_payment_gateway.integration.webhook.controller;
 
-import com.digirestro.digi_payment_gateway.enums.PaymentChannelNameEnum;
 import com.digirestro.digi_payment_gateway.integration.channel.adapter.PaymentChannelAdapter;
 import com.digirestro.digi_payment_gateway.integration.channel.dto.WebhookAdapterResponse;
 import com.digirestro.digi_payment_gateway.integration.channel.service.PaymentChannelAdapterResolver;
+import com.digirestro.digi_payment_gateway.payment.enums.PaymentChannelNameEnum;
 
 import java.util.Locale;
 import java.util.Map;

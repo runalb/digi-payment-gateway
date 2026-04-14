@@ -1,6 +1,8 @@
-package com.digirestro.digi_payment_gateway.entity;
+package com.digirestro.digi_payment_gateway.payment.entity;
 
-import com.digirestro.digi_payment_gateway.enums.PaymentChannelNameEnum;
+import com.digirestro.digi_payment_gateway.entity.AuditableEntity;
+import com.digirestro.digi_payment_gateway.payment.enums.PaymentChannelNameEnum;
+
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;

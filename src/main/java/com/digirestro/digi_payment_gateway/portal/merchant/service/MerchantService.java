@@ -9,7 +9,8 @@ import com.digirestro.digi_payment_gateway.portal.merchant.dto.merchantconfig.Me
 import com.digirestro.digi_payment_gateway.portal.merchant.dto.merchantpaymentchannel.MerchantPaymentChannelConfigCreateRequest;
 import com.digirestro.digi_payment_gateway.portal.merchant.dto.merchantpaymentchannel.MerchantPaymentChannelConfigResponse;
 import com.digirestro.digi_payment_gateway.portal.merchant.dto.merchantpaymentchannel.MerchantPaymentChannelConfigUpdateRequest;
-import com.digirestro.digi_payment_gateway.entity.PaymentChannelEntity;
+import com.digirestro.digi_payment_gateway.payment.entity.PaymentChannelEntity;
+import com.digirestro.digi_payment_gateway.payment.service.PaymentChannelService;
 import com.digirestro.digi_payment_gateway.portal.merchant.entity.MerchantConfigEntity;
 import com.digirestro.digi_payment_gateway.portal.merchant.entity.MerchantEntity;
 import com.digirestro.digi_payment_gateway.portal.merchant.entity.MerchantPaymentChannelConfigEntity;
@@ -17,7 +18,6 @@ import com.digirestro.digi_payment_gateway.portal.merchant.repository.MerchantCo
 import com.digirestro.digi_payment_gateway.portal.merchant.repository.MerchantPaymentChannelConfigRepository;
 import com.digirestro.digi_payment_gateway.portal.merchant.repository.MerchantRepository;
 import com.digirestro.digi_payment_gateway.portal.user.service.UserService;
-import com.digirestro.digi_payment_gateway.service.PaymentChannelService;
 import com.digirestro.digi_payment_gateway.util.StringNormalizer;
 import jakarta.persistence.EntityNotFoundException;
 import java.util.List;
