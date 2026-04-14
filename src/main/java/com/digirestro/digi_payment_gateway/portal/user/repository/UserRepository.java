@@ -1,6 +1,6 @@
-package com.digirestro.digi_payment_gateway.repository;
+package com.digirestro.digi_payment_gateway.portal.user.repository;
 
-import com.digirestro.digi_payment_gateway.entity.UserEntity;
+import com.digirestro.digi_payment_gateway.portal.user.entity.UserEntity;
 import java.util.Optional;
 import org.springframework.data.jpa.repository.JpaRepository;
 

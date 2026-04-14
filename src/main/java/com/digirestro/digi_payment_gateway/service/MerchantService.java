@@ -13,6 +13,7 @@ import com.digirestro.digi_payment_gateway.entity.MerchantConfigEntity;
 import com.digirestro.digi_payment_gateway.entity.MerchantEntity;
 import com.digirestro.digi_payment_gateway.entity.MerchantPaymentChannelConfigEntity;
 import com.digirestro.digi_payment_gateway.entity.PaymentChannelEntity;
+import com.digirestro.digi_payment_gateway.portal.user.service.UserService;
 import com.digirestro.digi_payment_gateway.repository.MerchantConfigRepository;
 import com.digirestro.digi_payment_gateway.repository.MerchantPaymentChannelConfigRepository;
 import com.digirestro.digi_payment_gateway.repository.MerchantRepository;

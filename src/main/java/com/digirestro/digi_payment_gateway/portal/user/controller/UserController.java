@@ -1,10 +1,10 @@
-package com.digirestro.digi_payment_gateway.controller.portal;
+package com.digirestro.digi_payment_gateway.portal.user.controller;
 
 import com.digirestro.digi_payment_gateway.auth.service.AuthService;
-import com.digirestro.digi_payment_gateway.dto.user.UserCreateRequest;
-import com.digirestro.digi_payment_gateway.dto.user.UserResponse;
-import com.digirestro.digi_payment_gateway.dto.user.UserUpdateRequest;
-import com.digirestro.digi_payment_gateway.service.UserService;
+import com.digirestro.digi_payment_gateway.portal.user.dto.UserCreateRequest;
+import com.digirestro.digi_payment_gateway.portal.user.dto.UserResponse;
+import com.digirestro.digi_payment_gateway.portal.user.dto.UserUpdateRequest;
+import com.digirestro.digi_payment_gateway.portal.user.service.UserService;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;

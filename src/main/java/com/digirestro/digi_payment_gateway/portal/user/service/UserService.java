@@ -1,11 +1,11 @@
-package com.digirestro.digi_payment_gateway.service;
+package com.digirestro.digi_payment_gateway.portal.user.service;
 
-import com.digirestro.digi_payment_gateway.dto.user.UserCreateRequest;
-import com.digirestro.digi_payment_gateway.dto.user.UserResponse;
-import com.digirestro.digi_payment_gateway.dto.user.UserUpdateRequest;
 import com.digirestro.digi_payment_gateway.entity.MerchantEntity;
-import com.digirestro.digi_payment_gateway.entity.UserEntity;
-import com.digirestro.digi_payment_gateway.repository.UserRepository;
+import com.digirestro.digi_payment_gateway.portal.user.entity.UserEntity;
+import com.digirestro.digi_payment_gateway.portal.user.dto.UserCreateRequest;
+import com.digirestro.digi_payment_gateway.portal.user.dto.UserResponse;
+import com.digirestro.digi_payment_gateway.portal.user.dto.UserUpdateRequest;
+import com.digirestro.digi_payment_gateway.portal.user.repository.UserRepository;
 import com.digirestro.digi_payment_gateway.util.StringNormalizer;
 
 import org.springframework.http.HttpStatus;
@@ -104,7 +104,7 @@ public class UserService {
         //     }
         //     user.setPasswordHash(passwordEncoder.encode(request.password()));
         // }
-        
+
         if (request.isVerified() != null) {
             user.setIsVerified(request.isVerified());
         }
