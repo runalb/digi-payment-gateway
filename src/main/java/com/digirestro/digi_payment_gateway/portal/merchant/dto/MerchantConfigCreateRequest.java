@@ -1,4 +1,4 @@
-package com.digirestro.digi_payment_gateway.portal.merchant.dto.merchantconfig;
+package com.digirestro.digi_payment_gateway.portal.merchant.dto;
 
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Pattern;

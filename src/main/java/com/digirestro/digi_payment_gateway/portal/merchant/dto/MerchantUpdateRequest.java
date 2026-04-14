@@ -1,4 +1,4 @@
-package com.digirestro.digi_payment_gateway.portal.merchant.dto.merchant;
+package com.digirestro.digi_payment_gateway.portal.merchant.dto;
 
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.Size;
