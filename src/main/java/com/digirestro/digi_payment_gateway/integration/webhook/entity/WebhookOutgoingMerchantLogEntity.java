@@ -1,4 +1,4 @@
-package com.digirestro.digi_payment_gateway.entity;
+package com.digirestro.digi_payment_gateway.integration.webhook.entity;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
@@ -10,6 +10,9 @@ import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
 import java.time.LocalDateTime;
 
+import com.digirestro.digi_payment_gateway.entity.AuditableEntity;
+import com.digirestro.digi_payment_gateway.entity.PaymentChannelEntity;
+import com.digirestro.digi_payment_gateway.entity.PaymentEntity;
 import com.digirestro.digi_payment_gateway.portal.merchant.entity.MerchantEntity;
 
 import lombok.Getter;

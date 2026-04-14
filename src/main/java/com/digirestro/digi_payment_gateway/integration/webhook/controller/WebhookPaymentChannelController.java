@@ -1,4 +1,4 @@
-package com.digirestro.digi_payment_gateway.integration.webhook;
+package com.digirestro.digi_payment_gateway.integration.webhook.controller;
 
 import com.digirestro.digi_payment_gateway.enums.PaymentChannelNameEnum;
 import com.digirestro.digi_payment_gateway.integration.adapter.PaymentChannelAdapter;
