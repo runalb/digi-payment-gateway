@@ -1,8 +1,9 @@
-package com.digirestro.digi_payment_gateway.repository;
+package com.digirestro.digi_payment_gateway.portal.merchant.repository;
 
-import com.digirestro.digi_payment_gateway.entity.MerchantConfigEntity;
 import java.util.Optional;
 import org.springframework.data.jpa.repository.JpaRepository;
+
+import com.digirestro.digi_payment_gateway.portal.merchant.entity.MerchantConfigEntity;
 
 public interface MerchantConfigRepository extends JpaRepository<MerchantConfigEntity, Long> {
 

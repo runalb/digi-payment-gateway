@@ -1,5 +1,7 @@
 package com.digirestro.digi_payment_gateway.entity;
 
+import com.digirestro.digi_payment_gateway.portal.merchant.entity.MerchantEntity;
+
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;

@@ -1,16 +1,17 @@
-package com.digirestro.digi_payment_gateway.controller.portal;
+package com.digirestro.digi_payment_gateway.portal.merchant.controller;
 
 import com.digirestro.digi_payment_gateway.auth.service.AuthService;
-import com.digirestro.digi_payment_gateway.dto.merchant.MerchantCreateRequest;
-import com.digirestro.digi_payment_gateway.dto.merchant.MerchantResponse;
-import com.digirestro.digi_payment_gateway.dto.merchant.MerchantUpdateRequest;
-import com.digirestro.digi_payment_gateway.dto.merchantconfig.MerchantConfigCreateRequest;
-import com.digirestro.digi_payment_gateway.dto.merchantconfig.MerchantConfigResponse;
-import com.digirestro.digi_payment_gateway.dto.merchantconfig.MerchantConfigUpdateRequest;
-import com.digirestro.digi_payment_gateway.dto.merchantpaymentchannel.MerchantPaymentChannelConfigCreateRequest;
-import com.digirestro.digi_payment_gateway.dto.merchantpaymentchannel.MerchantPaymentChannelConfigResponse;
-import com.digirestro.digi_payment_gateway.dto.merchantpaymentchannel.MerchantPaymentChannelConfigUpdateRequest;
-import com.digirestro.digi_payment_gateway.service.MerchantService;
+import com.digirestro.digi_payment_gateway.portal.merchant.dto.merchant.MerchantCreateRequest;
+import com.digirestro.digi_payment_gateway.portal.merchant.dto.merchant.MerchantResponse;
+import com.digirestro.digi_payment_gateway.portal.merchant.dto.merchant.MerchantUpdateRequest;
+import com.digirestro.digi_payment_gateway.portal.merchant.dto.merchantconfig.MerchantConfigCreateRequest;
+import com.digirestro.digi_payment_gateway.portal.merchant.dto.merchantconfig.MerchantConfigResponse;
+import com.digirestro.digi_payment_gateway.portal.merchant.dto.merchantconfig.MerchantConfigUpdateRequest;
+import com.digirestro.digi_payment_gateway.portal.merchant.dto.merchantpaymentchannel.MerchantPaymentChannelConfigCreateRequest;
+import com.digirestro.digi_payment_gateway.portal.merchant.dto.merchantpaymentchannel.MerchantPaymentChannelConfigResponse;
+import com.digirestro.digi_payment_gateway.portal.merchant.dto.merchantpaymentchannel.MerchantPaymentChannelConfigUpdateRequest;
+import com.digirestro.digi_payment_gateway.portal.merchant.service.MerchantService;
+
 import jakarta.validation.Valid;
 import java.util.List;
 import org.springframework.http.HttpStatus;

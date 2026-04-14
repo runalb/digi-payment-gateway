@@ -1,7 +1,8 @@
 package com.digirestro.digi_payment_gateway.integration.security;
 
-import com.digirestro.digi_payment_gateway.entity.MerchantEntity;
-import com.digirestro.digi_payment_gateway.repository.MerchantRepository;
+import com.digirestro.digi_payment_gateway.portal.merchant.entity.MerchantEntity;
+import com.digirestro.digi_payment_gateway.portal.merchant.repository.MerchantRepository;
+
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;

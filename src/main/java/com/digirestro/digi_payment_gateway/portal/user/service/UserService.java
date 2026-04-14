@@ -1,7 +1,7 @@
 package com.digirestro.digi_payment_gateway.portal.user.service;
 
-import com.digirestro.digi_payment_gateway.entity.MerchantEntity;
 import com.digirestro.digi_payment_gateway.portal.user.entity.UserEntity;
+import com.digirestro.digi_payment_gateway.portal.merchant.entity.MerchantEntity;
 import com.digirestro.digi_payment_gateway.portal.user.dto.UserCreateRequest;
 import com.digirestro.digi_payment_gateway.portal.user.dto.UserResponse;
 import com.digirestro.digi_payment_gateway.portal.user.dto.UserUpdateRequest;

@@ -9,6 +9,9 @@ import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
 import java.time.LocalDateTime;
+
+import com.digirestro.digi_payment_gateway.portal.merchant.entity.MerchantEntity;
+
 import lombok.Getter;
 import lombok.Setter;
 

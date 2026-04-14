@@ -1,10 +1,11 @@
 package com.digirestro.digi_payment_gateway.integration.service;
 
-import com.digirestro.digi_payment_gateway.entity.MerchantEntity;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Service;
 import org.springframework.web.server.ResponseStatusException;
+
+import com.digirestro.digi_payment_gateway.portal.merchant.entity.MerchantEntity;
 
 @Service
 public class IntegrationAuthenticationService {
