@@ -1,4 +1,4 @@
-package com.digirestro.digi_payment_gateway.integration.security;
+package com.digirestro.digi_payment_gateway.security;
 
 import com.digirestro.digi_payment_gateway.portal.merchant.entity.MerchantEntity;
 import com.digirestro.digi_payment_gateway.portal.merchant.repository.MerchantRepository;
