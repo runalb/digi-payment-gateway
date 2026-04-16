@@ -1,4 +1,4 @@
-package com.digirestro.digi_payment_gateway.integration.channel.entity;
+package com.digirestro.digi_payment_gateway.logging.entity;
 
 import com.digirestro.digi_payment_gateway.common.persistence.AuditableEntity;
 import com.digirestro.digi_payment_gateway.payment.entity.PaymentChannelEntity;
@@ -17,6 +17,9 @@ import jakarta.persistence.Table;
 import lombok.Getter;
 import lombok.Setter;
 
+// create new entity and new columns for logging all requests , respose and errors. delete the existing payment_channel_api_log entity.
+// log table can be used for debugging and monitoring without accessing server logs.
+// table name - payment_gateway_log
 @Getter
 @Setter
 @Entity
