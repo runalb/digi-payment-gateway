@@ -254,7 +254,7 @@ public class AuthService {
     }
 
     @Transactional
-    public AuthLoginResponse refresh(AuthRefreshRequest request) {
+    public AuthLoginResponse refreshToken(AuthRefreshRequest request) {
         String hashedToken = hashToken(request.refreshToken().trim());
         AuthRefreshTokenEntity existing = authRefreshTokenRepository
                 .findByTokenHashAndRevokedAtIsNull(hashedToken)

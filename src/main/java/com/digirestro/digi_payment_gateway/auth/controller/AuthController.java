@@ -68,9 +68,9 @@ public class AuthController {
         return ResponseEntity.ok(authService.verifyMobileOtp(request));
     }
 
-    @PostMapping("/refresh")
-    public ResponseEntity<AuthLoginResponse> refresh(@Valid @RequestBody AuthRefreshRequest request) {
-        return ResponseEntity.ok(authService.refresh(request));
+    @PostMapping("/refresh-token")
+    public ResponseEntity<AuthLoginResponse> refreshToken(@Valid @RequestBody AuthRefreshRequest request) {
+        return ResponseEntity.ok(authService.refreshToken(request));
     }
 
     @PostMapping("/logout")
