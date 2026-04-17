@@ -13,6 +13,7 @@ import com.digirestro.digi_payment_gateway.portal.merchant.entity.MerchantPaymen
 import com.digirestro.digi_payment_gateway.portal.merchant.service.MerchantService;
 
 import java.util.List;
+import java.util.UUID;
 
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -42,6 +43,9 @@ public class PaymentOrchestrationService {
         MerchantConfigEntity merchantConfig = merchantService.findMerchantConfigByMerchantId(merchantId);
 
         PaymentEntity payment = new PaymentEntity();
+        UUID paymentRefId = UUID.randomUUID();
+        payment.setPaymentRefId(paymentRefId);
+        payment.setDigiPaymentLink(buildDigiPaymentLink(paymentRefId));
         payment.setMerchant(merchant);
         payment.setMerchantPaymentChannelConfig(merchantPaymentChannelConfig);
         payment.setPaymentChannel(merchantPaymentChannelConfig.getPaymentChannel());
@@ -52,17 +56,21 @@ public class PaymentOrchestrationService {
         payment = paymentService.save(payment);
 
         PaymentLinkAdapterResponse adapterResponse = adapter.createPaymentLink(payment);
-        payment.setPaymentLinkUrl(adapterResponse.payment().getPaymentLinkUrl());
+        payment.setPaymentChannelPayLink(adapterResponse.payment().getPaymentChannelPayLink());
         payment.setPaymentChannelTxnId(adapterResponse.payment().getPaymentChannelTxnId());
         payment.setStatus(adapterResponse.payment().getStatus());
         payment = paymentService.save(payment);
 
         return new PaymentLinkResponse(
                 payment.getId(),
-                payment.getPaymentLinkUrl(),
+                payment.getDigiPaymentLink(),
                 payment.getPaymentChannelTxnId(),
                 payment.getStatus()
         );
+    }
+
+    private String buildDigiPaymentLink(UUID paymentRefId) {
+        return "http://localhost:8080" + "/pay/" + paymentRefId.toString();
     }
 
     @Transactional(readOnly = true)
@@ -91,7 +99,7 @@ public class PaymentOrchestrationService {
                 payment.getPaymentChannel().getId(),
                 payment.getPaymentChannel().getName(),
                 payment.getPaymentChannelTxnId(),
-                payment.getPaymentLinkUrl(),
+                payment.getDigiPaymentLink(),
                 payment.getCreatedDateTime(),
                 payment.getUpdatedDateTime()
         );

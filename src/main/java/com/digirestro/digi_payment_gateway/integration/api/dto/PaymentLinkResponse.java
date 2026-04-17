@@ -4,6 +4,6 @@ import com.digirestro.digi_payment_gateway.payment.enums.PaymentStatusEnum;
 
 public record PaymentLinkResponse(
         Long paymentId,
-        String paymentLinkUrl,
+        String digiPaymentLink,
         String paymentChannelTxnId,
         PaymentStatusEnum status) {}

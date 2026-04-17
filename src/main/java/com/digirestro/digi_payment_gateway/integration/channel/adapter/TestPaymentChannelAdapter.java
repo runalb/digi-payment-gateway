@@ -49,7 +49,7 @@ public class TestPaymentChannelAdapter implements PaymentChannelAdapter {
 
         if (!paymentChannelTxnId.isEmpty() && !paymentUrl.isEmpty()) {
             payment.setPaymentChannelTxnId(paymentChannelTxnId);
-            payment.setPaymentLinkUrl(paymentUrl);
+            payment.setPaymentChannelPayLink(paymentUrl);
             payment.setStatus(PaymentStatusEnum.PAYMENT_LINK_GENERATED);
         }
 
