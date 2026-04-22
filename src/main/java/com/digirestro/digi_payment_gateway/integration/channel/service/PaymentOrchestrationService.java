@@ -43,9 +43,9 @@ public class PaymentOrchestrationService {
         MerchantConfigEntity merchantConfig = merchantService.findMerchantConfigByMerchantId(merchantId);
 
         PaymentEntity payment = new PaymentEntity();
-        UUID paymentRefId = UUID.randomUUID();
-        payment.setPaymentRefId(paymentRefId);
-        payment.setDigiPaymentLink(buildDigiPaymentLink(paymentRefId));
+        // UUID paymentRefId = UUID.randomUUID();
+        // payment.setPaymentRefId(paymentRefId);
+        // payment.setDigiPaymentLink(buildDigiPaymentLink(paymentRefId));
         payment.setMerchant(merchant);
         payment.setMerchantPaymentChannelConfig(merchantPaymentChannelConfig);
         payment.setPaymentChannel(merchantPaymentChannelConfig.getPaymentChannel());
@@ -63,15 +63,16 @@ public class PaymentOrchestrationService {
 
         return new PaymentLinkResponse(
                 payment.getId(),
-                payment.getDigiPaymentLink(),
+                // payment.getDigiPaymentLink(),
+                payment.getPaymentChannelPayLink(),
                 payment.getPaymentChannelTxnId(),
                 payment.getStatus()
         );
     }
 
-    private String buildDigiPaymentLink(UUID paymentRefId) {
-        return "http://localhost:8080" + "/pay/" + paymentRefId.toString();
-    }
+    // private String buildDigiPaymentLink(UUID paymentRefId) {
+    //     return "http://localhost:8080" + "/pay/" + paymentRefId.toString();
+    // }
 
     @Transactional(readOnly = true)
     public PaymentDetailsResponse getPaymentDetails(Long paymentId, Long merchantId) {
@@ -99,7 +100,8 @@ public class PaymentOrchestrationService {
                 payment.getPaymentChannel().getId(),
                 payment.getPaymentChannel().getName(),
                 payment.getPaymentChannelTxnId(),
-                payment.getDigiPaymentLink(),
+                // payment.getDigiPaymentLink(),
+                payment.getPaymentChannelPayLink(),
                 payment.getCreatedDateTime(),
                 payment.getUpdatedDateTime()
         );

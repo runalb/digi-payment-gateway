@@ -30,8 +30,8 @@ public class PaymentEntity extends AuditableEntity {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(nullable = false, columnDefinition = "uuid")
-    private UUID paymentRefId;
+    // @Column(nullable = false, columnDefinition = "uuid")
+    // private UUID paymentRefId;
 
     @ManyToOne(optional = false)
     @JoinColumn(name = "merchant_id", nullable = false)
@@ -63,12 +63,12 @@ public class PaymentEntity extends AuditableEntity {
     private PaymentStatusEnum status = PaymentStatusEnum.INITIATED;
 
     private String paymentChannelPayLink;
-    private String digiPaymentLink;
+    // private String digiPaymentLink;
 
     @Column(columnDefinition = "TEXT")
     private String merchantMetadataJson;
 
-    @Column(nullable = false)
-    private Integer attempts = 0;
+    // @Column(nullable = false)
+    // private Integer attempts = 0;
 
 }
