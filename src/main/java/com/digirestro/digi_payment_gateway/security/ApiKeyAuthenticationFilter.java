@@ -1,8 +1,5 @@
 package com.digirestro.digi_payment_gateway.security;
 
-import com.digirestro.digi_payment_gateway.portal.merchant.entity.MerchantEntity;
-import com.digirestro.digi_payment_gateway.portal.merchant.repository.MerchantRepository;
-
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
@@ -17,6 +14,9 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
 import org.springframework.web.filter.OncePerRequestFilter;
+
+import com.digirestro.digi_payment_gateway.merchant.entity.MerchantEntity;
+import com.digirestro.digi_payment_gateway.merchant.repository.MerchantRepository;
 
 @Component
 public class ApiKeyAuthenticationFilter extends OncePerRequestFilter {

@@ -5,12 +5,12 @@ import com.digirestro.digi_payment_gateway.integration.api.dto.PaymentLinkReques
 import com.digirestro.digi_payment_gateway.integration.api.dto.PaymentLinkResponse;
 import com.digirestro.digi_payment_gateway.integration.channel.adapter.PaymentChannelAdapter;
 import com.digirestro.digi_payment_gateway.integration.channel.dto.PaymentLinkAdapterResponse;
+import com.digirestro.digi_payment_gateway.merchant.entity.MerchantConfigEntity;
+import com.digirestro.digi_payment_gateway.merchant.entity.MerchantEntity;
+import com.digirestro.digi_payment_gateway.merchant.entity.MerchantPaymentChannelConfigEntity;
+import com.digirestro.digi_payment_gateway.merchant.service.MerchantService;
 import com.digirestro.digi_payment_gateway.payment.entity.PaymentEntity;
 import com.digirestro.digi_payment_gateway.payment.service.PaymentService;
-import com.digirestro.digi_payment_gateway.portal.merchant.entity.MerchantConfigEntity;
-import com.digirestro.digi_payment_gateway.portal.merchant.entity.MerchantEntity;
-import com.digirestro.digi_payment_gateway.portal.merchant.entity.MerchantPaymentChannelConfigEntity;
-import com.digirestro.digi_payment_gateway.portal.merchant.service.MerchantService;
 
 import java.util.List;
 import java.util.UUID;

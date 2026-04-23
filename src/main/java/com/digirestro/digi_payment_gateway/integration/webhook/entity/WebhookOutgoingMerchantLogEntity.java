@@ -11,9 +11,9 @@ import jakarta.persistence.Table;
 import java.time.LocalDateTime;
 
 import com.digirestro.digi_payment_gateway.common.persistence.AuditableEntity;
+import com.digirestro.digi_payment_gateway.merchant.entity.MerchantEntity;
 import com.digirestro.digi_payment_gateway.payment.entity.PaymentChannelEntity;
 import com.digirestro.digi_payment_gateway.payment.entity.PaymentEntity;
-import com.digirestro.digi_payment_gateway.portal.merchant.entity.MerchantEntity;
 
 import lombok.Getter;
 import lombok.Setter;

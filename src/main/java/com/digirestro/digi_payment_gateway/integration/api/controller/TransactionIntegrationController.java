@@ -3,7 +3,7 @@ package com.digirestro.digi_payment_gateway.integration.api.controller;
 import com.digirestro.digi_payment_gateway.integration.api.dto.PaymentDetailsResponse;
 import com.digirestro.digi_payment_gateway.auth.service.IntegrationAuthService;
 import com.digirestro.digi_payment_gateway.integration.channel.service.PaymentOrchestrationService;
-import com.digirestro.digi_payment_gateway.portal.merchant.entity.MerchantEntity;
+import com.digirestro.digi_payment_gateway.merchant.entity.MerchantEntity;
 
 import java.util.List;
 import org.springframework.http.HttpStatus;

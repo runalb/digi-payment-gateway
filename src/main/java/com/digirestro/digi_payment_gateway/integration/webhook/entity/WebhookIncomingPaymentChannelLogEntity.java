@@ -1,9 +1,9 @@
 package com.digirestro.digi_payment_gateway.integration.webhook.entity;
 
 import com.digirestro.digi_payment_gateway.common.persistence.AuditableEntity;
+import com.digirestro.digi_payment_gateway.merchant.entity.MerchantEntity;
 import com.digirestro.digi_payment_gateway.payment.entity.PaymentChannelEntity;
 import com.digirestro.digi_payment_gateway.payment.entity.PaymentEntity;
-import com.digirestro.digi_payment_gateway.portal.merchant.entity.MerchantEntity;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;

@@ -4,7 +4,7 @@ import com.digirestro.digi_payment_gateway.integration.api.dto.PaymentLinkReques
 import com.digirestro.digi_payment_gateway.integration.api.dto.PaymentLinkResponse;
 import com.digirestro.digi_payment_gateway.auth.service.IntegrationAuthService;
 import com.digirestro.digi_payment_gateway.integration.channel.service.PaymentOrchestrationService;
-import com.digirestro.digi_payment_gateway.portal.merchant.entity.MerchantEntity;
+import com.digirestro.digi_payment_gateway.merchant.entity.MerchantEntity;
 
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
