@@ -8,11 +8,11 @@
 		<version>4.0.3</version>
 		<relativePath/> <!-- lookup parent from repository -->
 	</parent>
-	<groupId>com.digirestro</groupId>
-	<artifactId>digi-payment-gateway</artifactId>
+	<groupId>com.runalb</groupId>
+	<artifactId>ondemand-service-api</artifactId>
 	<version>0.0.1-SNAPSHOT</version>
-	<name>digi-payment-gateway</name>
-	<description>Demo project for Spring Boot</description>
+	<name>ondemand-service-api</name>
+	<description>RunalB - OnDemand Service API</description>
 	<url/>
 	<licenses>
 		<license/>
