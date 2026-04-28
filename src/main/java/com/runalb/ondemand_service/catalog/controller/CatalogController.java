@@ -71,6 +71,11 @@ public class CatalogController {
         return new ResponseEntity<>(body, HttpStatus.CREATED);
     }
 
+    @GetMapping("/services")
+    public ResponseEntity<List<CatalogServiceResponse>> listAllServices() {
+        return ResponseEntity.ok(catalogService.listAllCatalogServices());
+    }
+
     @GetMapping("/services/{serviceId}")
     public ResponseEntity<CatalogServiceResponse> getService(@PathVariable Long serviceId) {
         return ResponseEntity.ok(catalogService.getCatalogService(serviceId));

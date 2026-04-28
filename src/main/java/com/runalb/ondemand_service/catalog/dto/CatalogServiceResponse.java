@@ -4,11 +4,10 @@ import java.time.LocalDateTime;
 
 public record CatalogServiceResponse(
         Long id,
-        Long categoryId,
-        String categoryName,
         String name,
         String description,
         Integer displayOrder,
         Boolean active,
+        CatalogCategoryResponse category,
         LocalDateTime createdDateTime,
         LocalDateTime updatedDateTime) {}

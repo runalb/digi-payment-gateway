@@ -22,6 +22,8 @@ import org.springframework.web.server.ResponseStatusException;
 @Service
 public class CatalogService {
 
+    private static final String ALREADY_EXISTS_MESSAGE = "Name already exists";
+
     private final CatalogCategoryRepository categoryRepository;
     private final CatalogServiceRepository catalogServiceRepository;
 
@@ -33,20 +35,22 @@ public class CatalogService {
 
     @Transactional(readOnly = true)
     public List<CatalogCategoryResponse> listCategories() {
-        return categoryRepository.findAll(Sort.by("displayOrder", "id")).stream()
+        return categoryRepository.findByActiveTrue(Sort.by("displayOrder", "id")).stream()
                 .map(CatalogService::toCatalogCategoryResponse)
                 .toList();
     }
 
     @Transactional(readOnly = true)
     public CatalogCategoryResponse getCategory(Long id) {
-        return toCatalogCategoryResponse(requireCategory(id));
+        return toCatalogCategoryResponse(requireActiveCategory(id));
     }
 
     @Transactional
     public CatalogCategoryResponse createCategory(CatalogCategoryCreateRequest request) {
+        String name = request.name().trim();
+        assertCategoryNameUnique(name, null);
         CatalogCategoryEntity e = new CatalogCategoryEntity();
-        e.setName(request.name().trim());
+        e.setName(name);
         e.setDescription(blankDescriptionToNull(request.description()));
         e.setDisplayOrder(displayOrderVal(request.displayOrder()));
         e.setActive(request.active() == null ? Boolean.TRUE : request.active());
@@ -64,7 +68,9 @@ public class CatalogService {
         }
         CatalogCategoryEntity e = requireCategory(id);
         if (request.name() != null) {
-            e.setName(request.name().trim());
+            String name = request.name().trim();
+            assertCategoryNameUnique(name, id);
+            e.setName(name);
         }
         if (request.description() != null) {
             e.setDescription(blankDescriptionToNull(request.description()));
@@ -81,33 +87,49 @@ public class CatalogService {
 
     @Transactional
     public void deleteCategory(Long id) {
-        requireCategory(id);
-        if (catalogServiceRepository.countByCatalogCategory_Id(id) > 0) {
-            throw new ResponseStatusException(
-                    HttpStatus.CONFLICT, "Cannot delete category while it has services");
+        CatalogCategoryEntity cat = requireCategory(id);
+        List<CatalogServiceEntity> services = catalogServiceRepository.findByCatalogCategory_Id(id);
+        for (CatalogServiceEntity s : services) {
+            s.setActive(false);
         }
-        categoryRepository.deleteById(id);
+        catalogServiceRepository.saveAll(services);
+        cat.setActive(false);
+        categoryRepository.save(cat);
     }
 
     @Transactional(readOnly = true)
     public List<CatalogServiceResponse> listServicesInCategory(Long categoryId) {
-        requireCategory(categoryId);
-        return catalogServiceRepository.findByCatalogCategory_IdOrderByDisplayOrderAscIdAsc(categoryId).stream()
+        requireActiveCategory(categoryId);
+        return catalogServiceRepository
+                .findByCatalogCategory_IdAndActiveTrueOrderByDisplayOrderAscIdAsc(categoryId)
+                .stream()
+                .map(CatalogService::toCatalogServiceResponse)
+                .toList();
+    }
+
+    @Transactional(readOnly = true)
+    public List<CatalogServiceResponse> listAllCatalogServices() {
+        return catalogServiceRepository.findAllByActiveTrue(Sort.by("id")).stream()
                 .map(CatalogService::toCatalogServiceResponse)
                 .toList();
     }
 
     @Transactional(readOnly = true)
     public CatalogServiceResponse getCatalogService(Long id) {
-        return toCatalogServiceResponse(requireCatalogService(id));
+        return catalogServiceRepository
+                .findActiveByIdFetchCatalogCategory(id)
+                .map(CatalogService::toCatalogServiceResponse)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Service not found"));
     }
 
     @Transactional
     public CatalogServiceResponse createService(Long categoryId, CatalogServiceCreateRequest request) {
-        CatalogCategoryEntity category = requireCategory(categoryId);
+        CatalogCategoryEntity category = requireActiveCategory(categoryId);
+        String name = request.name().trim();
+        assertServiceNameUniqueInCategory(category.getId(), name, null);
         CatalogServiceEntity e = new CatalogServiceEntity();
         e.setCatalogCategory(category);
-        e.setName(request.name().trim());
+        e.setName(name);
         e.setDescription(blankDescriptionToNull(request.description()));
         e.setDisplayOrder(displayOrderVal(request.displayOrder()));
         e.setActive(request.active() == null ? Boolean.TRUE : request.active());
@@ -127,11 +149,14 @@ public class CatalogService {
         CatalogServiceEntity e = requireCatalogService(id);
         if (request.categoryId() != null
                 && !Objects.equals(request.categoryId(), e.getCatalogCategory().getId())) {
-            CatalogCategoryEntity newCat = requireCategory(request.categoryId());
+            CatalogCategoryEntity newCat = requireActiveCategory(request.categoryId());
             e.setCatalogCategory(newCat);
         }
+        Long targetCategoryId = e.getCatalogCategory().getId();
+        String targetName = request.name() != null ? request.name().trim() : e.getName();
+        assertServiceNameUniqueInCategory(targetCategoryId, targetName, id);
         if (request.name() != null) {
-            e.setName(request.name().trim());
+            e.setName(targetName);
         }
         if (request.description() != null) {
             e.setDescription(blankDescriptionToNull(request.description()));
@@ -149,7 +174,8 @@ public class CatalogService {
     @Transactional
     public void deleteCatalogService(Long id) {
         CatalogServiceEntity e = requireCatalogService(id);
-        catalogServiceRepository.delete(e);
+        e.setActive(false);
+        catalogServiceRepository.save(e);
     }
 
     private CatalogCategoryEntity requireCategory(Long id) {
@@ -158,10 +184,37 @@ public class CatalogService {
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Category not found"));
     }
 
+    private CatalogCategoryEntity requireActiveCategory(Long id) {
+        return categoryRepository
+                .findByIdAndActiveTrue(id)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Category not found"));
+    }
+
     private CatalogServiceEntity requireCatalogService(Long id) {
         return catalogServiceRepository
                 .findByIdFetchCatalogCategory(id)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Service not found"));
+    }
+
+    private void assertCategoryNameUnique(String name, Long excludeCategoryId) {
+        boolean duplicate =
+                excludeCategoryId == null
+                        ? categoryRepository.existsByNameIgnoreCase(name)
+                        : categoryRepository.existsByNameIgnoreCaseAndIdNot(name, excludeCategoryId);
+        if (duplicate) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT, ALREADY_EXISTS_MESSAGE);
+        }
+    }
+
+    private void assertServiceNameUniqueInCategory(Long categoryId, String name, Long excludeServiceId) {
+        boolean duplicate =
+                excludeServiceId == null
+                        ? catalogServiceRepository.existsByCatalogCategory_IdAndNameIgnoreCase(categoryId, name)
+                        : catalogServiceRepository.existsByCatalogCategory_IdAndNameIgnoreCaseAndIdNot(
+                                categoryId, name, excludeServiceId);
+        if (duplicate) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT, ALREADY_EXISTS_MESSAGE);
+        }
     }
 
     private static CatalogCategoryResponse toCatalogCategoryResponse(CatalogCategoryEntity e) {
@@ -178,12 +231,11 @@ public class CatalogService {
     private static CatalogServiceResponse toCatalogServiceResponse(CatalogServiceEntity e) {
         return new CatalogServiceResponse(
                 e.getId(),
-                e.getCatalogCategory().getId(),
-                e.getCatalogCategory().getName(),
                 e.getName(),
                 e.getDescription(),
                 e.getDisplayOrder(),
                 e.getActive(),
+                toCatalogCategoryResponse(e.getCatalogCategory()),
                 e.getCreatedDateTime(),
                 e.getUpdatedDateTime());
     }
