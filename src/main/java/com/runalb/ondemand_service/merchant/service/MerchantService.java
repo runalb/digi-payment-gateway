@@ -15,8 +15,8 @@ import com.runalb.ondemand_service.merchant.entity.MerchantPaymentChannelConfigE
 import com.runalb.ondemand_service.merchant.repository.MerchantConfigRepository;
 import com.runalb.ondemand_service.merchant.repository.MerchantPaymentChannelConfigRepository;
 import com.runalb.ondemand_service.merchant.repository.MerchantRepository;
-import com.runalb.ondemand_service.payment.entity.PaymentChannelEntity;
-import com.runalb.ondemand_service.payment.service.PaymentChannelService;
+// import com.runalb.ondemand_service.payment.entity.PaymentChannelEntity;
+// import com.runalb.ondemand_service.payment.service.PaymentChannelService;
 import com.runalb.ondemand_service.user.service.UserService;
 import com.runalb.ondemand_service.util.StringNormalizer;
 import jakarta.persistence.EntityNotFoundException;
@@ -33,19 +33,19 @@ public class MerchantService {
 
     private final MerchantRepository merchantRepository;
     private final MerchantConfigRepository merchantConfigRepository;
-    private final PaymentChannelService paymentChannelService;
+    // private final PaymentChannelService paymentChannelService;
     private final MerchantPaymentChannelConfigRepository merchantPaymentChannelConfigRepository;
     private final UserService userService;
 
     public MerchantService(
             MerchantRepository merchantRepository,
             MerchantConfigRepository merchantConfigRepository,
-            PaymentChannelService paymentChannelService,
+            // PaymentChannelService paymentChannelService,
             MerchantPaymentChannelConfigRepository merchantPaymentChannelConfigRepository,
             UserService userService) {
         this.merchantRepository = merchantRepository;
         this.merchantConfigRepository = merchantConfigRepository;
-        this.paymentChannelService = paymentChannelService;
+        // this.paymentChannelService = paymentChannelService;
         this.merchantPaymentChannelConfigRepository = merchantPaymentChannelConfigRepository;
         this.userService = userService;
     }
@@ -186,17 +186,18 @@ public class MerchantService {
                 .findById(merchantId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Merchant not found"));
 
-        PaymentChannelEntity paymentChannel = paymentChannelService.findById(request.paymentChannelId());
+        // PaymentChannelEntity paymentChannel = paymentChannelService.findById(request.paymentChannelId());
 
-        if (merchantPaymentChannelConfigRepository.existsByMerchant_IdAndPaymentChannel_Id(merchantId, paymentChannel.getId())) {
-            throw new ResponseStatusException(HttpStatus.CONFLICT, "Merchant already has configuration for this payment channel");
-        }
+        // if (merchantPaymentChannelConfigRepository.existsByMerchant_Id(merchantId)) {
+        //     // (merchantPaymentChannelConfigRepository.existsByMerchant_IdAndPaymentChannel_Id(merchantId, paymentChannel.getId())) {
+        //     throw new ResponseStatusException(HttpStatus.CONFLICT, "Merchant already has configuration for this payment channel");
+        // }
 
         String configJson = StringUtils.hasText(request.configJson()) ? request.configJson() : null;
 
         MerchantPaymentChannelConfigEntity entity = new MerchantPaymentChannelConfigEntity();
         entity.setMerchant(merchant);
-        entity.setPaymentChannel(paymentChannel);
+        // entity.setPaymentChannel(paymentChannel);
         entity.setIsActive(Boolean.TRUE);
         entity.setConfigJson(configJson);
         entity = merchantPaymentChannelConfigRepository.save(entity);
@@ -246,12 +247,12 @@ public class MerchantService {
 
     private static MerchantPaymentChannelConfigResponse toMerchantPaymentChannelConfigResponse(
             MerchantPaymentChannelConfigEntity entity) {
-        PaymentChannelEntity paymentChannel = entity.getPaymentChannel();
+        // PaymentChannelEntity paymentChannel = entity.getPaymentChannel();
         return new MerchantPaymentChannelConfigResponse(
                 entity.getId(),
                 entity.getMerchant().getId(),
-                paymentChannel.getId(),
-                paymentChannel.getName(),
+                // paymentChannel.getId(),
+                // paymentChannel.getName(),
                 entity.getIsActive(),
                 entity.getConfigJson());
     }

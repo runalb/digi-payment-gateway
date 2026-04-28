@@ -1,7 +1,7 @@
 package com.runalb.ondemand_service.merchant.entity;
 
 import com.runalb.ondemand_service.common.persistence.AuditableEntity;
-import com.runalb.ondemand_service.payment.entity.PaymentChannelEntity;
+// import com.runalb.ondemand_service.payment.entity.PaymentChannelEntity;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
@@ -28,9 +28,9 @@ public class MerchantPaymentChannelConfigEntity extends AuditableEntity {
     @JoinColumn(name = "merchant_id", nullable = false)
     private MerchantEntity merchant;
 
-    @ManyToOne(optional = false)
-    @JoinColumn(name = "payment_channel_id", nullable = false)
-    private PaymentChannelEntity paymentChannel;
+    // @ManyToOne(optional = false)
+    // @JoinColumn(name = "payment_channel_id", nullable = false)
+    // private PaymentChannelEntity paymentChannel;
 
     @Column(nullable = false)
     private Boolean isActive = Boolean.TRUE;

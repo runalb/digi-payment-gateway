@@ -9,7 +9,7 @@ import com.runalb.ondemand_service.merchant.entity.MerchantPaymentChannelConfigE
 public interface MerchantPaymentChannelConfigRepository extends JpaRepository<MerchantPaymentChannelConfigEntity, Long> {
     Optional<MerchantPaymentChannelConfigEntity> findFirstByMerchant_IdAndIsActiveTrue(Long merchantId);
 
-    boolean existsByMerchant_IdAndPaymentChannel_Id(Long merchantId, Long paymentChannelId);
+    // boolean existsByMerchant_IdAndPaymentChannel_Id(Long merchantId, Long paymentChannelId);
 
     Optional<MerchantPaymentChannelConfigEntity> findByIdAndMerchant_Id(Long id, Long merchantId);
 
