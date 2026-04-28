@@ -12,8 +12,11 @@ import com.runalb.ondemand_service.auth.dto.AuthOtpRequestResponse;
 import com.runalb.ondemand_service.auth.dto.AuthRefreshRequest;
 import com.runalb.ondemand_service.auth.entity.AuthRefreshTokenEntity;
 import com.runalb.ondemand_service.auth.repository.AuthRefreshTokenRepository;
+import com.runalb.ondemand_service.role.enums.RoleNameEnum;
 import com.runalb.ondemand_service.security.JwtService;
 import com.runalb.ondemand_service.user.entity.UserEntity;
+import java.util.Comparator;
+import java.util.List;
 import com.runalb.ondemand_service.user.service.UserService;
 import com.runalb.ondemand_service.util.StringNormalizer;
 import java.nio.charset.StandardCharsets;
@@ -98,11 +101,10 @@ public class AuthService {
             throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Not authenticated");
         }
         Object principal = authentication.getPrincipal();
-        if (!(principal instanceof String principalEmail) || !StringUtils.hasText(principalEmail)) {
+        if (!(principal instanceof Long userId)) {
             throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Not authenticated");
         }
-        String normalizedEmail = StringNormalizer.normalizeEmail(principalEmail);
-        return userService.findActiveUserByEmail(normalizedEmail);
+        return userService.requireActiveUserWithRoles(userId);
     }
 
     @Transactional
@@ -294,11 +296,17 @@ public class AuthService {
     }
 
     private AuthLoginResponse issueTokens(UserEntity user) {
-        String accessToken = jwtService.generateToken(user.getEmail());
+        UserEntity withRoles = userService.loadUserWithRolesForTokens(user.getId());
+        List<RoleNameEnum> roleNames = withRoles.getRoles().stream()
+                .map(r -> r.getRoleName())
+                .distinct()
+                .sorted(Comparator.comparing(RoleNameEnum::name))
+                .toList();
+        String accessToken = jwtService.generateToken(withRoles.getId(), roleNames);
         String refreshToken = generateRefreshToken();
 
         AuthRefreshTokenEntity refreshTokenEntity = new AuthRefreshTokenEntity();
-        refreshTokenEntity.setUser(user);
+        refreshTokenEntity.setUser(withRoles);
         refreshTokenEntity.setTokenHash(hashToken(refreshToken));
         refreshTokenEntity.setExpiresAt(LocalDateTime.now().plusSeconds(refreshExpirationSeconds));
         authRefreshTokenRepository.save(refreshTokenEntity);

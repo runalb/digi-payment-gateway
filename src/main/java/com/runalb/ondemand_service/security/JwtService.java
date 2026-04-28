@@ -1,14 +1,21 @@
 package com.runalb.ondemand_service.security;
 
+import tools.jackson.databind.JsonNode;
+import tools.jackson.databind.ObjectMapper;
+import tools.jackson.databind.node.ArrayNode;
+import tools.jackson.databind.node.ObjectNode;
 import java.nio.charset.StandardCharsets;
 import java.time.Instant;
+import java.util.ArrayList;
 import java.util.Base64;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
+import java.util.List;
+import java.util.Optional;
 import javax.crypto.Mac;
 import javax.crypto.spec.SecretKeySpec;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
+
+import com.runalb.ondemand_service.role.enums.RoleNameEnum;
 
 @Service
 public class JwtService {
@@ -16,24 +23,38 @@ public class JwtService {
     private static final Base64.Decoder URL_DECODER = Base64.getUrlDecoder();
     private static final String HMAC_ALGO = "HmacSHA256";
     private static final String HEADER_JSON = "{\"alg\":\"HS256\",\"typ\":\"JWT\"}";
-    private static final Pattern SUBJECT_PATTERN = Pattern.compile("\"sub\":\"([^\"]+)\"");
-    private static final Pattern EXP_PATTERN = Pattern.compile("\"exp\":(\\d+)");
 
     private final String secret;
     private final long expirationSeconds;
+    private final ObjectMapper objectMapper;
 
     public JwtService(
+            ObjectMapper objectMapper,
             @Value("${security.jwt.secret}") String secret,
             @Value("${security.jwt.expiration-seconds:3600}") long expirationSeconds) {
+        this.objectMapper = objectMapper;
         this.secret = secret;
         this.expirationSeconds = expirationSeconds;
     }
 
-    public String generateToken(String subject) {
+    /** Issues an access token with {@code sub} = user id and {@code roles} = logical role names (e.g. CUSTOMER). */
+    public String generateToken(Long userId, List<RoleNameEnum> roleNames) {
         long issuedAt = Instant.now().getEpochSecond();
         long expiresAt = issuedAt + expirationSeconds;
-        String payloadJson =
-                "{\"sub\":\"" + escapeJson(subject) + "\",\"iat\":" + issuedAt + ",\"exp\":" + expiresAt + "}";
+        ObjectNode root = objectMapper.createObjectNode();
+        root.put("sub", userId);
+        ArrayNode rolesArr = root.putArray("roles");
+        for (RoleNameEnum roleName : roleNames) {
+            rolesArr.add(roleName.name());
+        }
+        root.put("iat", issuedAt);
+        root.put("exp", expiresAt);
+        String payloadJson;
+        try {
+            payloadJson = objectMapper.writeValueAsString(root);
+        } catch (Exception ex) {
+            throw new IllegalStateException("Unable to serialize JWT payload", ex);
+        }
 
         String header = URL_ENCODER.encodeToString(HEADER_JSON.getBytes(StandardCharsets.UTF_8));
         String payload = URL_ENCODER.encodeToString(payloadJson.getBytes(StandardCharsets.UTF_8));
@@ -42,28 +63,48 @@ public class JwtService {
         return signingInput + "." + signature;
     }
 
-    public String validateAndExtractSubject(String token) {
+    /** Validates signature and expiry; returns parsed claims. */
+    public Optional<JwtPayload> validateAndParsePayload(String token) {
         String[] parts = token.split("\\.");
         if (parts.length != 3) {
-            return null;
+            return Optional.empty();
         }
 
         String signingInput = parts[0] + "." + parts[1];
         String expectedSignature = sign(signingInput);
         if (!constantTimeEquals(expectedSignature, parts[2])) {
-            return null;
+            return Optional.empty();
         }
 
         try {
             String payloadJson = new String(URL_DECODER.decode(parts[1]), StandardCharsets.UTF_8);
-            String sub = extractSubject(payloadJson);
-            long exp = extractExpiration(payloadJson);
-            if (sub == null || exp <= Instant.now().getEpochSecond()) {
-                return null;
+            JsonNode root = objectMapper.readTree(payloadJson);
+            long exp = root.path("exp").asLong(0L);
+            if (exp <= Instant.now().getEpochSecond()) {
+                return Optional.empty();
             }
-            return sub;
+            JsonNode subNode = root.get("sub");
+            if (subNode == null || subNode.isNull()) {
+                return Optional.empty();
+            }
+            long userId = subNode.isIntegralNumber() ? subNode.asLong() : Long.parseLong(subNode.asText());
+
+            List<RoleNameEnum> roleNames = new ArrayList<>();
+            JsonNode rolesNode = root.get("roles");
+            if (rolesNode != null && rolesNode.isArray()) {
+                for (JsonNode n : rolesNode) {
+                    if (n != null && n.isTextual()) {
+                        try {
+                            roleNames.add(RoleNameEnum.valueOf(n.asText().trim()));
+                        } catch (IllegalArgumentException ex) {
+                            return Optional.empty();
+                        }
+                    }
+                }
+            }
+            return Optional.of(new JwtPayload(userId, roleNames));
         } catch (Exception ex) {
-            return null;
+            return Optional.empty();
         }
     }
 
@@ -93,29 +134,5 @@ public class JwtService {
             result |= leftBytes[i] ^ rightBytes[i];
         }
         return result == 0;
-    }
-
-    private String escapeJson(String value) {
-        return value.replace("\\", "\\\\").replace("\"", "\\\"");
-    }
-
-    private String extractSubject(String payloadJson) {
-        Matcher matcher = SUBJECT_PATTERN.matcher(payloadJson);
-        if (!matcher.find()) {
-            return null;
-        }
-        return matcher.group(1).replace("\\\"", "\"").replace("\\\\", "\\");
-    }
-
-    private long extractExpiration(String payloadJson) {
-        Matcher matcher = EXP_PATTERN.matcher(payloadJson);
-        if (!matcher.find()) {
-            return 0L;
-        }
-        try {
-            return Long.parseLong(matcher.group(1));
-        } catch (NumberFormatException ex) {
-            return 0L;
-        }
     }
 }

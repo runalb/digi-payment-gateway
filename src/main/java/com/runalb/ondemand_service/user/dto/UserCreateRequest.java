@@ -2,8 +2,12 @@ package com.runalb.ondemand_service.user.dto;
 
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotEmpty;
 import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Size;
+import java.util.List;
+
+import com.runalb.ondemand_service.role.enums.RoleNameEnum;
 
 public record UserCreateRequest(
         @NotBlank @Email @Size(max = 255) String email,
@@ -12,4 +16,6 @@ public record UserCreateRequest(
         @Pattern(
                         regexp = "^$|^\\+?[1-9]\\d{7,14}$",
                         message = "mobileNumber must be E.164 format, e.g. +14155552671")
-                String mobileNumber) {}
+                String mobileNumber,
+        /** Role codes to assign; each must exist in the database or registration fails. */
+        @NotEmpty List<RoleNameEnum> roles) {}
