@@ -52,7 +52,7 @@ public class SecurityConfig {
                         
                         // Catalog
                         .requestMatchers(HttpMethod.GET, "/api/v1/catalog/**").authenticated()
-                        .requestMatchers("/api/v1/catalog/**").hasRole("SUPER_ADMIN")
+                        .requestMatchers("/api/v1/catalog/**").hasRole("SUPER_ADMIN") // only super admin can access catalog routes to create, update, delete categories and services
 
                         // Integration
                         .requestMatchers("/api/v1/integration/**").authenticated()
