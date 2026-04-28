@@ -20,12 +20,12 @@ import org.springframework.util.StringUtils;
 import org.springframework.web.server.ResponseStatusException;
 
 @Service
-public class CatalogSuperAdminService {
+public class CatalogService {
 
     private final CatalogCategoryRepository categoryRepository;
     private final CatalogServiceRepository catalogServiceRepository;
 
-    public CatalogSuperAdminService(
+    public CatalogService(
             CatalogCategoryRepository categoryRepository, CatalogServiceRepository catalogServiceRepository) {
         this.categoryRepository = categoryRepository;
         this.catalogServiceRepository = catalogServiceRepository;
@@ -34,7 +34,7 @@ public class CatalogSuperAdminService {
     @Transactional(readOnly = true)
     public List<CatalogCategoryResponse> listCategories() {
         return categoryRepository.findAll(Sort.by("displayOrder", "id")).stream()
-                .map(CatalogSuperAdminService::toCatalogCategoryResponse)
+                .map(CatalogService::toCatalogCategoryResponse)
                 .toList();
     }
 
@@ -93,7 +93,7 @@ public class CatalogSuperAdminService {
     public List<CatalogServiceResponse> listServicesInCategory(Long categoryId) {
         requireCategory(categoryId);
         return catalogServiceRepository.findByCatalogCategory_IdOrderByDisplayOrderAscIdAsc(categoryId).stream()
-                .map(CatalogSuperAdminService::toCatalogServiceResponse)
+                .map(CatalogService::toCatalogServiceResponse)
                 .toList();
     }
 
