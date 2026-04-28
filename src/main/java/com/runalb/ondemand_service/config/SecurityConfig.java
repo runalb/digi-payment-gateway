@@ -35,7 +35,11 @@ public class SecurityConfig {
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
                         .requestMatchers("/webhook/**").permitAll()
+
+                        // User
                         .requestMatchers(HttpMethod.POST, "/api/v1/users").permitAll()
+
+                        // Auth
                         .requestMatchers(HttpMethod.POST, "/api/v1/auth/login").permitAll()
                         .requestMatchers(HttpMethod.POST, "/api/v1/auth/login/email/request-otp").permitAll()
                         .requestMatchers(HttpMethod.POST, "/api/v1/auth/login/email/verify-otp").permitAll()
@@ -45,8 +49,15 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.POST, "/api/v1/auth/login/mobile/verify-otp").permitAll()
                         .requestMatchers(HttpMethod.POST, "/api/v1/auth/refresh-token").permitAll()
                         .requestMatchers(HttpMethod.POST, "/api/v1/auth/logout").permitAll()
-                        .requestMatchers("/api/v1/super-admin/**").hasRole("SUPER_ADMIN")
+                        
+                        // Catalog
+                        .requestMatchers(HttpMethod.GET, "/api/v1/catalog/**").authenticated()
+                        .requestMatchers("/api/v1/catalog/**").hasRole("SUPER_ADMIN")
+
+                        // Integration
                         .requestMatchers("/api/v1/integration/**").authenticated()
+                        
+                        // All other routes
                         .requestMatchers("/api/**").authenticated()
                         .anyRequest().permitAll())
                 .addFilterBefore(apiKeyAuthenticationFilter, UsernamePasswordAuthenticationFilter.class)
