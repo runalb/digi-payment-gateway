@@ -2,17 +2,18 @@
   "info": {
     "_postman_id": "a1b2c3d4-e5f6-7890-abcd-ondemand-service",
     "name": "OnDemand Service API",
-    "description": "REST collection for the Spring Boot OnDemand Service (`com.runalb.ondemand_service`).\n\n**Integration** (`/api/v1/integration/**`): send `X-API-Key` (merchant API key). `ApiKeyAuthenticationFilter` authenticates the merchant; JWT is not used. Optional path prefix: `security.integration.path-prefix` (default `/api/v1/integration/`).\n\n**Portal** (`/api/v1/portal/**`, `/api/v1/users`): send `Authorization: Bearer {{accessToken}}` except **signup** `POST /api/v1/users` (public; body must include non-empty `roles`, e.g. `[\"CUSTOMER\"]`).\n\n**Auth** (`/api/v1/auth/**`): login, OTP, refresh, logout — public (no Bearer).\n\n**Catalog** (`/api/v1/catalog/**`): `GET` requires an authenticated user; `POST` / `PATCH` / `DELETE` require `ROLE_SUPER_ADMIN` (see `SecurityConfig`).\n\n**Webhooks** (`/webhook/**`): permit-all; secure in production (e.g. signatures).\n\nDefault `baseUrl`: `http://localhost:8080`. Set `{{apiKey}}` from `MerchantResponse` after creating a merchant.",
+    "description": "REST collection for the Spring Boot OnDemand Service (`com.runalb.ondemand_service`).\n\n**Auth** (`/api/v1/auth/**`): login + OTP + refresh + logout routes are public (no Bearer).\n\n**Users** (`/api/v1/users`): signup (`POST`) is public. Other user routes require Bearer and user ownership.\n\n**Portal / Merchants** (`/api/v1/portal/merchants/**`): Bearer required; ownership checks enforced via `AuthService.assertAuthenticatedUserOwnsMerchant`.\n\n**Business** (`/api/v1/business/**`): Bearer required. Currently only `POST /api/v1/business` is implemented; list/get/update/delete handlers return `501 Not Implemented`.\n\n**Catalog** (`/api/v1/catalog/**`): `GET` requires authentication; non-GET endpoints require `ROLE_SUPER_ADMIN`.\n\n**Integration + Webhook note**: security/filter rules exist for `/api/v1/integration/**` and `/webhook/**`, but no corresponding controllers are currently present in this project module.\n\nDefault `baseUrl`: `http://localhost:8080`. Set `{{apiKey}}` after merchant creation if/when integration controllers are available.",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "variable": [
     { "key": "baseUrl", "value": "http://localhost:8080" },
-    { "key": "apiKey", "value": "your-merchant-api-key" },
+    { "key": "emailId", "value": "hello@runalb.com" },
+    { "key": "password", "value": "runal@123" },
     { "key": "accessToken", "value": "" },
     { "key": "refreshToken", "value": "" },
-    { "key": "paymentId", "value": "1" },
     { "key": "merchantId", "value": "1" },
     { "key": "userId", "value": "1" },
+    { "key": "businessId", "value": "1" },
     { "key": "configId", "value": "1" },
     { "key": "categoryId", "value": "1" },
     { "key": "serviceId", "value": "1" }
@@ -29,7 +30,7 @@
             "header": [{ "key": "Content-Type", "value": "application/json" }],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"email\": \"user@example.com\",\n  \"password\": \"password123\"\n}"
+              "raw": "{\n  \"email\": \"{{emailId}}\",\n  \"password\": \"{{password}}\"\n}"
             },
             "url": {
               "raw": "{{baseUrl}}/api/v1/auth/login",
@@ -274,6 +275,96 @@
       ]
     },
     {
+      "name": "Business",
+      "description": "`business.controller.BusinessController` — `/api/v1/business`. `POST` creates business (201). `GET`/`{id}`/`PATCH`/`DELETE` currently return 501 Not Implemented.",
+      "item": [
+        {
+          "name": "Create business",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{accessToken}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Sample Business\",\n  \"description\": \"Business profile description\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/business",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "business"]
+            },
+            "description": "`BusinessCreateRequest` — implemented endpoint; returns 201 + `BusinessResponse`."
+          },
+          "response": []
+        },
+        {
+          "name": "List businesses",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/business",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "business"]
+            },
+            "description": "Currently returns 501 Not Implemented in `BusinessController`."
+          },
+          "response": []
+        },
+        {
+          "name": "Get business",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/business/{{businessId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "business", "{{businessId}}"]
+            },
+            "description": "Currently returns 501 Not Implemented in `BusinessController`."
+          },
+          "response": []
+        },
+        {
+          "name": "Patch business",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{accessToken}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Updated Business Name\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/business/{{businessId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "business", "{{businessId}}"]
+            },
+            "description": "Currently returns 501 Not Implemented in `BusinessController`."
+          },
+          "response": []
+        },
+        {
+          "name": "Delete business",
+          "request": {
+            "method": "DELETE",
+            "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/business/{{businessId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "business", "{{businessId}}"]
+            },
+            "description": "Currently returns 501 Not Implemented in `BusinessController`."
+          },
+          "response": []
+        }
+      ]
+    },
+    {
       "name": "Merchants (portal)",
       "description": "`merchant.controller.MerchantController` — `/api/v1/portal/merchants`. All routes require Bearer; merchant ownership enforced where applicable.",
       "item": [
@@ -392,7 +483,7 @@
               "host": ["{{baseUrl}}"],
               "path": ["api", "v1", "portal", "merchants", "{{merchantId}}", "config"]
             },
-            "description": "`MerchantConfigCreateRequest` — required 3-letter ISO 4217 `currency`; `webhookUrl` optional."
+            "description": "`MerchantConfigCreateRequest` — required 3-letter ISO 4217 `currency`; `webhookUrl` optional. Returns 200 in current controller implementation."
           },
           "response": []
         },
@@ -710,113 +801,6 @@
               "path": ["api", "v1", "catalog", "services", "{{serviceId}}"]
             },
             "description": "**SUPER_ADMIN** only — 204 No Content."
-          },
-          "response": []
-        }
-      ]
-    },
-    {
-      "name": "Integration API",
-      "description": "Server-to-server — `X-API-Key` only (`ApiKeyAuthenticationFilter`). DTOs in `integration.api.dto`.",
-      "item": [
-        {
-          "name": "Payment link",
-          "item": [
-            {
-              "name": "Generate payment link",
-              "request": {
-                "method": "POST",
-                "header": [
-                  { "key": "Content-Type", "value": "application/json" },
-                  { "key": "X-API-Key", "value": "{{apiKey}}" }
-                ],
-                "body": {
-                  "mode": "raw",
-                  "raw": "{\n  \"merchantReferencePaymentId\": \"ORDER-12345\",\n  \"amount\": 99.99,\n  \"merchantMetadataJson\": \"{\\\"orderId\\\":\\\"ORD-001\\\"}\"\n}"
-                },
-                "url": {
-                  "raw": "{{baseUrl}}/api/v1/integration/payment-link/generate",
-                  "host": ["{{baseUrl}}"],
-                  "path": ["api", "v1", "integration", "payment-link", "generate"]
-                },
-                "description": "`PaymentLinkIntegrationController` — body `PaymentLinkRequest` (amount ≥ 0.01). 201 + `PaymentLinkResponse`."
-              },
-              "response": []
-            }
-          ]
-        },
-        {
-          "name": "Transactions",
-          "item": [
-            {
-              "name": "List transactions",
-              "request": {
-                "method": "GET",
-                "header": [{ "key": "X-API-Key", "value": "{{apiKey}}" }],
-                "url": {
-                  "raw": "{{baseUrl}}/api/v1/integration/transactions",
-                  "host": ["{{baseUrl}}"],
-                  "path": ["api", "v1", "integration", "transactions"]
-                },
-                "description": "`TransactionIntegrationController` — `List<PaymentDetailsResponse>` for API key merchant."
-              },
-              "response": []
-            },
-            {
-              "name": "Get payment details by id",
-              "request": {
-                "method": "GET",
-                "header": [{ "key": "X-API-Key", "value": "{{apiKey}}" }],
-                "url": {
-                  "raw": "{{baseUrl}}/api/v1/integration/transactions/{{paymentId}}",
-                  "host": ["{{baseUrl}}"],
-                  "path": ["api", "v1", "integration", "transactions", "{{paymentId}}"]
-                },
-                "description": "`PaymentDetailsResponse` scoped to merchant."
-              },
-              "response": []
-            }
-          ]
-        }
-      ]
-    },
-    {
-      "name": "Payment channel webhooks",
-      "description": "`integration.webhook.controller.WebhookPaymentChannelController` — no API key or JWT.",
-      "item": [
-        {
-          "name": "TEST webhook (success)",
-          "request": {
-            "method": "POST",
-            "header": [{ "key": "Content-Type", "value": "application/json" }],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"paymentStatus\": \"SUCCESS\",\n  \"paymentId\": {{paymentId}}\n}"
-            },
-            "url": {
-              "raw": "{{baseUrl}}/webhook/v1/payment-channel-webhooks/test",
-              "host": ["{{baseUrl}}"],
-              "path": ["webhook", "v1", "payment-channel-webhooks", "test"]
-            },
-            "description": "`channelKey` = payment channel enum name (e.g. test, stripe). Body channel-specific; TEST adapter expects `paymentStatus`, `paymentId`. Response: `WebhookAdapterResponse`."
-          },
-          "response": []
-        },
-        {
-          "name": "TEST webhook (failed)",
-          "request": {
-            "method": "POST",
-            "header": [{ "key": "Content-Type", "value": "application/json" }],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"paymentStatus\": \"FAILED\",\n  \"paymentId\": {{paymentId}}\n}"
-            },
-            "url": {
-              "raw": "{{baseUrl}}/webhook/v1/payment-channel-webhooks/test",
-              "host": ["{{baseUrl}}"],
-              "path": ["webhook", "v1", "payment-channel-webhooks", "test"]
-            },
-            "description": "Same path with FAILED sample."
           },
           "response": []
         }
