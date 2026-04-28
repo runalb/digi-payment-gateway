@@ -1,5 +1,6 @@
 package com.runalb.ondemand_service.user.service;
 
+import com.runalb.ondemand_service.business.entity.BusinessEntity;
 import com.runalb.ondemand_service.merchant.entity.MerchantEntity;
 import com.runalb.ondemand_service.role.entity.RoleEntity;
 import com.runalb.ondemand_service.role.enums.RoleNameEnum;
@@ -143,6 +144,8 @@ public class UserService {
         return toResponse(user);
     }
 
+
+    // Merchants
     @Transactional(readOnly = true)
     public boolean userOwnsMerchant(Long userId, Long merchantId) {
         return userRepository.existsByIdAndMerchants_Id(userId, merchantId);
@@ -159,6 +162,22 @@ public class UserService {
         user.getMerchants().add(merchant);
         userRepository.save(user);
     }
+
+    // Businesses
+    public void linkBusinessToUser(Long userId, BusinessEntity business) {
+        UserEntity user = userRepository
+                .findById(userId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "User not found"));
+        if (!Boolean.TRUE.equals(user.getIsActive())) {
+            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "User is deleted");
+        }
+        user.getBusinesses().add(business);
+    }
+
+    public boolean userOwnsBusiness(Long userId, Long businessId) {
+        return userRepository.existsByIdAndBusinesses_Id(userId, businessId);
+    }
+
 
     @Transactional(readOnly = true)
     public UserEntity findActiveUserByEmail(String email) {

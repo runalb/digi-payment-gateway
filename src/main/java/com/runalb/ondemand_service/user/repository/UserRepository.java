@@ -27,4 +27,6 @@ public interface UserRepository extends JpaRepository<UserEntity, Long> {
 
     @Query("SELECT DISTINCT u FROM UserEntity u LEFT JOIN FETCH u.roles WHERE u.id = :id")
     Optional<UserEntity> findByIdWithRoles(@Param("id") Long id);
+
+    boolean existsByIdAndBusinesses_Id(Long id, Long businessesId);
 }

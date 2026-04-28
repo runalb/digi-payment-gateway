@@ -1,5 +1,6 @@
 package com.runalb.ondemand_service.user.entity;
 
+import com.runalb.ondemand_service.business.entity.BusinessEntity;
 import com.runalb.ondemand_service.common.persistence.AuditableEntity;
 import com.runalb.ondemand_service.merchant.entity.MerchantEntity;
 import com.runalb.ondemand_service.role.entity.RoleEntity;
@@ -61,4 +62,11 @@ public class UserEntity extends AuditableEntity {
             joinColumns = @JoinColumn(name = "user_id"),
             inverseJoinColumns = @JoinColumn(name = "merchant_id"))
     private List<MerchantEntity> merchants = new ArrayList<>();
+
+    @ManyToMany
+    @JoinTable(
+            name = "user_business",
+            joinColumns = @JoinColumn(name = "user_id"),
+            inverseJoinColumns = @JoinColumn(name = "business_id"))
+    private List<BusinessEntity> businesses = new ArrayList<>();
 }
