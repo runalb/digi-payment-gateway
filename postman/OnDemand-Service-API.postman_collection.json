@@ -1,0 +1,826 @@
+{
+  "info": {
+    "_postman_id": "a1b2c3d4-e5f6-7890-abcd-ondemand-service",
+    "name": "OnDemand Service API",
+    "description": "REST collection for the Spring Boot OnDemand Service (`com.runalb.ondemand_service`).\n\n**Integration** (`/api/v1/integration/**`): send `X-API-Key` (merchant API key). `ApiKeyAuthenticationFilter` authenticates the merchant; JWT is not used. Optional path prefix: `security.integration.path-prefix` (default `/api/v1/integration/`).\n\n**Portal** (`/api/v1/portal/**`, `/api/v1/users`): send `Authorization: Bearer {{accessToken}}` except **signup** `POST /api/v1/users` (public; body must include non-empty `roles`, e.g. `[\"CUSTOMER\"]`).\n\n**Auth** (`/api/v1/auth/**`): login, OTP, refresh, logout — public (no Bearer).\n\n**Catalog** (`/api/v1/catalog/**`): `GET` requires an authenticated user; `POST` / `PATCH` / `DELETE` require `ROLE_SUPER_ADMIN` (see `SecurityConfig`).\n\n**Webhooks** (`/webhook/**`): permit-all; secure in production (e.g. signatures).\n\nDefault `baseUrl`: `http://localhost:8080`. Set `{{apiKey}}` from `MerchantResponse` after creating a merchant.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    { "key": "baseUrl", "value": "http://localhost:8080" },
+    { "key": "apiKey", "value": "your-merchant-api-key" },
+    { "key": "accessToken", "value": "" },
+    { "key": "refreshToken", "value": "" },
+    { "key": "paymentId", "value": "1" },
+    { "key": "merchantId", "value": "1" },
+    { "key": "userId", "value": "1" },
+    { "key": "configId", "value": "1" },
+    { "key": "categoryId", "value": "1" },
+    { "key": "serviceId", "value": "1" }
+  ],
+  "item": [
+    {
+      "name": "Auth",
+      "description": "`auth.controller.AuthController` — public routes; no Bearer.",
+      "item": [
+        {
+          "name": "Login (email + password)",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"user@example.com\",\n  \"password\": \"password123\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/auth/login",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "auth", "login"]
+            },
+            "description": "`AuthLoginRequest` → `AuthLoginResponse`. Copy `accessToken` / `refreshToken` into collection variables."
+          },
+          "response": []
+        },
+        {
+          "name": "Login email — request OTP",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"user@example.com\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/auth/login/email/request-otp",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "auth", "login", "email", "request-otp"]
+            },
+            "description": "`AuthEmailOtpRequest`. In dev, OTP may be logged server-side."
+          },
+          "response": []
+        },
+        {
+          "name": "Login email — verify OTP",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"user@example.com\",\n  \"otp\": \"123456\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/auth/login/email/verify-otp",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "auth", "login", "email", "verify-otp"]
+            },
+            "description": "`AuthEmailVerifyOtpRequest` — returns `AuthLoginResponse`."
+          },
+          "response": []
+        },
+        {
+          "name": "Forgot password — request OTP",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"user@example.com\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/auth/forgot-password/email/request-otp",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "auth", "forgot-password", "email", "request-otp"]
+            },
+            "description": "`AuthEmailOtpRequest` — returns `AuthOtpRequestResponse`."
+          },
+          "response": []
+        },
+        {
+          "name": "Forgot password — reset with OTP",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"user@example.com\",\n  \"otp\": \"123456\",\n  \"newPassword\": \"newPassword123\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/auth/forgot-password/email/reset-password",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "auth", "forgot-password", "email", "reset-password"]
+            },
+            "description": "`AuthForgotPasswordResetRequest` — 204 No Content."
+          },
+          "response": []
+        },
+        {
+          "name": "Login mobile — request OTP",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"mobileNumber\": \"+14155552671\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/auth/login/mobile/request-otp",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "auth", "login", "mobile", "request-otp"]
+            },
+            "description": "`AuthMobileOtpRequest` (E.164)."
+          },
+          "response": []
+        },
+        {
+          "name": "Login mobile — verify OTP",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"mobileNumber\": \"+14155552671\",\n  \"otp\": \"123456\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/auth/login/mobile/verify-otp",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "auth", "login", "mobile", "verify-otp"]
+            },
+            "description": "`AuthMobileVerifyOtpRequest` — returns `AuthLoginResponse`."
+          },
+          "response": []
+        },
+        {
+          "name": "Refresh token",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"refreshToken\": \"{{refreshToken}}\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/auth/refresh-token",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "auth", "refresh-token"]
+            },
+            "description": "`AuthRefreshRequest` — returns new `AuthLoginResponse`."
+          },
+          "response": []
+        },
+        {
+          "name": "Logout",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"refreshToken\": \"{{refreshToken}}\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/auth/logout",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "auth", "logout"]
+            },
+            "description": "`AuthLogoutRequest` — 204 No Content."
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Users",
+      "description": "`user.controller.UserController` — `/api/v1/users`. `POST` is public; other routes require Bearer and ownership of `userId`.",
+      "item": [
+        {
+          "name": "Create user (signup)",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"newuser@example.com\",\n  \"password\": \"password123\",\n  \"name\": \"New User\",\n  \"mobileNumber\": \"+14155552671\",\n  \"roles\": [\"CUSTOMER\"]\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/users",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "users"]
+            },
+            "description": "`UserCreateRequest` — required non-empty `roles` (`RoleNameEnum`: CUSTOMER, PROVIDER, ADMIN, SUPER_ADMIN); each must exist in DB. `mobileNumber` optional (E.164 if set). 201 + `UserResponse`."
+          },
+          "response": []
+        },
+        {
+          "name": "Get user",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/users/{{userId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "users", "{{userId}}"]
+            },
+            "description": "`AuthService.assertAuthenticatedUserOwnsUserId` — principal must match `userId`."
+          },
+          "response": []
+        },
+        {
+          "name": "Patch user",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{accessToken}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Updated Name\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/users/{{userId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "users", "{{userId}}"]
+            },
+            "description": "`UserUpdateRequest` — partial update; self-only."
+          },
+          "response": []
+        },
+        {
+          "name": "Delete user (deactivate)",
+          "request": {
+            "method": "DELETE",
+            "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/users/{{userId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "users", "{{userId}}"]
+            },
+            "description": "204 No Content — `UserService.deactivateUser`."
+          },
+          "response": []
+        },
+        {
+          "name": "Reactivate user",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/users/{{userId}}/reactivate",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "users", "{{userId}}", "reactivate"]
+            },
+            "description": "Self-only — returns `UserResponse`."
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Merchants (portal)",
+      "description": "`merchant.controller.MerchantController` — `/api/v1/portal/merchants`. All routes require Bearer; merchant ownership enforced where applicable.",
+      "item": [
+        {
+          "name": "Create merchant",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{accessToken}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Acme Corp\",\n  \"email\": \"billing@acme.example\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/portal/merchants",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "portal", "merchants"]
+            },
+            "description": "`MerchantCreateRequest` — `name`, `email`. 201 + `MerchantResponse` including **apiKey** — save to `{{apiKey}}` for integration calls."
+          },
+          "response": []
+        },
+        {
+          "name": "List merchants",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/portal/merchants",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "portal", "merchants"]
+            },
+            "description": "Merchants for the authenticated user — `List<MerchantResponse>`."
+          },
+          "response": []
+        },
+        {
+          "name": "Get merchant",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/portal/merchants/{{merchantId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "portal", "merchants", "{{merchantId}}"]
+            },
+            "description": "`MerchantResponse` — must own merchant."
+          },
+          "response": []
+        },
+        {
+          "name": "Patch merchant",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{accessToken}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Acme Ltd\",\n  \"email\": \"newemail@acme.example\",\n  \"isActive\": true\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/portal/merchants/{{merchantId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "portal", "merchants", "{{merchantId}}"]
+            },
+            "description": "`MerchantUpdateRequest` — all fields optional."
+          },
+          "response": []
+        },
+        {
+          "name": "Delete merchant (deactivate)",
+          "request": {
+            "method": "DELETE",
+            "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/portal/merchants/{{merchantId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "portal", "merchants", "{{merchantId}}"]
+            },
+            "description": "204 No Content."
+          },
+          "response": []
+        },
+        {
+          "name": "Get merchant config",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/portal/merchants/{{merchantId}}/config",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "portal", "merchants", "{{merchantId}}", "config"]
+            },
+            "description": "`MerchantConfigResponse`."
+          },
+          "response": []
+        },
+        {
+          "name": "Create merchant config",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{accessToken}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"currency\": \"USD\",\n  \"webhookUrl\": \"https://merchant.example/hooks\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/portal/merchants/{{merchantId}}/config",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "portal", "merchants", "{{merchantId}}", "config"]
+            },
+            "description": "`MerchantConfigCreateRequest` — required 3-letter ISO 4217 `currency`; `webhookUrl` optional."
+          },
+          "response": []
+        },
+        {
+          "name": "Patch merchant config",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{accessToken}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"currency\": \"EUR\",\n  \"webhookUrl\": \"https://merchant.example/v2/hooks\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/portal/merchants/{{merchantId}}/config",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "portal", "merchants", "{{merchantId}}", "config"]
+            },
+            "description": "`MerchantConfigUpdateRequest` — fields optional."
+          },
+          "response": []
+        },
+        {
+          "name": "Create payment channel config",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{accessToken}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"paymentChannelId\": 1,\n  \"paymentChannelName\": \"TEST\",\n  \"configJson\": \"{}\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/portal/merchants/{{merchantId}}/payment-channel-configs",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "portal", "merchants", "{{merchantId}}", "payment-channel-configs"]
+            },
+            "description": "`MerchantPaymentChannelConfigCreateRequest` — `paymentChannelId` required; `paymentChannelName` optional enum (TEST, STRIPE, RAZORPAY, PAYMOB, XPLORPAY); `configJson` optional."
+          },
+          "response": []
+        },
+        {
+          "name": "List payment channel configs",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/portal/merchants/{{merchantId}}/payment-channel-configs",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "portal", "merchants", "{{merchantId}}", "payment-channel-configs"]
+            },
+            "description": "`List<MerchantPaymentChannelConfigResponse>`."
+          },
+          "response": []
+        },
+        {
+          "name": "Get payment channel config",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/portal/merchants/{{merchantId}}/payment-channel-configs/{{configId}}",
+              "host": ["{{baseUrl}}"],
+              "path": [
+                "api",
+                "v1",
+                "portal",
+                "merchants",
+                "{{merchantId}}",
+                "payment-channel-configs",
+                "{{configId}}"
+              ]
+            },
+            "description": "`MerchantPaymentChannelConfigResponse`."
+          },
+          "response": []
+        },
+        {
+          "name": "Patch payment channel config",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{accessToken}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"isActive\": true,\n  \"configJson\": \"{\\\"key\\\":\\\"value\\\"}\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/portal/merchants/{{merchantId}}/payment-channel-configs/{{configId}}",
+              "host": ["{{baseUrl}}"],
+              "path": [
+                "api",
+                "v1",
+                "portal",
+                "merchants",
+                "{{merchantId}}",
+                "payment-channel-configs",
+                "{{configId}}"
+              ]
+            },
+            "description": "`MerchantPaymentChannelConfigUpdateRequest` — `isActive`, `configJson` optional."
+          },
+          "response": []
+        },
+        {
+          "name": "Delete payment channel config (deactivate)",
+          "request": {
+            "method": "DELETE",
+            "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/portal/merchants/{{merchantId}}/payment-channel-configs/{{configId}}",
+              "host": ["{{baseUrl}}"],
+              "path": [
+                "api",
+                "v1",
+                "portal",
+                "merchants",
+                "{{merchantId}}",
+                "payment-channel-configs",
+                "{{configId}}"
+              ]
+            },
+            "description": "204 No Content."
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Catalog",
+      "description": "`catalog.controller.CatalogController` — `/api/v1/catalog`. **GET** requires authentication. **POST/PATCH/DELETE** require `SUPER_ADMIN` role.",
+      "item": [
+        {
+          "name": "List categories",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/catalog/categories",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "catalog", "categories"]
+            },
+            "description": "`List<CatalogCategoryResponse>`."
+          },
+          "response": []
+        },
+        {
+          "name": "Get category",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/catalog/categories/{{categoryId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "catalog", "categories", "{{categoryId}}"]
+            },
+            "description": "`CatalogCategoryResponse`."
+          },
+          "response": []
+        },
+        {
+          "name": "Create category",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{accessToken}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Housekeeping\",\n  \"description\": \"Cleaning and maintenance\",\n  \"displayOrder\": 1,\n  \"active\": true\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/catalog/categories",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "catalog", "categories"]
+            },
+            "description": "`CatalogCategoryCreateRequest` — **SUPER_ADMIN** only. 201 Created."
+          },
+          "response": []
+        },
+        {
+          "name": "Patch category",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{accessToken}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Housekeeping & laundry\",\n  \"displayOrder\": 2\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/catalog/categories/{{categoryId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "catalog", "categories", "{{categoryId}}"]
+            },
+            "description": "`CatalogCategoryUpdateRequest` — **SUPER_ADMIN** only."
+          },
+          "response": []
+        },
+        {
+          "name": "Delete category",
+          "request": {
+            "method": "DELETE",
+            "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/catalog/categories/{{categoryId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "catalog", "categories", "{{categoryId}}"]
+            },
+            "description": "**SUPER_ADMIN** only — 204 No Content."
+          },
+          "response": []
+        },
+        {
+          "name": "List services in category",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/catalog/categories/{{categoryId}}/services",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "catalog", "categories", "{{categoryId}}", "services"]
+            },
+            "description": "`List<CatalogServiceResponse>` for category."
+          },
+          "response": []
+        },
+        {
+          "name": "Create service in category",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{accessToken}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Deep clean\",\n  \"description\": \"Full apartment deep clean\",\n  \"displayOrder\": 1,\n  \"active\": true\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/catalog/categories/{{categoryId}}/services",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "catalog", "categories", "{{categoryId}}", "services"]
+            },
+            "description": "`CatalogServiceCreateRequest` — **SUPER_ADMIN** only. 201 Created."
+          },
+          "response": []
+        },
+        {
+          "name": "List all services",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/catalog/services",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "catalog", "services"]
+            },
+            "description": "All catalog services — `List<CatalogServiceResponse>`."
+          },
+          "response": []
+        },
+        {
+          "name": "Get service",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/catalog/services/{{serviceId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "catalog", "services", "{{serviceId}}"]
+            },
+            "description": "`CatalogServiceResponse`."
+          },
+          "response": []
+        },
+        {
+          "name": "Patch service",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{accessToken}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Deep clean (4h)\",\n  \"categoryId\": 1\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/catalog/services/{{serviceId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "catalog", "services", "{{serviceId}}"]
+            },
+            "description": "`CatalogServiceUpdateRequest` — **SUPER_ADMIN** only; optional `categoryId` to move service."
+          },
+          "response": []
+        },
+        {
+          "name": "Delete service",
+          "request": {
+            "method": "DELETE",
+            "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/catalog/services/{{serviceId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "catalog", "services", "{{serviceId}}"]
+            },
+            "description": "**SUPER_ADMIN** only — 204 No Content."
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Integration API",
+      "description": "Server-to-server — `X-API-Key` only (`ApiKeyAuthenticationFilter`). DTOs in `integration.api.dto`.",
+      "item": [
+        {
+          "name": "Payment link",
+          "item": [
+            {
+              "name": "Generate payment link",
+              "request": {
+                "method": "POST",
+                "header": [
+                  { "key": "Content-Type", "value": "application/json" },
+                  { "key": "X-API-Key", "value": "{{apiKey}}" }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"merchantReferencePaymentId\": \"ORDER-12345\",\n  \"amount\": 99.99,\n  \"merchantMetadataJson\": \"{\\\"orderId\\\":\\\"ORD-001\\\"}\"\n}"
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/integration/payment-link/generate",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["api", "v1", "integration", "payment-link", "generate"]
+                },
+                "description": "`PaymentLinkIntegrationController` — body `PaymentLinkRequest` (amount ≥ 0.01). 201 + `PaymentLinkResponse`."
+              },
+              "response": []
+            }
+          ]
+        },
+        {
+          "name": "Transactions",
+          "item": [
+            {
+              "name": "List transactions",
+              "request": {
+                "method": "GET",
+                "header": [{ "key": "X-API-Key", "value": "{{apiKey}}" }],
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/integration/transactions",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["api", "v1", "integration", "transactions"]
+                },
+                "description": "`TransactionIntegrationController` — `List<PaymentDetailsResponse>` for API key merchant."
+              },
+              "response": []
+            },
+            {
+              "name": "Get payment details by id",
+              "request": {
+                "method": "GET",
+                "header": [{ "key": "X-API-Key", "value": "{{apiKey}}" }],
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/integration/transactions/{{paymentId}}",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["api", "v1", "integration", "transactions", "{{paymentId}}"]
+                },
+                "description": "`PaymentDetailsResponse` scoped to merchant."
+              },
+              "response": []
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Payment channel webhooks",
+      "description": "`integration.webhook.controller.WebhookPaymentChannelController` — no API key or JWT.",
+      "item": [
+        {
+          "name": "TEST webhook (success)",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"paymentStatus\": \"SUCCESS\",\n  \"paymentId\": {{paymentId}}\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/webhook/v1/payment-channel-webhooks/test",
+              "host": ["{{baseUrl}}"],
+              "path": ["webhook", "v1", "payment-channel-webhooks", "test"]
+            },
+            "description": "`channelKey` = payment channel enum name (e.g. test, stripe). Body channel-specific; TEST adapter expects `paymentStatus`, `paymentId`. Response: `WebhookAdapterResponse`."
+          },
+          "response": []
+        },
+        {
+          "name": "TEST webhook (failed)",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"paymentStatus\": \"FAILED\",\n  \"paymentId\": {{paymentId}}\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/webhook/v1/payment-channel-webhooks/test",
+              "host": ["{{baseUrl}}"],
+              "path": ["webhook", "v1", "payment-channel-webhooks", "test"]
+            },
+            "description": "Same path with FAILED sample."
+          },
+          "response": []
+        }
+      ]
+    }
+  ]
+}
