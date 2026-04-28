@@ -45,13 +45,7 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.POST, "/api/v1/auth/login/mobile/verify-otp").permitAll()
                         .requestMatchers(HttpMethod.POST, "/api/v1/auth/refresh-token").permitAll()
                         .requestMatchers(HttpMethod.POST, "/api/v1/auth/logout").permitAll()
-                        // start - testing purposes
-                        .requestMatchers(HttpMethod.POST, "/api/v1/users/**")
-                                .hasAnyRole("CUSTOMER", "PROVIDER", "ADMIN", "SUPER_ADMIN")
-                        .requestMatchers("/api/v1/customer-app/**").hasAnyRole("CUSTOMER", "SUPER_ADMIN")
-                        .requestMatchers("/api/v1/provider-app/**").hasAnyRole("PROVIDER", "SUPER_ADMIN")
-                        .requestMatchers("/api/v1/admin/**").hasAnyRole("ADMIN", "SUPER_ADMIN")
-                        // end - testing purposes
+                        .requestMatchers("/api/v1/super-admin/**").hasRole("SUPER_ADMIN")
                         .requestMatchers("/api/v1/integration/**").authenticated()
                         .requestMatchers("/api/**").authenticated()
                         .anyRequest().permitAll())
