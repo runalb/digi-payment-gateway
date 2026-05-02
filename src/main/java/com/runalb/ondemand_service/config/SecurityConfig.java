@@ -34,21 +34,15 @@ public class SecurityConfig {
                 .csrf(csrf -> csrf.disable())
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
+
+                        // Webhook
                         .requestMatchers("/webhook/**").permitAll()
 
                         // User
                         .requestMatchers(HttpMethod.POST, "/api/v1/users").permitAll()
 
                         // Auth
-                        .requestMatchers(HttpMethod.POST, "/api/v1/auth/login").permitAll()
-                        .requestMatchers(HttpMethod.POST, "/api/v1/auth/login/email/request-otp").permitAll()
-                        .requestMatchers(HttpMethod.POST, "/api/v1/auth/login/email/verify-otp").permitAll()
-                        .requestMatchers(HttpMethod.POST, "/api/v1/auth/forgot-password/email/request-otp").permitAll()
-                        .requestMatchers(HttpMethod.POST, "/api/v1/auth/forgot-password/email/reset-password").permitAll()
-                        .requestMatchers(HttpMethod.POST, "/api/v1/auth/login/mobile/request-otp").permitAll()
-                        .requestMatchers(HttpMethod.POST, "/api/v1/auth/login/mobile/verify-otp").permitAll()
-                        .requestMatchers(HttpMethod.POST, "/api/v1/auth/refresh-token").permitAll()
-                        .requestMatchers(HttpMethod.POST, "/api/v1/auth/logout").permitAll()
+                        .requestMatchers(HttpMethod.POST, "/api/v1/auth/**").permitAll()
                         
                         // Catalog
                         .requestMatchers(HttpMethod.GET, "/api/v1/catalog/**").authenticated()
