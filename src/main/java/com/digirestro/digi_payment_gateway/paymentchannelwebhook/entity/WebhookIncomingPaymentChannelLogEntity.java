@@ -1,4 +1,4 @@
-package com.digirestro.digi_payment_gateway.integration.webhook.entity;
+package com.digirestro.digi_payment_gateway.paymentchannelwebhook.entity;
 
 import com.digirestro.digi_payment_gateway.common.persistence.AuditableEntity;
 import com.digirestro.digi_payment_gateway.merchant.entity.MerchantEntity;

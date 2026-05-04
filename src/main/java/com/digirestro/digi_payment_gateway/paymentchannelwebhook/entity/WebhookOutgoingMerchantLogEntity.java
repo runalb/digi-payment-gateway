@@ -1,4 +1,4 @@
-package com.digirestro.digi_payment_gateway.integration.webhook.entity;
+package com.digirestro.digi_payment_gateway.paymentchannelwebhook.entity;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
