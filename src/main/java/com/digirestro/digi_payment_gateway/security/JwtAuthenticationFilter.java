@@ -70,7 +70,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         if (path.startsWith("/webhook/")) {
             return false;
         }
-        if (HttpMethod.POST.matches(method) && "/api/v1/portal/users".equals(path)) {
+        if (HttpMethod.POST.matches(method) && "/api/v1/users".equals(path)) {
             return false;
         }
         if (HttpMethod.POST.matches(method) && "/api/v1/auth/login".equals(path)) {
