@@ -8,4 +8,7 @@ import java.math.BigDecimal;
 public record PaymentLinkRequest(
         @NotBlank String merchantReferencePaymentId,
         @NotNull @DecimalMin("0.01") BigDecimal amount,
-        String merchantMetadataJson) {}
+        String merchantMetadataJson,
+        String redirectSuccessUrl,
+        String redirectFailureUrl
+) {}
