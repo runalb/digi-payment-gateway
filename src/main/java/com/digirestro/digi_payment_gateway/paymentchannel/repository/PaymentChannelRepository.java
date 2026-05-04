@@ -1,7 +1,7 @@
-package com.digirestro.digi_payment_gateway.payment.repository;
+package com.digirestro.digi_payment_gateway.paymentchannel.repository;
 
-import com.digirestro.digi_payment_gateway.payment.entity.PaymentChannelEntity;
-import com.digirestro.digi_payment_gateway.payment.enums.PaymentChannelNameEnum;
+import com.digirestro.digi_payment_gateway.paymentchannel.entity.PaymentChannelEntity;
+import com.digirestro.digi_payment_gateway.paymentchannel.enums.PaymentChannelNameEnum;
 
 import java.util.Optional;
 import org.springframework.data.jpa.repository.JpaRepository;

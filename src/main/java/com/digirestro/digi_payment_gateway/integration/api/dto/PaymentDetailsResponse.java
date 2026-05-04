@@ -3,8 +3,8 @@ package com.digirestro.digi_payment_gateway.integration.api.dto;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
-import com.digirestro.digi_payment_gateway.payment.enums.PaymentChannelNameEnum;
 import com.digirestro.digi_payment_gateway.payment.enums.PaymentStatusEnum;
+import com.digirestro.digi_payment_gateway.paymentchannel.enums.PaymentChannelNameEnum;
 
 public record PaymentDetailsResponse(
         Long id,

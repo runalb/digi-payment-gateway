@@ -15,8 +15,8 @@ import com.digirestro.digi_payment_gateway.merchant.entity.MerchantPaymentChanne
 import com.digirestro.digi_payment_gateway.merchant.repository.MerchantConfigRepository;
 import com.digirestro.digi_payment_gateway.merchant.repository.MerchantPaymentChannelConfigRepository;
 import com.digirestro.digi_payment_gateway.merchant.repository.MerchantRepository;
-import com.digirestro.digi_payment_gateway.payment.entity.PaymentChannelEntity;
-import com.digirestro.digi_payment_gateway.payment.service.PaymentChannelService;
+import com.digirestro.digi_payment_gateway.paymentchannel.entity.PaymentChannelEntity;
+import com.digirestro.digi_payment_gateway.paymentchannel.service.PaymentChannelService;
 import com.digirestro.digi_payment_gateway.user.service.UserService;
 import com.digirestro.digi_payment_gateway.util.StringNormalizer;
 import jakarta.persistence.EntityNotFoundException;
