@@ -95,6 +95,17 @@ public class AuthService {
         }
     }
 
+    /** Ensures the current user has the {@link RoleNameEnum#PROVIDER} role (e.g. provider profile APIs). */
+    @Transactional(readOnly = true)
+    public void assertAuthenticatedUserHasProviderRole() {
+        UserEntity user = resolveAuthenticatedActiveUser();
+        boolean isProvider = user.getRoles().stream()
+                .anyMatch(r -> r.getRoleName() == RoleNameEnum.PROVIDER);
+        if (!isProvider) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Provider role required");
+        }
+    }
+
     private UserEntity resolveAuthenticatedActiveUser() {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         if (authentication == null || !authentication.isAuthenticated()) {

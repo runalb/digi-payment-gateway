@@ -50,7 +50,10 @@ public class SecurityConfig {
 
                         // Integration
                         .requestMatchers("/api/v1/integration/**").authenticated()
-                        
+
+                        // Provider
+                        .requestMatchers("/api/v1/providers/**").hasRole("PROVIDER")
+
                         // All other routes
                         .requestMatchers("/api/**").authenticated()
                         .anyRequest().permitAll())
