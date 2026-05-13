@@ -1,8 +1,7 @@
 package com.digirestro.digi_payment_gateway.paymentchannelwebhook.controller;
 
 import com.digirestro.digi_payment_gateway.paymentchannel.enums.PaymentChannelNameEnum;
-import com.digirestro.digi_payment_gateway.paymentchannelstrategy.PaymentChannelStrategy;
-import com.digirestro.digi_payment_gateway.paymentchannelstrategy.PaymentChannelStrategyResolver;
+import com.digirestro.digi_payment_gateway.paymentchannelwebhook.service.PaymentChannelWebhookOrchestrationService;
 import com.digirestro.digi_payment_gateway.paymentchannelstrategy.dto.WebhookStrategyResponse;
 
 import java.util.Locale;
@@ -24,10 +23,10 @@ import lombok.extern.slf4j.Slf4j;
 @RequestMapping("/webhook/v1/payment-channel")
 public class PaymentChannelWebhookController {
 
-    private final PaymentChannelStrategyResolver strategyResolver;
+    private final PaymentChannelWebhookOrchestrationService webhookOrchestrationService;
 
-    public PaymentChannelWebhookController(PaymentChannelStrategyResolver strategyResolver) {
-        this.strategyResolver = strategyResolver;
+    public PaymentChannelWebhookController(PaymentChannelWebhookOrchestrationService webhookOrchestrationService) {
+        this.webhookOrchestrationService = webhookOrchestrationService;
     }
 
     /** 
@@ -51,9 +50,7 @@ public class PaymentChannelWebhookController {
         PaymentChannelNameEnum channelName = parseChannelKey(channelKey);
         log.info("Parsed channel name: {}", channelName);
 
-        PaymentChannelStrategy strategy = strategyResolver.getRequiredStrategy(channelName);
-
-        WebhookStrategyResponse response = strategy.validateAndParseWebhook(webhookPayload);
+        WebhookStrategyResponse response = webhookOrchestrationService.processWebhook(channelName, webhookPayload);
         return new ResponseEntity<>(response, HttpStatus.OK);
     }
 

@@ -6,16 +6,38 @@ import com.digirestro.digi_payment_gateway.merchant.entity.MerchantConfigEntity;
 import com.digirestro.digi_payment_gateway.merchant.entity.MerchantEntity;
 import com.digirestro.digi_payment_gateway.merchant.entity.MerchantPaymentChannelConfigEntity;
 import com.digirestro.digi_payment_gateway.merchant.service.MerchantService;
+import com.digirestro.digi_payment_gateway.payment.contract.PaymentLinkOrchestrationContract;
 import com.digirestro.digi_payment_gateway.payment.entity.PaymentEntity;
 import com.digirestro.digi_payment_gateway.payment.enums.PaymentStatusEnum;
-import com.digirestro.digi_payment_gateway.paymentchannelstrategy.PaymentChannelStrategy;
-import com.digirestro.digi_payment_gateway.paymentchannelstrategy.PaymentChannelStrategyResolver;
+import com.digirestro.digi_payment_gateway.paymentchannelstrategy.interfaces.PaymentChannelStrategy;
+import com.digirestro.digi_payment_gateway.paymentchannelstrategy.resolver.PaymentChannelStrategyResolver;
 import com.digirestro.digi_payment_gateway.paymentchannelstrategy.dto.PaymentLinkStrategyResponse;
 
 import java.util.UUID;
 
 import org.springframework.stereotype.Service;
 
+/**
+ * Orchestrates payment-link creation using a fixed two-phase flow.
+ *
+ * <p><b>Do not change without team review.</b> Contract is enforced by
+ * {@link com.digirestro.digi_payment_gateway.payment.PaymentOrchestrationServiceContractTest}.
+ *
+ * <ol>
+ *   <li>Phase 1 — persist {@link PaymentStatusEnum#INITIATED} (committed before any channel HTTP call)</li>
+ *   <li>Phase 2 — {@link #completePaymentLinkGeneration(PaymentEntity, PaymentChannelStrategy)}:
+ *       channel API, refetch from DB, persist link fields and {@link PaymentStatusEnum#PAYMENT_LINK_GENERATED}</li>
+ * </ol>
+ *
+ * <p>Rules:
+ * <ul>
+ *   <li>Do not add {@code @Transactional} on {@link #generatePaymentLink} — external HTTP must run outside a DB transaction</li>
+ *   <li>Do not merge both phases into one transaction</li>
+ *   <li>Do not persist payment or set status inside {@link com.digirestro.digi_payment_gateway.paymentchannelstrategy.interfaces.PaymentChannelStrategy#createPaymentLink}</li>
+ *   <li>Always refetch before the second save in {@link #completePaymentLinkGeneration}</li>
+ * </ul>
+ */
+@PaymentLinkOrchestrationContract
 @Service
 public class PaymentOrchestrationService {
 
@@ -65,13 +87,17 @@ public class PaymentOrchestrationService {
         );
     }
 
+    /**
+     * Phase 2 only. Channel HTTP runs here, between two independent commits.
+     */
+    @PaymentLinkOrchestrationContract
     private PaymentEntity completePaymentLinkGeneration(PaymentEntity payment, PaymentChannelStrategy strategy) {
         PaymentLinkStrategyResponse strategyResponse = strategy.createPaymentLink(payment);
 
         PaymentEntity paymentToUpdate = paymentService.findById(payment.getId());
         paymentToUpdate.setPaymentChannelPayLink(strategyResponse.paymentChannelPayLink());
         paymentToUpdate.setPaymentChannelTxnId(strategyResponse.paymentChannelTxnId());
-        paymentToUpdate.setStatus(PaymentStatusEnum.PAYMENT_LINK_GENERATED);
+        paymentToUpdate.setStatus(strategyResponse.status());
         return paymentService.save(paymentToUpdate);
     }
 }
