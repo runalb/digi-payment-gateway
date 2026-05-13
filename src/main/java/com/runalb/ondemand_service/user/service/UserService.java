@@ -193,13 +193,7 @@ public class UserService {
     }
 
     @Transactional
-    public void linkUserToBusiness(Long userId, BusinessEntity business) {
-        UserEntity user = userRepository
-                .findById(userId)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "User not found"));
-        if (Boolean.TRUE.equals(user.getIsDeleted())) {
-            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "User is deleted");
-        }
+    public void linkUserToBusiness(UserEntity user, BusinessEntity business) {
         user.getBusinesses().add(business);
         userRepository.save(user);
     }

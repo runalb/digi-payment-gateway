@@ -8,7 +8,6 @@ import com.runalb.ondemand_service.provider.entity.ProviderEntity;
 import com.runalb.ondemand_service.provider.repository.ProviderRepository;
 import com.runalb.ondemand_service.user.dto.UserResponse;
 import com.runalb.ondemand_service.user.entity.UserEntity;
-import com.runalb.ondemand_service.user.repository.UserRepository;
 import com.runalb.ondemand_service.util.InputSanitizer;
 import java.util.List;
 import org.springframework.http.HttpStatus;
@@ -20,31 +19,25 @@ import org.springframework.web.server.ResponseStatusException;
 public class ProviderService {
 
     private final ProviderRepository providerRepository;
-    private final UserRepository userRepository;
     private final AuthService authService;
 
     public ProviderService(
             ProviderRepository providerRepository,
-            UserRepository userRepository,
             AuthService authService) {
         this.providerRepository = providerRepository;
-        this.userRepository = userRepository;
         this.authService = authService;
     }
 
     @Transactional
     public ProviderDetailResponse createProvider(ProviderCreateRequest request) {
-        UserEntity user = authService.loadAuthenticatedActiveUser();
-        UserEntity managedUser = userRepository
-                .findById(user.getId())
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "User not found"));
-
-        if (providerRepository.existsByUser_Id(managedUser.getId())) {
+        UserEntity user = authService.resolveAuthenticatedUser();
+        
+        if (providerRepository.existsByUser_Id(user.getId())) {
             throw new ResponseStatusException(HttpStatus.CONFLICT, "Provider already exists for this user");
         }
 
         ProviderEntity entity = new ProviderEntity();
-        entity.setUser(managedUser);
+        entity.setUser(user);
         entity.setBio(InputSanitizer.trimToNull(request.bio()));
         entity.setIsVerified(Boolean.FALSE);
         entity.setAverageRating(0.0);
@@ -58,13 +51,13 @@ public class ProviderService {
 
     @Transactional
     public ProviderDetailResponse updateProvider(Long providerId, ProviderUpdateRequest request) {
-        Long userId = authService.loadAuthenticatedActiveUser().getId();
+        UserEntity user = authService.resolveAuthenticatedUser();
 
         ProviderEntity entity =
                 providerRepository.findById(providerId).orElseThrow(() -> new ResponseStatusException(
                         HttpStatus.NOT_FOUND, "Provider not found"));
 
-        if (!entity.getUser().getId().equals(userId)) {
+        if (!entity.getUser().getId().equals(user.getId())) {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "You are not authorized to update this provider");
         }
 
@@ -82,13 +75,13 @@ public class ProviderService {
 
     @Transactional(readOnly = true)
     public ProviderDetailResponse getProvider(Long providerId) {
-        Long userId = authService.loadAuthenticatedActiveUser().getId();
+        UserEntity user = authService.resolveAuthenticatedUser();
 
         ProviderEntity entity = providerRepository
                 .findByIdWithUserAndRoles(providerId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Provider not found"));
 
-        if (!entity.getUser().getId().equals(userId)) {
+        if (!entity.getUser().getId().equals(user.getId())) {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "You are not authorized to view this provider");
         }
 

@@ -42,15 +42,13 @@ public class BusinessController {
     @PostMapping
     public ResponseEntity<BusinessResponse> createBusiness(
             @Valid @RequestBody BusinessCreateRequest request) {
-        Long ownerUserId = authService.loadAuthenticatedActiveUser().getId();
-        BusinessResponse response = businessService.createBusiness(request, ownerUserId);
+        BusinessResponse response = businessService.createBusiness(request);
         return new ResponseEntity<>(response, HttpStatus.CREATED);
     }
 
     @GetMapping
-    public ResponseEntity<List<BusinessResponse>> listBusinesses() {
-        Long userId = authService.loadAuthenticatedActiveUser().getId();
-        List<BusinessResponse> businesses = businessService.listBusinessesForUser(userId);
+    public ResponseEntity<List<BusinessResponse>> listBusinessesForUser() {
+        List<BusinessResponse> businesses = businessService.listBusinessesForUser();
         return new ResponseEntity<>(businesses, HttpStatus.OK);
     }
 

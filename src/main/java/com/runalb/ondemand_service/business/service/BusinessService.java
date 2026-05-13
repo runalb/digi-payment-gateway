@@ -15,6 +15,8 @@ import com.runalb.ondemand_service.business.entity.BusinessPaymentChannelConfigE
 import com.runalb.ondemand_service.business.repository.BusinessConfigRepository;
 import com.runalb.ondemand_service.business.repository.BusinessPaymentChannelConfigRepository;
 import com.runalb.ondemand_service.business.repository.BusinessRepository;
+import com.runalb.ondemand_service.user.entity.UserEntity;
+import com.runalb.ondemand_service.auth.service.AuthService;
 // import com.runalb.ondemand_service.payment.entity.PaymentChannelEntity;
 // import com.runalb.ondemand_service.payment.service.PaymentChannelService;
 import com.runalb.ondemand_service.user.service.UserService;
@@ -36,18 +38,21 @@ public class BusinessService {
     // private final PaymentChannelService paymentChannelService;
     private final BusinessPaymentChannelConfigRepository businessPaymentChannelConfigRepository;
     private final UserService userService;
+    private final AuthService authService;
 
     public BusinessService(
             BusinessRepository businessRepository,
             BusinessConfigRepository businessConfigRepository,
             // PaymentChannelService paymentChannelService,
             BusinessPaymentChannelConfigRepository businessPaymentChannelConfigRepository,
-            UserService userService) {
+            UserService userService,
+            AuthService authService) {
         this.businessRepository = businessRepository;
         this.businessConfigRepository = businessConfigRepository;
         // this.paymentChannelService = paymentChannelService;
         this.businessPaymentChannelConfigRepository = businessPaymentChannelConfigRepository;
         this.userService = userService;
+        this.authService = authService;
     }
 
     @Transactional(readOnly = true)
@@ -66,22 +71,26 @@ public class BusinessService {
     }
 
     @Transactional
-    public BusinessResponse createBusiness(BusinessCreateRequest request, Long ownerUserId) {
+    public BusinessResponse createBusiness(BusinessCreateRequest request) {
+        UserEntity user = authService.resolveAuthenticatedUser();
+
         BusinessEntity business = new BusinessEntity();
         business.setName(InputSanitizer.normalizeName(request.name()));
         business.setApiKey(UUID.randomUUID().toString());
         business.setEmail(InputSanitizer.normalizeEmail(request.email()));
         business = businessRepository.save(business);
 
-        userService.linkUserToBusiness(ownerUserId, business);
+        userService.linkUserToBusiness(user, business);
 
         return new BusinessResponse(
                 business.getId(), business.getName(), business.getEmail(), business.getApiKey(), business.getIsDeleted());
     }
 
     @Transactional(readOnly = true)
-    public List<BusinessResponse> listBusinessesForUser(Long userId) {
-        return businessRepository.findByUsers_IdOrderByIdAsc(userId).stream()
+    public List<BusinessResponse> listBusinessesForUser() {
+        UserEntity user = authService.resolveAuthenticatedUser();
+
+        return businessRepository.findByUsers_IdOrderByIdAsc(user.getId()).stream()
                 .map(BusinessService::toBusinessResponse)
                 .toList();
     }

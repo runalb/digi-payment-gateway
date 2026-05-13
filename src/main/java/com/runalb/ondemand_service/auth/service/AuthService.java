@@ -102,7 +102,8 @@ public class AuthService {
         }
     }
 
-    private UserEntity resolveAuthenticatedUser() {
+
+    public UserEntity resolveAuthenticatedUser() {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         if (authentication == null || !authentication.isAuthenticated()) {
             throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Not authenticated");
