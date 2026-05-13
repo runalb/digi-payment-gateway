@@ -73,14 +73,10 @@ public class AuthService {
         this.otpResendCooldownSeconds = otpResendCooldownSeconds;
     }
 
-    @Transactional(readOnly = true)
-    public UserEntity loadAuthenticatedActiveUser() {
-        return resolveAuthenticatedActiveUser();
-    }
 
     @Transactional(readOnly = true)
     public void assertAuthenticatedUserOwnsUserId(Long userId) {
-        UserEntity authenticatedUser = resolveAuthenticatedActiveUser();
+        UserEntity authenticatedUser = resolveAuthenticatedUser();
         if (!authenticatedUser.getId().equals(userId)) {
             throw new ResponseStatusException(
                     HttpStatus.FORBIDDEN, "You are not authorized to access this resource");
@@ -89,7 +85,7 @@ public class AuthService {
 
     @Transactional(readOnly = true)
     public void assertAuthenticatedUserOwnsBusiness(Long businessId) {
-        UserEntity user = resolveAuthenticatedActiveUser();
+        UserEntity user = resolveAuthenticatedUser();
         if (!userService.userOwnsBusiness(user.getId(), businessId)) {
             throw new ResponseStatusException(
                     HttpStatus.FORBIDDEN, "You are not authorized to access this resource");
@@ -99,14 +95,14 @@ public class AuthService {
 
     @Transactional(readOnly = true)
     public void assertAuthenticatedUserOwnsProvider(Long providerId) {
-        UserEntity user = resolveAuthenticatedActiveUser();
+        UserEntity user = resolveAuthenticatedUser();
         if (!userService.userOwnsProvider(user.getId(), providerId)) {
             throw new ResponseStatusException(
                     HttpStatus.FORBIDDEN, "You are not authorized to access this resource. You are not the owner of this provider");
         }
     }
 
-    private UserEntity resolveAuthenticatedActiveUser() {
+    private UserEntity resolveAuthenticatedUser() {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         if (authentication == null || !authentication.isAuthenticated()) {
             throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Not authenticated");
@@ -115,13 +111,13 @@ public class AuthService {
         if (!(principal instanceof Long userId)) {
             throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Not authenticated");
         }
-        return userService.requireActiveUserWithRoles(userId);
+        return userService.findUserById(userId);
     }
 
     @Transactional
     public AuthLoginResponse login(AuthLoginRequest request) {
         String normalizedEmail = InputSanitizer.normalizeEmail(request.email());
-        UserEntity user = userService.findActiveUserByEmail(normalizedEmail);
+        UserEntity user = userService.findUserByEmail(normalizedEmail);
 
         if (!passwordEncoder.matches(request.password(), user.getPasswordHash())) {
             throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Invalid credentials");
@@ -133,7 +129,7 @@ public class AuthService {
     @Transactional(readOnly = true)
     public AuthOtpRequestResponse requestEmailOtp(AuthEmailOtpRequest request) {
         String normalizedEmail = InputSanitizer.normalizeEmail(request.email());
-        userService.findActiveUserByEmail(normalizedEmail);
+        userService.findUserByEmail(normalizedEmail);
 
         LocalDateTime now = LocalDateTime.now();
         OtpSession existingSession = emailOtpSessions.get(normalizedEmail);
@@ -160,7 +156,7 @@ public class AuthService {
     @Transactional
     public AuthLoginResponse verifyEmailOtp(AuthEmailVerifyOtpRequest request) {
         String normalizedEmail = InputSanitizer.normalizeEmail(request.email());
-        UserEntity user = userService.findActiveUserByEmail(normalizedEmail);
+        UserEntity user = userService.findUserByEmail(normalizedEmail);
 
         OtpSession otpSession = emailOtpSessions.get(normalizedEmail);
         if (otpSession == null || otpSession.expiresAt().isBefore(LocalDateTime.now())) {
@@ -179,7 +175,7 @@ public class AuthService {
     @Transactional(readOnly = true)
     public AuthOtpRequestResponse requestForgotPasswordEmailOtp(AuthEmailOtpRequest request) {
         String normalizedEmail = InputSanitizer.normalizeEmail(request.email());
-        userService.findActiveUserByEmail(normalizedEmail);
+        userService.findUserByEmail(normalizedEmail);
 
         LocalDateTime now = LocalDateTime.now();
         OtpSession existingSession = forgotPasswordEmailOtpSessions.get(normalizedEmail);
@@ -217,13 +213,13 @@ public class AuthService {
         }
 
         forgotPasswordEmailOtpSessions.remove(normalizedEmail);
-        userService.updatePasswordForActiveUser(normalizedEmail, request.newPassword());
+        userService.updatePasswordForUserByEmail(normalizedEmail, request.newPassword());
     }
 
     @Transactional(readOnly = true)
     public AuthOtpRequestResponse requestMobileOtp(AuthMobileOtpRequest request) {
         String mobileNumber = InputSanitizer.normalizeMobile(request.mobileNumber());
-        userService.findActiveUserByMobile(mobileNumber);
+        userService.findUserByMobileNumber(mobileNumber);
 
         LocalDateTime now = LocalDateTime.now();
         OtpSession existingSession = mobileOtpSessions.get(mobileNumber);
@@ -250,7 +246,7 @@ public class AuthService {
     @Transactional
     public AuthLoginResponse verifyMobileOtp(AuthMobileVerifyOtpRequest request) {
         String mobileNumber = InputSanitizer.normalizeMobile(request.mobileNumber());
-        UserEntity user = userService.findActiveUserByMobile(mobileNumber);
+        UserEntity user = userService.findUserByMobileNumber(mobileNumber);
 
         OtpSession otpSession = mobileOtpSessions.get(mobileNumber);
         if (otpSession == null || otpSession.expiresAt().isBefore(LocalDateTime.now())) {
@@ -307,17 +303,17 @@ public class AuthService {
     }
 
     private AuthLoginResponse issueTokens(UserEntity user) {
-        UserEntity withRoles = userService.loadUserWithRolesForTokens(user.getId());
-        List<RoleNameEnum> roleNames = withRoles.getRoles().stream()
+        UserEntity userWithRoles = userService.findUserByIdWithRoles(user.getId());
+        List<RoleNameEnum> roleNames = userWithRoles.getRoles().stream()
                 .map(r -> r.getRoleName())
                 .distinct()
                 .sorted(Comparator.comparing(RoleNameEnum::name))
                 .toList();
-        String accessToken = jwtService.generateToken(withRoles.getId(), roleNames);
+        String accessToken = jwtService.generateToken(userWithRoles.getId(), roleNames);
         String refreshToken = generateRefreshToken();
 
         AuthRefreshTokenEntity refreshTokenEntity = new AuthRefreshTokenEntity();
-        refreshTokenEntity.setUser(withRoles);
+        refreshTokenEntity.setUser(userWithRoles);
         refreshTokenEntity.setTokenHash(hashToken(refreshToken));
         refreshTokenEntity.setExpiresAt(LocalDateTime.now().plusSeconds(refreshExpirationSeconds));
         authRefreshTokenRepository.save(refreshTokenEntity);

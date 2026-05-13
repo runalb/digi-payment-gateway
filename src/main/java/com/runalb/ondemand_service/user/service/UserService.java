@@ -39,12 +39,25 @@ public class UserService {
         this.passwordEncoder = passwordEncoder;
     }
 
-    /** Active user with roles loaded; used after JWT resolves principal user id. */
+
+
+    
+    // Get User data
     @Transactional(readOnly = true)
-    public UserEntity requireActiveUserWithRoles(Long userId) {
-        UserEntity user = userRepository
-                .findByIdWithRoles(userId)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Not authenticated"));
+    public UserEntity findUserById(Long userId) {
+        UserEntity user = userRepository.findById(userId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "User not found"));
+        if (Boolean.TRUE.equals(user.getIsDeleted())) {
+            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "User is deleted for id: " + userId);
+        }
+        return user;
+    }
+
+    @Transactional(readOnly = true)
+    public UserEntity findUserByEmail(String email) {
+        UserEntity user = userRepository.findByEmail(email)
+                .orElseThrow(() -> new ResponseStatusException(
+                        HttpStatus.NOT_FOUND, "User not found for email: " + email));
         if (Boolean.TRUE.equals(user.getIsDeleted())) {
             throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "User is deleted");
         }
@@ -52,15 +65,42 @@ public class UserService {
     }
 
     @Transactional(readOnly = true)
-    public UserEntity loadUserWithRolesForTokens(Long userId) {
-        UserEntity user = userRepository
-                .findByIdWithRoles(userId)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "User not found"));
+    public UserEntity findUserByMobileNumber(String mobileNumber) {
+        UserEntity user = userRepository.findByMobileNumber(mobileNumber)
+                .orElseThrow(() -> new ResponseStatusException(
+                    HttpStatus.NOT_FOUND, "User not found for mobile number: " + mobileNumber));
         if (Boolean.TRUE.equals(user.getIsDeleted())) {
             throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "User is deleted");
         }
         return user;
     }
+
+
+    
+    // Get User data with roles
+    @Transactional(readOnly = true)
+    public UserEntity findUserByIdWithRoles(Long userId) {
+        return userRepository
+                .findByIdWithRoles(userId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "User not found"));
+    }
+
+
+    @Transactional(readOnly = true)
+    public UserEntity findUserByEmailWithRoles(String email) {
+        return userRepository.findByEmailWithRoles(email)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "User not found"));
+    }
+
+    @Transactional(readOnly = true)
+    public UserEntity findUserByMobileNumberWithRoles(String mobileNumber) {
+        return userRepository.findByMobileNumberWithRoles(mobileNumber)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "User not found"));
+    }
+
+
+
+
 
     @Transactional
     public UserResponse createUser(UserCreateRequest request) {
@@ -97,9 +137,7 @@ public class UserService {
 
     @Transactional(readOnly = true)
     public UserResponse getUser(Long userId) {
-        UserEntity user = userRepository
-                .findByIdWithRoles(userId)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "User not found"));
+        UserEntity user = findUserByIdWithRoles(userId);
         return toResponse(user);
     }
 
@@ -174,34 +212,18 @@ public class UserService {
     }
 
 
-    @Transactional(readOnly = true)
-    public UserEntity findActiveUserByEmail(String email) {
-        UserEntity user =
-                userRepository.findByEmailWithRoles(email).orElseThrow(() -> new ResponseStatusException(
-                        HttpStatus.NOT_FOUND, "User not found for email: " + email));
-        if (Boolean.TRUE.equals(user.getIsDeleted())) {
-            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "User is deleted");
-        }
-        return user;
-    }
+    
 
-    @Transactional(readOnly = true)
-    public UserEntity findActiveUserByMobile(String mobileNumber) {
-        UserEntity user = userRepository.findByMobileNumberWithRoles(mobileNumber).orElseThrow(
-                () -> new ResponseStatusException(HttpStatus.NOT_FOUND,
-                        "User not found for mobile number: " + mobileNumber));
-        if (Boolean.TRUE.equals(user.getIsDeleted())) {
-            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "User is deleted");
-        }
-        return user;
-    }
+
 
     @Transactional
-    public void updatePasswordForActiveUser(String normalizedEmail, String newPassword) {
+    public void updatePasswordForUserByEmail(String normalizedEmail, String newPassword) {
         if (!StringUtils.hasText(newPassword) || newPassword.length() < 8 || newPassword.length() > 128) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "password must be between 8 and 128 characters");
         }
-        UserEntity user = findActiveUserByEmail(normalizedEmail);
+        UserEntity user = userRepository.findByEmail(normalizedEmail)
+                .orElseThrow(() -> new ResponseStatusException(
+                    HttpStatus.NOT_FOUND, "User not found for email: " + normalizedEmail));
         user.setPasswordHash(passwordEncoder.encode(newPassword));
         userRepository.save(user);
     }
