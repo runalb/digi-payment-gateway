@@ -1,10 +1,9 @@
 package com.digirestro.digi_payment_gateway.integration.api.controller;
 
 import com.digirestro.digi_payment_gateway.integration.api.dto.PaymentDetailsResponse;
+import com.digirestro.digi_payment_gateway.integration.api.service.TransactionIntegrationService;
 import com.digirestro.digi_payment_gateway.auth.service.IntegrationAuthService;
 import com.digirestro.digi_payment_gateway.merchant.entity.MerchantEntity;
-import com.digirestro.digi_payment_gateway.payment.service.PaymentOrchestrationService;
-import com.digirestro.digi_payment_gateway.payment.service.PaymentService;
 
 import java.util.List;
 import org.springframework.http.HttpStatus;
@@ -19,23 +18,20 @@ import org.springframework.web.bind.annotation.RestController;
 @RequestMapping("/api/v1/integration/transactions")
 public class TransactionIntegrationController {
 
-    private final PaymentOrchestrationService paymentOrchestrationService;
-    private final PaymentService paymentService;
+    private final TransactionIntegrationService transactionIntegrationService;
     private final IntegrationAuthService integrationAuthService;
 
     public TransactionIntegrationController(
-            PaymentOrchestrationService paymentOrchestrationService,
-            PaymentService paymentService,
+            TransactionIntegrationService transactionIntegrationService,
             IntegrationAuthService integrationAuthService) {
-        this.paymentOrchestrationService = paymentOrchestrationService;
-        this.paymentService = paymentService;
+        this.transactionIntegrationService = transactionIntegrationService;
         this.integrationAuthService = integrationAuthService;
     }
 
     @GetMapping
     public ResponseEntity<List<PaymentDetailsResponse>> listTransactions(Authentication authentication) {
         MerchantEntity merchant = integrationAuthService.extractMerchant(authentication);
-        List<PaymentDetailsResponse> response = paymentOrchestrationService.listPaymentDetails(merchant.getId());
+        List<PaymentDetailsResponse> response = transactionIntegrationService.listPaymentDetails(merchant.getId());
         return new ResponseEntity<>(response, HttpStatus.OK);
     }
 
@@ -44,7 +40,7 @@ public class TransactionIntegrationController {
             Authentication authentication,
             @PathVariable("id") Long id) {
         MerchantEntity merchant = integrationAuthService.extractMerchant(authentication);
-        PaymentDetailsResponse response = paymentOrchestrationService.getPaymentDetails(id, merchant.getId());
+        PaymentDetailsResponse response = transactionIntegrationService.getPaymentDetails(id, merchant.getId());
         return new ResponseEntity<>(response, HttpStatus.OK);
     }
 }

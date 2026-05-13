@@ -1,6 +1,5 @@
 package com.digirestro.digi_payment_gateway.payment.service;
 
-import com.digirestro.digi_payment_gateway.integration.api.dto.PaymentDetailsResponse;
 import com.digirestro.digi_payment_gateway.integration.api.dto.PaymentLinkRequest;
 import com.digirestro.digi_payment_gateway.integration.api.dto.PaymentLinkResponse;
 import com.digirestro.digi_payment_gateway.merchant.entity.MerchantConfigEntity;
@@ -12,7 +11,6 @@ import com.digirestro.digi_payment_gateway.paymentchannelstrategy.PaymentChannel
 import com.digirestro.digi_payment_gateway.paymentchannelstrategy.PaymentChannelStrategyResolver;
 import com.digirestro.digi_payment_gateway.paymentchannelstrategy.dto.PaymentLinkStrategyResponse;
 
-import java.util.List;
 import java.util.UUID;
 
 import org.springframework.stereotype.Service;
@@ -43,7 +41,7 @@ public class PaymentOrchestrationService {
 
         PaymentChannelStrategy strategy = strategyResolver.requireByChannelName(
                 merchantPaymentChannelConfig.getPaymentChannel().getName());
-                
+
         MerchantConfigEntity merchantConfig = merchantService.findMerchantConfigByMerchantId(merchantId);
 
         PaymentEntity payment = new PaymentEntity();
@@ -79,36 +77,4 @@ public class PaymentOrchestrationService {
     //     return "http://localhost:8080" + "/pay/" + paymentReferenceId.toString();
     // }
 
-    @Transactional(readOnly = true)
-    public PaymentDetailsResponse getPaymentDetails(Long paymentId, Long merchantId) {
-        PaymentEntity payment = paymentService.findByIdAndMerchantId(paymentId, merchantId);
-        return toPaymentDetailsResponse(payment);
-    }
-
-    @Transactional(readOnly = true)
-    public List<PaymentDetailsResponse> listPaymentDetails(Long merchantId) {
-        return paymentService.findAllByMerchantIdOrderByCreatedDateTimeDesc(merchantId)
-                .stream()
-                .map(this::toPaymentDetailsResponse)
-                .toList();
-    }
-
-    private PaymentDetailsResponse toPaymentDetailsResponse(PaymentEntity payment) {
-        return new PaymentDetailsResponse(
-                payment.getId(),
-                payment.getAmount(),
-                payment.getCurrency(),
-                payment.getStatus(),
-                payment.getMerchant().getId(),
-                payment.getMerchantReferencePaymentId(),
-                payment.getMerchantMetadataJson(),
-                payment.getPaymentChannel().getId(),
-                payment.getPaymentChannel().getName(),
-                payment.getPaymentChannelTxnId(),
-                // payment.getDigiPaymentLink(),
-                payment.getPaymentChannelPayLink(),
-                payment.getCreatedDateTime(),
-                payment.getUpdatedDateTime()
-        );
-    }
 }

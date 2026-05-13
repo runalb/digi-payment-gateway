@@ -26,7 +26,7 @@ public class PaymentService {
     @Transactional(readOnly = true)
     public PaymentEntity findByIdAndMerchantId(Long id, Long merchantId) {
         return paymentRepository.findByIdAndMerchantId(id, merchantId)
-                .orElseThrow(() -> new EntityNotFoundException("Payment not found"));
+                .orElseThrow(() -> new EntityNotFoundException("Payment not found for paymentId: " + id + " and merchantId: " + merchantId));
     }
 
     @Transactional(readOnly = true)
