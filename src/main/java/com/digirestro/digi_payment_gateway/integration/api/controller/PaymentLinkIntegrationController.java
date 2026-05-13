@@ -3,8 +3,8 @@ package com.digirestro.digi_payment_gateway.integration.api.controller;
 import com.digirestro.digi_payment_gateway.integration.api.dto.PaymentLinkRequest;
 import com.digirestro.digi_payment_gateway.integration.api.dto.PaymentLinkResponse;
 import com.digirestro.digi_payment_gateway.auth.service.IntegrationAuthService;
+import com.digirestro.digi_payment_gateway.integration.api.service.PaymentLinkIntegrationService;
 import com.digirestro.digi_payment_gateway.merchant.entity.MerchantEntity;
-import com.digirestro.digi_payment_gateway.payment.service.PaymentOrchestrationService;
 
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
@@ -19,13 +19,13 @@ import org.springframework.web.bind.annotation.RestController;
 @RequestMapping("/api/v1/integration/payment-link")
 public class PaymentLinkIntegrationController {
 
-    private final PaymentOrchestrationService paymentOrchestrationService;
+    private final PaymentLinkIntegrationService paymentLinkIntegrationService;
     private final IntegrationAuthService integrationAuthService;
 
     public PaymentLinkIntegrationController(
-            PaymentOrchestrationService paymentOrchestrationService,
+            PaymentLinkIntegrationService paymentLinkIntegrationService,
             IntegrationAuthService integrationAuthService) {
-        this.paymentOrchestrationService = paymentOrchestrationService;
+        this.paymentLinkIntegrationService = paymentLinkIntegrationService;
         this.integrationAuthService = integrationAuthService;
     }
 
@@ -34,7 +34,7 @@ public class PaymentLinkIntegrationController {
             Authentication authentication,
             @Valid @RequestBody PaymentLinkRequest request) {
         MerchantEntity merchant = integrationAuthService.extractMerchant(authentication);
-        PaymentLinkResponse response = paymentOrchestrationService.generatePaymentLink(merchant, request);
+        PaymentLinkResponse response = paymentLinkIntegrationService.generatePaymentLink(merchant, request);
         return new ResponseEntity<>(response, HttpStatus.CREATED);
     }
 }
