@@ -6,7 +6,7 @@ import com.runalb.ondemand_service.business.entity.BusinessEntity;
 import com.runalb.ondemand_service.business.repository.BusinessRepository;
 import com.runalb.ondemand_service.user.entity.UserEntity;
 import com.runalb.ondemand_service.user.service.UserService;
-import com.runalb.ondemand_service.util.StringNormalizer;
+import com.runalb.ondemand_service.util.InputSanitizer;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -28,11 +28,11 @@ public class BusinessService {
     @Transactional
     public BusinessResponse createBusiness(BusinessCreateRequest request, UserEntity user) {
         BusinessEntity business = new BusinessEntity();
-        business.setName(StringNormalizer.normalizeName(request.name()));
+        business.setName(InputSanitizer.normalizeName(request.name()));
         business.setAddress(request.address());
         business.setMobileNumber(request.mobileNumber());
         business.setIsActive(true);
-        business.setEmail(StringNormalizer.normalizeEmail(request.email()));
+        business.setEmail(InputSanitizer.normalizeEmail(request.email()));
         business = businessRepository.save(business);
 
         userService.linkBusinessToUser(user.getId(), business);

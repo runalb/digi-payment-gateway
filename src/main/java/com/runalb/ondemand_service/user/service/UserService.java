@@ -10,7 +10,7 @@ import com.runalb.ondemand_service.user.dto.UserResponse;
 import com.runalb.ondemand_service.user.dto.UserUpdateRequest;
 import com.runalb.ondemand_service.user.entity.UserEntity;
 import com.runalb.ondemand_service.user.repository.UserRepository;
-import com.runalb.ondemand_service.util.StringNormalizer;
+import com.runalb.ondemand_service.util.InputSanitizer;
 import java.util.LinkedHashSet;
 import java.util.List;
 import org.springframework.http.HttpStatus;
@@ -59,11 +59,11 @@ public class UserService {
 
     @Transactional
     public UserResponse createUser(UserCreateRequest request) {
-        String email = StringNormalizer.normalizeEmail(request.email());
+        String email = InputSanitizer.normalizeEmail(request.email());
         if (userRepository.findByEmail(email).isPresent()) {
             throw new ResponseStatusException(HttpStatus.CONFLICT, "Email already registered");
         }
-        String mobileNumber = StringNormalizer.normalizeMobile(request.mobileNumber());
+        String mobileNumber = InputSanitizer.normalizeMobile(request.mobileNumber());
         if (userRepository.existsByMobileNumber(mobileNumber)) {
             throw new ResponseStatusException(HttpStatus.CONFLICT, "Mobile number already registered");
         }
@@ -72,7 +72,7 @@ public class UserService {
         entity.setEmail(email);
         entity.setMobileNumber(mobileNumber);
         entity.setPasswordHash(passwordEncoder.encode(request.password()));
-        entity.setName(StringNormalizer.normalizeName(request.name()));
+        entity.setName(InputSanitizer.normalizeName(request.name()));
         entity.setIsActive(true);
         entity.setIsVerified(false);
 
@@ -114,7 +114,7 @@ public class UserService {
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "User not found"));
 
         if (request.email() != null) {
-            String normalizedEmail = StringNormalizer.normalizeEmail(request.email());
+            String normalizedEmail = InputSanitizer.normalizeEmail(request.email());
             userRepository
                     .findByEmail(normalizedEmail)
                     .filter(other -> !other.getId().equals(userId))
@@ -124,11 +124,11 @@ public class UserService {
             user.setEmail(normalizedEmail);
         }
         if (request.name() != null) {
-            String name = StringNormalizer.normalizeName(request.name());
+            String name = InputSanitizer.normalizeName(request.name());
             user.setName(name);
         }
         if (request.mobileNumber() != null) {
-            String mobile = StringNormalizer.normalizeMobile(request.mobileNumber());
+            String mobile = InputSanitizer.normalizeMobile(request.mobileNumber());
             if (userRepository.existsByMobileNumber(mobile) && !mobile.equals(user.getMobileNumber())) {
                 throw new ResponseStatusException(HttpStatus.CONFLICT, "Mobile number already registered");
             }

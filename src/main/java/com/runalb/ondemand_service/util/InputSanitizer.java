@@ -7,12 +7,13 @@ import org.springframework.http.HttpStatus;
 import org.springframework.util.StringUtils;
 import org.springframework.web.server.ResponseStatusException;
 
-public final class StringNormalizer {
+/** Trims, validates, and normalizes user-supplied string input. */
+public final class InputSanitizer {
 
     private static final Pattern WHITESPACE_RUN = Pattern.compile("\\s+");
     private static final Pattern ISO_4217_CURRENCY = Pattern.compile("[A-Za-z]{3}");
 
-    private StringNormalizer() {}
+    private InputSanitizer() {}
 
     public static String normalizeEmail(String email) {
         if (!StringUtils.hasText(email)) {
@@ -37,6 +38,19 @@ public final class StringNormalizer {
             return trimmed;
         }
         return WHITESPACE_RUN.matcher(trimmed).replaceAll(" ");
+    }
+
+    /** Returns null when the value is blank; otherwise returns the trimmed string. */
+    public static String trimToNull(String value) {
+        if (!StringUtils.hasText(value)) {
+            return null;
+        }
+        String trimmed = value.trim();
+        return trimmed.isEmpty() ? null : trimmed;
+    }
+
+    public static boolean hasText(String value) {
+        return StringUtils.hasText(value);
     }
 
     public static String normalizeISO4217Currency(String currency) {

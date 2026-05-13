@@ -18,7 +18,7 @@ import com.runalb.ondemand_service.user.entity.UserEntity;
 import java.util.Comparator;
 import java.util.List;
 import com.runalb.ondemand_service.user.service.UserService;
-import com.runalb.ondemand_service.util.StringNormalizer;
+import com.runalb.ondemand_service.util.InputSanitizer;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
@@ -120,7 +120,7 @@ public class AuthService {
 
     @Transactional
     public AuthLoginResponse login(AuthLoginRequest request) {
-        String normalizedEmail = StringNormalizer.normalizeEmail(request.email());
+        String normalizedEmail = InputSanitizer.normalizeEmail(request.email());
         UserEntity user = userService.findActiveUserByEmail(normalizedEmail);
 
         if (!passwordEncoder.matches(request.password(), user.getPasswordHash())) {
@@ -132,7 +132,7 @@ public class AuthService {
 
     @Transactional(readOnly = true)
     public AuthOtpRequestResponse requestEmailOtp(AuthEmailOtpRequest request) {
-        String normalizedEmail = StringNormalizer.normalizeEmail(request.email());
+        String normalizedEmail = InputSanitizer.normalizeEmail(request.email());
         userService.findActiveUserByEmail(normalizedEmail);
 
         LocalDateTime now = LocalDateTime.now();
@@ -159,7 +159,7 @@ public class AuthService {
 
     @Transactional
     public AuthLoginResponse verifyEmailOtp(AuthEmailVerifyOtpRequest request) {
-        String normalizedEmail = StringNormalizer.normalizeEmail(request.email());
+        String normalizedEmail = InputSanitizer.normalizeEmail(request.email());
         UserEntity user = userService.findActiveUserByEmail(normalizedEmail);
 
         OtpSession otpSession = emailOtpSessions.get(normalizedEmail);
@@ -178,7 +178,7 @@ public class AuthService {
 
     @Transactional(readOnly = true)
     public AuthOtpRequestResponse requestForgotPasswordEmailOtp(AuthEmailOtpRequest request) {
-        String normalizedEmail = StringNormalizer.normalizeEmail(request.email());
+        String normalizedEmail = InputSanitizer.normalizeEmail(request.email());
         userService.findActiveUserByEmail(normalizedEmail);
 
         LocalDateTime now = LocalDateTime.now();
@@ -204,7 +204,7 @@ public class AuthService {
 
     @Transactional
     public void resetPasswordWithForgotPasswordEmailOtp(AuthForgotPasswordResetRequest request) {
-        String normalizedEmail = StringNormalizer.normalizeEmail(request.email());
+        String normalizedEmail = InputSanitizer.normalizeEmail(request.email());
 
         OtpSession otpSession = forgotPasswordEmailOtpSessions.get(normalizedEmail);
         if (otpSession == null || otpSession.expiresAt().isBefore(LocalDateTime.now())) {
@@ -222,7 +222,7 @@ public class AuthService {
 
     @Transactional(readOnly = true)
     public AuthOtpRequestResponse requestMobileOtp(AuthMobileOtpRequest request) {
-        String mobileNumber = StringNormalizer.normalizeMobile(request.mobileNumber());
+        String mobileNumber = InputSanitizer.normalizeMobile(request.mobileNumber());
         userService.findActiveUserByMobile(mobileNumber);
 
         LocalDateTime now = LocalDateTime.now();
@@ -249,7 +249,7 @@ public class AuthService {
 
     @Transactional
     public AuthLoginResponse verifyMobileOtp(AuthMobileVerifyOtpRequest request) {
-        String mobileNumber = StringNormalizer.normalizeMobile(request.mobileNumber());
+        String mobileNumber = InputSanitizer.normalizeMobile(request.mobileNumber());
         UserEntity user = userService.findActiveUserByMobile(mobileNumber);
 
         OtpSession otpSession = mobileOtpSessions.get(mobileNumber);

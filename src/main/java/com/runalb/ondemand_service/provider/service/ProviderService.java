@@ -9,7 +9,7 @@ import com.runalb.ondemand_service.provider.repository.ProviderRepository;
 import com.runalb.ondemand_service.user.dto.UserResponse;
 import com.runalb.ondemand_service.user.entity.UserEntity;
 import com.runalb.ondemand_service.user.repository.UserRepository;
-import com.runalb.ondemand_service.util.StringNormalizer;
+import com.runalb.ondemand_service.util.InputSanitizer;
 import java.util.List;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
@@ -45,11 +45,11 @@ public class ProviderService {
 
         ProviderEntity entity = new ProviderEntity();
         entity.setUser(managedUser);
-        entity.setBio(StringNormalizer.trimToNull(request.bio()));
+        entity.setBio(InputSanitizer.trimToNull(request.bio()));
         entity.setIsVerified(Boolean.FALSE);
         entity.setAverageRating(0.0);
         entity.setIsActive(Boolean.TRUE);
-        entity.setAddress(StringNormalizer.trimToNull(request.address()));
+        entity.setAddress(InputSanitizer.trimToNull(request.address()));
         entity.setProfileCompletionPercentage(computeProfileCompletion(entity));
 
         ProviderEntity saved = providerRepository.save(entity);
@@ -69,10 +69,10 @@ public class ProviderService {
         }
 
         if (request.bio() != null) {
-            entity.setBio(StringNormalizer.trimToNull(request.bio()));
+            entity.setBio(InputSanitizer.trimToNull(request.bio()));
         }
         if (request.address() != null) {
-            entity.setAddress(StringNormalizer.trimToNull(request.address()));
+            entity.setAddress(InputSanitizer.trimToNull(request.address()));
         }
         if (request.isActive() != null) {
             entity.setIsActive(request.isActive());
@@ -136,7 +136,7 @@ public class ProviderService {
      */
     static int computeProfileCompletion(ProviderEntity p) {
         int score = 0;
-        if (StringNormalizer.hasText(p.getBio())) {
+        if (InputSanitizer.hasText(p.getBio())) {
             score += 50;
         }
         if (Boolean.TRUE.equals(p.getIsVerified())) {

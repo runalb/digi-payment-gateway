@@ -18,7 +18,7 @@ import com.runalb.ondemand_service.merchant.repository.MerchantRepository;
 // import com.runalb.ondemand_service.payment.entity.PaymentChannelEntity;
 // import com.runalb.ondemand_service.payment.service.PaymentChannelService;
 import com.runalb.ondemand_service.user.service.UserService;
-import com.runalb.ondemand_service.util.StringNormalizer;
+import com.runalb.ondemand_service.util.InputSanitizer;
 import jakarta.persistence.EntityNotFoundException;
 import java.util.List;
 import java.util.UUID;
@@ -68,10 +68,10 @@ public class MerchantService {
     @Transactional
     public MerchantResponse createMerchant(MerchantCreateRequest request, Long ownerUserId) {
         MerchantEntity merchant = new MerchantEntity();
-        merchant.setName(StringNormalizer.normalizeName(request.name()));
+        merchant.setName(InputSanitizer.normalizeName(request.name()));
         merchant.setApiKey(UUID.randomUUID().toString());
         merchant.setIsActive(true);
-        merchant.setEmail(StringNormalizer.normalizeEmail(request.email()));
+        merchant.setEmail(InputSanitizer.normalizeEmail(request.email()));
         merchant = merchantRepository.save(merchant);
 
         userService.linkMerchantToUser(ownerUserId, merchant);
@@ -106,10 +106,10 @@ public class MerchantService {
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Merchant not found"));
 
         if (request.name() != null) {
-            merchant.setName(StringNormalizer.normalizeName(request.name()));
+            merchant.setName(InputSanitizer.normalizeName(request.name()));
         }
         if (request.email() != null) {
-            String email = StringNormalizer.normalizeEmail(request.email());
+            String email = InputSanitizer.normalizeEmail(request.email());
             merchantRepository
                     .findByEmail(email)
                     .filter(other -> !other.getId().equals(merchantId))
@@ -150,7 +150,7 @@ public class MerchantService {
             throw new ResponseStatusException(HttpStatus.CONFLICT, "Merchant configuration already exists");
         }
 
-        String currency = StringNormalizer.normalizeISO4217Currency(request.currency());
+        String currency = InputSanitizer.normalizeISO4217Currency(request.currency());
         String webhookUrl = StringUtils.hasText(request.webhookUrl()) ? request.webhookUrl().trim() : null;
 
         MerchantConfigEntity entity = new MerchantConfigEntity();
@@ -170,7 +170,7 @@ public class MerchantService {
                         HttpStatus.NOT_FOUND, "Merchant configuration not found"));
 
         if (StringUtils.hasText(request.currency())) {
-            entity.setCurrency(StringNormalizer.normalizeISO4217Currency(request.currency()));
+            entity.setCurrency(InputSanitizer.normalizeISO4217Currency(request.currency()));
         }
         if (request.webhookUrl() != null) {
             entity.setWebhookUrl(StringUtils.hasText(request.webhookUrl()) ? request.webhookUrl().trim() : null);
