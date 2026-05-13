@@ -8,6 +8,5 @@ public record ProviderDetailResponse(
         boolean isVerified,
         double averageRating,
         int profileCompletionPercentage,
-        boolean isActive,
         String address,
         UserResponse user) {}

@@ -33,14 +33,14 @@ public class ProviderService {
     }
 
     @Transactional
-    public ProviderDetailResponse createProfile(ProviderCreateRequest request) {
+    public ProviderDetailResponse createProvider(ProviderCreateRequest request) {
         UserEntity user = authService.loadAuthenticatedActiveUser();
         UserEntity managedUser = userRepository
                 .findById(user.getId())
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "User not found"));
 
         if (providerRepository.existsByUser_Id(managedUser.getId())) {
-            throw new ResponseStatusException(HttpStatus.CONFLICT, "Provider profile already exists for this user");
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "Provider already exists for this user");
         }
 
         ProviderEntity entity = new ProviderEntity();
@@ -57,15 +57,15 @@ public class ProviderService {
     }
 
     @Transactional
-    public ProviderDetailResponse updateProfile(Long providerId, ProviderUpdateRequest request) {
+    public ProviderDetailResponse updateProvider(Long providerId, ProviderUpdateRequest request) {
         Long userId = authService.loadAuthenticatedActiveUser().getId();
 
         ProviderEntity entity =
                 providerRepository.findById(providerId).orElseThrow(() -> new ResponseStatusException(
-                        HttpStatus.NOT_FOUND, "Provider profile not found"));
+                        HttpStatus.NOT_FOUND, "Provider not found"));
 
         if (!entity.getUser().getId().equals(userId)) {
-            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "You are not authorized to update this profile");
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "You are not authorized to update this provider");
         }
 
         if (request.bio() != null) {
@@ -74,9 +74,6 @@ public class ProviderService {
         if (request.address() != null) {
             entity.setAddress(InputSanitizer.trimToNull(request.address()));
         }
-        if (request.isActive() != null) {
-            entity.setIsActive(request.isActive());
-        }
 
         entity.setProfileCompletionPercentage(computeProfileCompletion(entity));
         providerRepository.save(entity);
@@ -84,15 +81,15 @@ public class ProviderService {
     }
 
     @Transactional(readOnly = true)
-    public ProviderDetailResponse getProfileForOwner(Long providerId) {
+    public ProviderDetailResponse getProvider(Long providerId) {
         Long userId = authService.loadAuthenticatedActiveUser().getId();
 
         ProviderEntity entity = providerRepository
                 .findByIdWithUserAndRoles(providerId)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Provider profile not found"));
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Provider not found"));
 
         if (!entity.getUser().getId().equals(userId)) {
-            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "You are not authorized to view this profile");
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "You are not authorized to view this provider");
         }
 
         return toDetailResponse(entity);
@@ -101,7 +98,28 @@ public class ProviderService {
     private ProviderEntity requireLoaded(Long id) {
         return providerRepository
                 .findByIdWithUserAndRoles(id)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Provider profile not found"));
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Provider not found"));
+    }
+
+    @Transactional(readOnly = true)
+    public boolean providerBelongsToUser(Long userId, Long providerId) {
+        return providerRepository.existsByIdAndUser_Id(providerId, userId);
+    }
+
+    @Transactional(readOnly = true)
+    public List<ProviderDetailResponse> getAllProviders() {
+        return providerRepository.findAllActiveWithUserAndRoles().stream()
+                .map(ProviderService::toDetailResponse)
+                .toList();
+    }
+
+    @Transactional
+    public void deleteProvider(Long providerId) {
+        ProviderEntity entity = providerRepository
+                .findById(providerId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Provider not found"));
+        entity.setIsActive(false);
+        providerRepository.save(entity);
     }
 
     private static ProviderDetailResponse toDetailResponse(ProviderEntity p) {
@@ -116,7 +134,6 @@ public class ProviderService {
                 u.getEmail(),
                 u.getMobileNumber(),
                 u.getName(),
-                u.getIsActive(),
                 u.getIsVerified(),
                 roles);
 
@@ -126,7 +143,6 @@ public class ProviderService {
                 Boolean.TRUE.equals(p.getIsVerified()),
                 p.getAverageRating() != null ? p.getAverageRating() : 0.0,
                 p.getProfileCompletionPercentage(),
-                Boolean.TRUE.equals(p.getIsActive()),
                 p.getAddress(),
                 userResponse);
     }

@@ -63,7 +63,8 @@ public class AuthService {
             PasswordEncoder passwordEncoder,
             JwtService jwtService,
             @Value("${security.jwt.refresh-expiration-seconds:1209600}") long refreshExpirationSeconds,
-            @Value("${security.otp.resend-cooldown-seconds:45}") long otpResendCooldownSeconds) {
+            @Value("${security.otp.resend-cooldown-seconds:45}") long otpResendCooldownSeconds
+        ) {
         this.userService = userService;
         this.authRefreshTokenRepository = authRefreshTokenRepository;
         this.passwordEncoder = passwordEncoder;
@@ -95,14 +96,13 @@ public class AuthService {
         }
     }
 
-    /** Ensures the current user has the {@link RoleNameEnum#PROVIDER} role (e.g. provider profile APIs). */
+
     @Transactional(readOnly = true)
-    public void assertAuthenticatedUserHasProviderRole() {
+    public void assertAuthenticatedUserOwnsProvider(Long providerId) {
         UserEntity user = resolveAuthenticatedActiveUser();
-        boolean isProvider = user.getRoles().stream()
-                .anyMatch(r -> r.getRoleName() == RoleNameEnum.PROVIDER);
-        if (!isProvider) {
-            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Provider role required");
+        if (!userService.userOwnsProvider(user.getId(), providerId)) {
+            throw new ResponseStatusException(
+                    HttpStatus.FORBIDDEN, "You are not authorized to access this resource. You are not the owner of this provider");
         }
     }
 

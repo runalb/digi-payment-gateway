@@ -6,8 +6,12 @@ import com.runalb.ondemand_service.provider.dto.ProviderDetailResponse;
 import com.runalb.ondemand_service.provider.dto.ProviderUpdateRequest;
 import com.runalb.ondemand_service.provider.service.ProviderService;
 import jakarta.validation.Valid;
+
+import java.util.List;
+
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -28,23 +32,34 @@ public class ProviderController {
         this.authService = authService;
     }
 
+    @GetMapping
+    public ResponseEntity<List<ProviderDetailResponse>> getAllProviders() {
+        return ResponseEntity.ok(providerService.getAllProviders());
+    }
+
+    @GetMapping("/{providerId}")
+    public ResponseEntity<ProviderDetailResponse> getProvider(@PathVariable("providerId") Long providerId) {
+        return ResponseEntity.ok(providerService.getProvider(providerId));
+    }
+
     @PostMapping
     public ResponseEntity<ProviderDetailResponse> createProvider(@Valid @RequestBody ProviderCreateRequest request) {
-        authService.assertAuthenticatedUserHasProviderRole();
-        ProviderDetailResponse body = providerService.createProfile(request);
+        ProviderDetailResponse body = providerService.createProvider(request);
         return new ResponseEntity<>(body, HttpStatus.CREATED);
     }
 
     @PutMapping("/{providerId}")
     public ResponseEntity<ProviderDetailResponse> updateProvider(
             @PathVariable("providerId") Long providerId, @Valid @RequestBody ProviderUpdateRequest request) {
-        authService.assertAuthenticatedUserHasProviderRole();
-        return ResponseEntity.ok(providerService.updateProfile(providerId, request));
+        authService.assertAuthenticatedUserOwnsProvider(providerId);
+        return ResponseEntity.ok(providerService.updateProvider(providerId, request));
     }
 
-    @GetMapping("/{providerId}")
-    public ResponseEntity<ProviderDetailResponse> getProvider(@PathVariable("providerId") Long providerId) {
-        authService.assertAuthenticatedUserHasProviderRole();
-        return ResponseEntity.ok(providerService.getProfileForOwner(providerId));
+    @DeleteMapping("/{providerId}")
+    public ResponseEntity<Void> deleteProvider(@PathVariable("providerId") Long providerId) {
+        authService.assertAuthenticatedUserOwnsProvider(providerId);
+        providerService.deleteProvider(providerId);
+        return ResponseEntity.noContent().build();
     }
+
 }
