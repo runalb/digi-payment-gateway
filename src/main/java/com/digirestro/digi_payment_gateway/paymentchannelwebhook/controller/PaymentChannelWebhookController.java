@@ -51,7 +51,7 @@ public class PaymentChannelWebhookController {
         PaymentChannelNameEnum channelName = parseChannelKey(channelKey);
         log.info("Parsed channel name: {}", channelName);
 
-        PaymentChannelStrategy strategy = strategyResolver.requireByChannelName(channelName);
+        PaymentChannelStrategy strategy = strategyResolver.getRequiredStrategy(channelName);
 
         WebhookStrategyResponse response = strategy.validateAndParseWebhook(webhookPayload);
         return new ResponseEntity<>(response, HttpStatus.OK);

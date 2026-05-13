@@ -39,7 +39,7 @@ public class PaymentOrchestrationService {
         MerchantPaymentChannelConfigEntity merchantPaymentChannelConfig =
                 merchantService.findPaymentChannelConfigByMerchantId(merchantId);
 
-        PaymentChannelStrategy strategy = strategyResolver.requireByChannelName(
+        PaymentChannelStrategy strategy = strategyResolver.getRequiredStrategy(
                 merchantPaymentChannelConfig.getPaymentChannel().getName());
 
         MerchantConfigEntity merchantConfig = merchantService.findMerchantConfigByMerchantId(merchantId);

@@ -13,6 +13,7 @@ import java.util.Map;
 import java.util.UUID;
 import lombok.extern.slf4j.Slf4j;
 
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
@@ -24,10 +25,14 @@ public class TestPaymentChannelStrategy implements PaymentChannelStrategy {
 
     private static final PaymentChannelNameEnum CHANNEL_NAME = PaymentChannelNameEnum.TEST;
     private final PaymentService paymentService;
+    private final String testPaymentLinkBaseUrl;
 
     public TestPaymentChannelStrategy(
-            PaymentService paymentService) {
+            PaymentService paymentService,
+            @Value("${payment-channel.test.payment-link-base-url:http://localhost:8080/test-payment-link.html}")
+            String testPaymentLinkBaseUrl) {
         this.paymentService = paymentService;
+        this.testPaymentLinkBaseUrl = testPaymentLinkBaseUrl;
     }
 
     @Override
@@ -40,7 +45,7 @@ public class TestPaymentChannelStrategy implements PaymentChannelStrategy {
         String paymentChannelTxnId = "TEST-TXN-" + UUID.randomUUID();
         String amountParam = URLEncoder.encode(payment.getAmount().toPlainString(), StandardCharsets.UTF_8);
         String currencyParam = URLEncoder.encode(payment.getCurrency(), StandardCharsets.UTF_8);
-        String paymentUrl = "http://localhost:8080/test-payment-link.html?paymentId=" + payment.getId()
+        String paymentUrl = testPaymentLinkBaseUrl + "?paymentId=" + payment.getId()
                 + "&merchantId=" + payment.getMerchant().getId()
                 + "&amount=" + amountParam
                 + "&currency=" + currencyParam;
