@@ -2,60 +2,130 @@
   "info": {
     "_postman_id": "a1b2c3d4-e5f6-7890-abcd-ondemand-service",
     "name": "OnDemand Service API",
-    "description": "REST collection for the Spring Boot OnDemand Service (`com.runalb.ondemand_service`).\n\n**Auth** (`/api/v1/auth/**`): login + OTP + refresh + logout routes are public (no Bearer).\n\n**Users** (`/api/v1/users`): signup (`POST`) is public. Other user routes require Bearer and user ownership.\n\n**Portal / Merchants** (`/api/v1/portal/merchants/**`): Bearer required; ownership checks enforced via `AuthService.assertAuthenticatedUserOwnsMerchant`.\n\n**Business** (`/api/v1/business/**`): Bearer required. Currently only `POST /api/v1/business` is implemented; list/get/update/delete handlers return `501 Not Implemented`.\n\n**Catalog** (`/api/v1/catalog/**`): `GET` requires authentication; non-GET endpoints require `ROLE_SUPER_ADMIN`.\n\n**Integration + Webhook note**: security/filter rules exist for `/api/v1/integration/**` and `/webhook/**`, but no corresponding controllers are currently present in this project module.\n\nDefault `baseUrl`: `http://localhost:8080`. Set `{{apiKey}}` after merchant creation if/when integration controllers are available.",
+    "description": "REST collection for the Spring Boot OnDemand Service (com.runalb.ondemand_service).\n\n**Quick start:** Run Auth > Login, then use authenticated folders.\n\n**Auth** (/api/v1/auth/**): public.\n**Users**: signup public; other routes Bearer + ownership.\n**Providers**: Bearer + ROLE_PROVIDER.\n**Merchants** (/api/v1/portal/merchants/**): Bearer + ownership.\n**Business**: only POST implemented (others 501).\n**Catalog**: GET authenticated; mutations SUPER_ADMIN.\n**Integration** (/api/v1/integration/**): X-API-Key (no controllers yet).\n\nDefault baseUrl: http://localhost:8080. Seed roles: scripts/seed-roles.sql.",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "variable": [
-    { "key": "baseUrl", "value": "http://localhost:8080" },
-    { "key": "emailId", "value": "hello@runalb.com" },
-    { "key": "password", "value": "runal@123" },
-    { "key": "accessToken", "value": "" },
-    { "key": "refreshToken", "value": "" },
-    { "key": "merchantId", "value": "1" },
-    { "key": "userId", "value": "1" },
-    { "key": "businessId", "value": "1" },
-    { "key": "configId", "value": "1" },
-    { "key": "categoryId", "value": "1" },
-    { "key": "serviceId", "value": "1" }
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:8080"
+    },
+    {
+      "key": "emailId",
+      "value": "hello@runalb.com"
+    },
+    {
+      "key": "password",
+      "value": "runal@123"
+    },
+    {
+      "key": "mobileNumber",
+      "value": "+14155552671"
+    },
+    {
+      "key": "accessToken",
+      "value": ""
+    },
+    {
+      "key": "refreshToken",
+      "value": ""
+    },
+    {
+      "key": "userId",
+      "value": "1"
+    },
+    {
+      "key": "merchantId",
+      "value": "1"
+    },
+    {
+      "key": "apiKey",
+      "value": ""
+    },
+    {
+      "key": "providerId",
+      "value": "1"
+    },
+    {
+      "key": "businessId",
+      "value": "1"
+    },
+    {
+      "key": "configId",
+      "value": "1"
+    },
+    {
+      "key": "categoryId",
+      "value": "1"
+    },
+    {
+      "key": "serviceId",
+      "value": "1"
+    }
   ],
   "item": [
     {
       "name": "Auth",
-      "description": "`auth.controller.AuthController` — public routes; no Bearer.",
+      "description": "auth.controller.AuthController — all routes public.",
       "item": [
         {
           "name": "Login (email + password)",
           "request": {
             "method": "POST",
-            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/v1/auth/login",
+            "description": "AuthLoginRequest → AuthLoginResponse. Saves tokens and userId from JWT.",
             "body": {
               "mode": "raw",
               "raw": "{\n  \"email\": \"{{emailId}}\",\n  \"password\": \"{{password}}\"\n}"
-            },
-            "url": {
-              "raw": "{{baseUrl}}/api/v1/auth/login",
-              "host": ["{{baseUrl}}"],
-              "path": ["api", "v1", "auth", "login"]
-            },
-            "description": "`AuthLoginRequest` → `AuthLoginResponse`. Copy `accessToken` / `refreshToken` into collection variables."
+            }
           },
-          "response": []
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "function saveAuthFromResponse() {",
+                  "  if (pm.response.code !== 200) return;",
+                  "  const json = pm.response.json();",
+                  "  if (json.accessToken) {",
+                  "    pm.collectionVariables.set('accessToken', json.accessToken);",
+                  "    try {",
+                  "      const payload = JSON.parse(atob(json.accessToken.split('.')[1]));",
+                  "      if (payload.sub) pm.collectionVariables.set('userId', String(payload.sub));",
+                  "    } catch (e) {}",
+                  "  }",
+                  "  if (json.refreshToken) pm.collectionVariables.set('refreshToken', json.refreshToken);",
+                  "}",
+                  "saveAuthFromResponse();"
+                ]
+              }
+            }
+          ]
         },
         {
           "name": "Login email — request OTP",
           "request": {
             "method": "POST",
-            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/v1/auth/login/email/request-otp",
+            "description": "AuthEmailOtpRequest. OTP logged server-side in dev.",
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"email\": \"user@example.com\"\n}"
-            },
-            "url": {
-              "raw": "{{baseUrl}}/api/v1/auth/login/email/request-otp",
-              "host": ["{{baseUrl}}"],
-              "path": ["api", "v1", "auth", "login", "email", "request-otp"]
-            },
-            "description": "`AuthEmailOtpRequest`. In dev, OTP may be logged server-side."
+              "raw": "{\n  \"email\": \"{{emailId}}\"\n}"
+            }
           },
           "response": []
         },
@@ -63,35 +133,60 @@
           "name": "Login email — verify OTP",
           "request": {
             "method": "POST",
-            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/v1/auth/login/email/verify-otp",
+            "description": "AuthEmailVerifyOtpRequest → AuthLoginResponse.",
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"email\": \"user@example.com\",\n  \"otp\": \"123456\"\n}"
-            },
-            "url": {
-              "raw": "{{baseUrl}}/api/v1/auth/login/email/verify-otp",
-              "host": ["{{baseUrl}}"],
-              "path": ["api", "v1", "auth", "login", "email", "verify-otp"]
-            },
-            "description": "`AuthEmailVerifyOtpRequest` — returns `AuthLoginResponse`."
+              "raw": "{\n  \"email\": \"{{emailId}}\",\n  \"otp\": \"123456\"\n}"
+            }
           },
-          "response": []
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "function saveAuthFromResponse() {",
+                  "  if (pm.response.code !== 200) return;",
+                  "  const json = pm.response.json();",
+                  "  if (json.accessToken) {",
+                  "    pm.collectionVariables.set('accessToken', json.accessToken);",
+                  "    try {",
+                  "      const payload = JSON.parse(atob(json.accessToken.split('.')[1]));",
+                  "      if (payload.sub) pm.collectionVariables.set('userId', String(payload.sub));",
+                  "    } catch (e) {}",
+                  "  }",
+                  "  if (json.refreshToken) pm.collectionVariables.set('refreshToken', json.refreshToken);",
+                  "}",
+                  "saveAuthFromResponse();"
+                ]
+              }
+            }
+          ]
         },
         {
           "name": "Forgot password — request OTP",
           "request": {
             "method": "POST",
-            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/v1/auth/forgot-password/email/request-otp",
+            "description": "AuthEmailOtpRequest → AuthOtpRequestResponse.",
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"email\": \"user@example.com\"\n}"
-            },
-            "url": {
-              "raw": "{{baseUrl}}/api/v1/auth/forgot-password/email/request-otp",
-              "host": ["{{baseUrl}}"],
-              "path": ["api", "v1", "auth", "forgot-password", "email", "request-otp"]
-            },
-            "description": "`AuthEmailOtpRequest` — returns `AuthOtpRequestResponse`."
+              "raw": "{\n  \"email\": \"{{emailId}}\"\n}"
+            }
           },
           "response": []
         },
@@ -99,17 +194,18 @@
           "name": "Forgot password — reset with OTP",
           "request": {
             "method": "POST",
-            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/v1/auth/forgot-password/email/reset-password",
+            "description": "AuthForgotPasswordResetRequest — 204.",
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"email\": \"user@example.com\",\n  \"otp\": \"123456\",\n  \"newPassword\": \"newPassword123\"\n}"
-            },
-            "url": {
-              "raw": "{{baseUrl}}/api/v1/auth/forgot-password/email/reset-password",
-              "host": ["{{baseUrl}}"],
-              "path": ["api", "v1", "auth", "forgot-password", "email", "reset-password"]
-            },
-            "description": "`AuthForgotPasswordResetRequest` — 204 No Content."
+              "raw": "{\n  \"email\": \"{{emailId}}\",\n  \"otp\": \"123456\",\n  \"newPassword\": \"newPassword123\"\n}"
+            }
           },
           "response": []
         },
@@ -117,17 +213,18 @@
           "name": "Login mobile — request OTP",
           "request": {
             "method": "POST",
-            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/v1/auth/login/mobile/request-otp",
+            "description": "AuthMobileOtpRequest (E.164).",
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"mobileNumber\": \"+14155552671\"\n}"
-            },
-            "url": {
-              "raw": "{{baseUrl}}/api/v1/auth/login/mobile/request-otp",
-              "host": ["{{baseUrl}}"],
-              "path": ["api", "v1", "auth", "login", "mobile", "request-otp"]
-            },
-            "description": "`AuthMobileOtpRequest` (E.164)."
+              "raw": "{\n  \"mobileNumber\": \"{{mobileNumber}}\"\n}"
+            }
           },
           "response": []
         },
@@ -135,53 +232,102 @@
           "name": "Login mobile — verify OTP",
           "request": {
             "method": "POST",
-            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/v1/auth/login/mobile/verify-otp",
+            "description": "AuthMobileVerifyOtpRequest → AuthLoginResponse.",
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"mobileNumber\": \"+14155552671\",\n  \"otp\": \"123456\"\n}"
-            },
-            "url": {
-              "raw": "{{baseUrl}}/api/v1/auth/login/mobile/verify-otp",
-              "host": ["{{baseUrl}}"],
-              "path": ["api", "v1", "auth", "login", "mobile", "verify-otp"]
-            },
-            "description": "`AuthMobileVerifyOtpRequest` — returns `AuthLoginResponse`."
+              "raw": "{\n  \"mobileNumber\": \"{{mobileNumber}}\",\n  \"otp\": \"123456\"\n}"
+            }
           },
-          "response": []
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "function saveAuthFromResponse() {",
+                  "  if (pm.response.code !== 200) return;",
+                  "  const json = pm.response.json();",
+                  "  if (json.accessToken) {",
+                  "    pm.collectionVariables.set('accessToken', json.accessToken);",
+                  "    try {",
+                  "      const payload = JSON.parse(atob(json.accessToken.split('.')[1]));",
+                  "      if (payload.sub) pm.collectionVariables.set('userId', String(payload.sub));",
+                  "    } catch (e) {}",
+                  "  }",
+                  "  if (json.refreshToken) pm.collectionVariables.set('refreshToken', json.refreshToken);",
+                  "}",
+                  "saveAuthFromResponse();"
+                ]
+              }
+            }
+          ]
         },
         {
           "name": "Refresh token",
           "request": {
             "method": "POST",
-            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/v1/auth/refresh-token",
+            "description": "AuthRefreshRequest — rotates refresh token.",
             "body": {
               "mode": "raw",
               "raw": "{\n  \"refreshToken\": \"{{refreshToken}}\"\n}"
-            },
-            "url": {
-              "raw": "{{baseUrl}}/api/v1/auth/refresh-token",
-              "host": ["{{baseUrl}}"],
-              "path": ["api", "v1", "auth", "refresh-token"]
-            },
-            "description": "`AuthRefreshRequest` — returns new `AuthLoginResponse`."
+            }
           },
-          "response": []
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "function saveAuthFromResponse() {",
+                  "  if (pm.response.code !== 200) return;",
+                  "  const json = pm.response.json();",
+                  "  if (json.accessToken) {",
+                  "    pm.collectionVariables.set('accessToken', json.accessToken);",
+                  "    try {",
+                  "      const payload = JSON.parse(atob(json.accessToken.split('.')[1]));",
+                  "      if (payload.sub) pm.collectionVariables.set('userId', String(payload.sub));",
+                  "    } catch (e) {}",
+                  "  }",
+                  "  if (json.refreshToken) pm.collectionVariables.set('refreshToken', json.refreshToken);",
+                  "}",
+                  "saveAuthFromResponse();"
+                ]
+              }
+            }
+          ]
         },
         {
           "name": "Logout",
           "request": {
             "method": "POST",
-            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/v1/auth/logout",
+            "description": "AuthLogoutRequest — 204.",
             "body": {
               "mode": "raw",
               "raw": "{\n  \"refreshToken\": \"{{refreshToken}}\"\n}"
-            },
-            "url": {
-              "raw": "{{baseUrl}}/api/v1/auth/logout",
-              "host": ["{{baseUrl}}"],
-              "path": ["api", "v1", "auth", "logout"]
-            },
-            "description": "`AuthLogoutRequest` — 204 No Content."
+            }
           },
           "response": []
         }
@@ -189,37 +335,53 @@
     },
     {
       "name": "Users",
-      "description": "`user.controller.UserController` — `/api/v1/users`. `POST` is public; other routes require Bearer and ownership of `userId`.",
+      "description": "user.controller.UserController — POST public; other routes Bearer + userId ownership.",
       "item": [
         {
           "name": "Create user (signup)",
           "request": {
             "method": "POST",
-            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/v1/users",
+            "description": "UserCreateRequest. Roles must exist (seed-roles.sql).",
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"email\": \"newuser@example.com\",\n  \"password\": \"password123\",\n  \"name\": \"New User\",\n  \"mobileNumber\": \"+14155552671\",\n  \"roles\": [\"CUSTOMER\"]\n}"
-            },
-            "url": {
-              "raw": "{{baseUrl}}/api/v1/users",
-              "host": ["{{baseUrl}}"],
-              "path": ["api", "v1", "users"]
-            },
-            "description": "`UserCreateRequest` — required non-empty `roles` (`RoleNameEnum`: CUSTOMER, PROVIDER, ADMIN, SUPER_ADMIN); each must exist in DB. `mobileNumber` optional (E.164 if set). 201 + `UserResponse`."
+              "raw": "{\n  \"email\": \"newuser@example.com\",\n  \"password\": \"password123\",\n  \"name\": \"New User\",\n  \"mobileNumber\": \"+14155559999\",\n  \"roles\": [\"CUSTOMER\"]\n}"
+            }
           },
-          "response": []
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (pm.response.code === 201) {",
+                  "  const json = pm.response.json();",
+                  "  if (json.id) pm.collectionVariables.set('userId', String(json.id));",
+                  "}"
+                ]
+              }
+            }
+          ]
         },
         {
           "name": "Get user",
           "request": {
             "method": "GET",
-            "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }],
-            "url": {
-              "raw": "{{baseUrl}}/api/v1/users/{{userId}}",
-              "host": ["{{baseUrl}}"],
-              "path": ["api", "v1", "users", "{{userId}}"]
-            },
-            "description": "`AuthService.assertAuthenticatedUserOwnsUserId` — principal must match `userId`."
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "url": "{{baseUrl}}/api/v1/users/{{userId}}",
+            "description": "Self-only — UserResponse."
           },
           "response": []
         },
@@ -228,19 +390,25 @@
           "request": {
             "method": "PATCH",
             "header": [
-              { "key": "Content-Type", "value": "application/json" },
-              { "key": "Authorization", "value": "Bearer {{accessToken}}" }
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
             ],
+            "url": "{{baseUrl}}/api/v1/users/{{userId}}",
+            "description": "UserUpdateRequest — partial update.",
             "body": {
               "mode": "raw",
               "raw": "{\n  \"name\": \"Updated Name\"\n}"
-            },
-            "url": {
-              "raw": "{{baseUrl}}/api/v1/users/{{userId}}",
-              "host": ["{{baseUrl}}"],
-              "path": ["api", "v1", "users", "{{userId}}"]
-            },
-            "description": "`UserUpdateRequest` — partial update; self-only."
+            }
           },
           "response": []
         },
@@ -248,13 +416,14 @@
           "name": "Delete user (deactivate)",
           "request": {
             "method": "DELETE",
-            "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }],
-            "url": {
-              "raw": "{{baseUrl}}/api/v1/users/{{userId}}",
-              "host": ["{{baseUrl}}"],
-              "path": ["api", "v1", "users", "{{userId}}"]
-            },
-            "description": "204 No Content — `UserService.deactivateUser`."
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "url": "{{baseUrl}}/api/v1/users/{{userId}}",
+            "description": "204 No Content."
           },
           "response": []
         },
@@ -262,13 +431,103 @@
           "name": "Reactivate user",
           "request": {
             "method": "POST",
-            "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }],
-            "url": {
-              "raw": "{{baseUrl}}/api/v1/users/{{userId}}/reactivate",
-              "host": ["{{baseUrl}}"],
-              "path": ["api", "v1", "users", "{{userId}}", "reactivate"]
-            },
-            "description": "Self-only — returns `UserResponse`."
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "url": "{{baseUrl}}/api/v1/users/{{userId}}/reactivate",
+            "description": "Self-only — UserResponse."
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Providers",
+      "description": "provider.controller.ProviderController — Bearer + ROLE_PROVIDER.",
+      "item": [
+        {
+          "name": "Create provider profile",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/v1/providers",
+            "description": "ProviderCreateRequest.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"bio\": \"Experienced service provider\",\n  \"address\": \"123 Main St, City\"\n}"
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (pm.response.code === 201) {",
+                  "  const json = pm.response.json();",
+                  "  if (json.providerId) pm.collectionVariables.set('providerId', String(json.providerId));",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Get provider profile",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "url": "{{baseUrl}}/api/v1/providers/{{providerId}}",
+            "description": "ProviderDetailResponse — owner only."
+          },
+          "response": []
+        },
+        {
+          "name": "Update provider profile",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/v1/providers/{{providerId}}",
+            "description": "ProviderUpdateRequest.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"bio\": \"Updated bio\",\n  \"address\": \"456 Oak Ave\",\n  \"isActive\": true\n}"
+            }
           },
           "response": []
         }
@@ -276,89 +535,118 @@
     },
     {
       "name": "Business",
-      "description": "`business.controller.BusinessController` — `/api/v1/business`. `POST` creates business (201). `GET`/`{id}`/`PATCH`/`DELETE` currently return 501 Not Implemented.",
+      "description": "business.controller.BusinessController — only POST implemented.",
       "item": [
         {
           "name": "Create business",
           "request": {
             "method": "POST",
             "header": [
-              { "key": "Content-Type", "value": "application/json" },
-              { "key": "Authorization", "value": "Bearer {{accessToken}}" }
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
             ],
+            "url": "{{baseUrl}}/api/v1/business",
+            "description": "BusinessCreateRequest.",
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"name\": \"Sample Business\",\n  \"description\": \"Business profile description\"\n}"
-            },
-            "url": {
-              "raw": "{{baseUrl}}/api/v1/business",
-              "host": ["{{baseUrl}}"],
-              "path": ["api", "v1", "business"]
-            },
-            "description": "`BusinessCreateRequest` — implemented endpoint; returns 201 + `BusinessResponse`."
+              "raw": "{\n  \"name\": \"Sample Business\",\n  \"email\": \"business@example.com\",\n  \"address\": \"100 Commerce Blvd\",\n  \"mobileNumber\": \"+14155558888\"\n}"
+            }
           },
-          "response": []
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (pm.response.code === 201) {",
+                  "  const json = pm.response.json();",
+                  "  if (json.id) pm.collectionVariables.set('businessId', String(json.id));",
+                  "}"
+                ]
+              }
+            }
+          ]
         },
         {
-          "name": "List businesses",
+          "name": "List businesses (501)",
           "request": {
             "method": "GET",
-            "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }],
-            "url": {
-              "raw": "{{baseUrl}}/api/v1/business",
-              "host": ["{{baseUrl}}"],
-              "path": ["api", "v1", "business"]
-            },
-            "description": "Currently returns 501 Not Implemented in `BusinessController`."
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "url": "{{baseUrl}}/api/v1/business",
+            "description": "501 Not Implemented."
           },
           "response": []
         },
         {
-          "name": "Get business",
+          "name": "Get business (501)",
           "request": {
             "method": "GET",
-            "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }],
-            "url": {
-              "raw": "{{baseUrl}}/api/v1/business/{{businessId}}",
-              "host": ["{{baseUrl}}"],
-              "path": ["api", "v1", "business", "{{businessId}}"]
-            },
-            "description": "Currently returns 501 Not Implemented in `BusinessController`."
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "url": "{{baseUrl}}/api/v1/business/{{businessId}}",
+            "description": "501 Not Implemented."
           },
           "response": []
         },
         {
-          "name": "Patch business",
+          "name": "Patch business (501)",
           "request": {
             "method": "PATCH",
             "header": [
-              { "key": "Content-Type", "value": "application/json" },
-              { "key": "Authorization", "value": "Bearer {{accessToken}}" }
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
             ],
+            "url": "{{baseUrl}}/api/v1/business/{{businessId}}",
+            "description": "501 Not Implemented.",
             "body": {
               "mode": "raw",
               "raw": "{\n  \"name\": \"Updated Business Name\"\n}"
-            },
-            "url": {
-              "raw": "{{baseUrl}}/api/v1/business/{{businessId}}",
-              "host": ["{{baseUrl}}"],
-              "path": ["api", "v1", "business", "{{businessId}}"]
-            },
-            "description": "Currently returns 501 Not Implemented in `BusinessController`."
+            }
           },
           "response": []
         },
         {
-          "name": "Delete business",
+          "name": "Delete business (501)",
           "request": {
             "method": "DELETE",
-            "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }],
-            "url": {
-              "raw": "{{baseUrl}}/api/v1/business/{{businessId}}",
-              "host": ["{{baseUrl}}"],
-              "path": ["api", "v1", "business", "{{businessId}}"]
-            },
-            "description": "Currently returns 501 Not Implemented in `BusinessController`."
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "url": "{{baseUrl}}/api/v1/business/{{businessId}}",
+            "description": "501 Not Implemented."
           },
           "response": []
         }
@@ -366,40 +654,62 @@
     },
     {
       "name": "Merchants (portal)",
-      "description": "`merchant.controller.MerchantController` — `/api/v1/portal/merchants`. All routes require Bearer; merchant ownership enforced where applicable.",
+      "description": "merchant.controller.MerchantController — Bearer + merchant ownership.",
       "item": [
         {
           "name": "Create merchant",
           "request": {
             "method": "POST",
             "header": [
-              { "key": "Content-Type", "value": "application/json" },
-              { "key": "Authorization", "value": "Bearer {{accessToken}}" }
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
             ],
+            "url": "{{baseUrl}}/api/v1/portal/merchants",
+            "description": "MerchantCreateRequest.",
             "body": {
               "mode": "raw",
               "raw": "{\n  \"name\": \"Acme Corp\",\n  \"email\": \"billing@acme.example\"\n}"
-            },
-            "url": {
-              "raw": "{{baseUrl}}/api/v1/portal/merchants",
-              "host": ["{{baseUrl}}"],
-              "path": ["api", "v1", "portal", "merchants"]
-            },
-            "description": "`MerchantCreateRequest` — `name`, `email`. 201 + `MerchantResponse` including **apiKey** — save to `{{apiKey}}` for integration calls."
+            }
           },
-          "response": []
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (pm.response.code === 201) {",
+                  "  const json = pm.response.json();",
+                  "  if (json.id) pm.collectionVariables.set('merchantId', String(json.id));",
+                  "  if (json.apiKey) pm.collectionVariables.set('apiKey', json.apiKey);",
+                  "}"
+                ]
+              }
+            }
+          ]
         },
         {
           "name": "List merchants",
           "request": {
             "method": "GET",
-            "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }],
-            "url": {
-              "raw": "{{baseUrl}}/api/v1/portal/merchants",
-              "host": ["{{baseUrl}}"],
-              "path": ["api", "v1", "portal", "merchants"]
-            },
-            "description": "Merchants for the authenticated user — `List<MerchantResponse>`."
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "url": "{{baseUrl}}/api/v1/portal/merchants",
+            "description": "Merchants for authenticated user."
           },
           "response": []
         },
@@ -407,13 +717,14 @@
           "name": "Get merchant",
           "request": {
             "method": "GET",
-            "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }],
-            "url": {
-              "raw": "{{baseUrl}}/api/v1/portal/merchants/{{merchantId}}",
-              "host": ["{{baseUrl}}"],
-              "path": ["api", "v1", "portal", "merchants", "{{merchantId}}"]
-            },
-            "description": "`MerchantResponse` — must own merchant."
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "url": "{{baseUrl}}/api/v1/portal/merchants/{{merchantId}}",
+            "description": "MerchantResponse."
           },
           "response": []
         },
@@ -422,19 +733,25 @@
           "request": {
             "method": "PATCH",
             "header": [
-              { "key": "Content-Type", "value": "application/json" },
-              { "key": "Authorization", "value": "Bearer {{accessToken}}" }
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
             ],
+            "url": "{{baseUrl}}/api/v1/portal/merchants/{{merchantId}}",
+            "description": "MerchantUpdateRequest.",
             "body": {
               "mode": "raw",
               "raw": "{\n  \"name\": \"Acme Ltd\",\n  \"email\": \"newemail@acme.example\",\n  \"isActive\": true\n}"
-            },
-            "url": {
-              "raw": "{{baseUrl}}/api/v1/portal/merchants/{{merchantId}}",
-              "host": ["{{baseUrl}}"],
-              "path": ["api", "v1", "portal", "merchants", "{{merchantId}}"]
-            },
-            "description": "`MerchantUpdateRequest` — all fields optional."
+            }
           },
           "response": []
         },
@@ -442,13 +759,14 @@
           "name": "Delete merchant (deactivate)",
           "request": {
             "method": "DELETE",
-            "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }],
-            "url": {
-              "raw": "{{baseUrl}}/api/v1/portal/merchants/{{merchantId}}",
-              "host": ["{{baseUrl}}"],
-              "path": ["api", "v1", "portal", "merchants", "{{merchantId}}"]
-            },
-            "description": "204 No Content."
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "url": "{{baseUrl}}/api/v1/portal/merchants/{{merchantId}}",
+            "description": "204."
           },
           "response": []
         },
@@ -456,13 +774,14 @@
           "name": "Get merchant config",
           "request": {
             "method": "GET",
-            "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }],
-            "url": {
-              "raw": "{{baseUrl}}/api/v1/portal/merchants/{{merchantId}}/config",
-              "host": ["{{baseUrl}}"],
-              "path": ["api", "v1", "portal", "merchants", "{{merchantId}}", "config"]
-            },
-            "description": "`MerchantConfigResponse`."
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "url": "{{baseUrl}}/api/v1/portal/merchants/{{merchantId}}/config",
+            "description": "MerchantConfigResponse."
           },
           "response": []
         },
@@ -471,19 +790,25 @@
           "request": {
             "method": "POST",
             "header": [
-              { "key": "Content-Type", "value": "application/json" },
-              { "key": "Authorization", "value": "Bearer {{accessToken}}" }
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
             ],
+            "url": "{{baseUrl}}/api/v1/portal/merchants/{{merchantId}}/config",
+            "description": "MerchantConfigCreateRequest.",
             "body": {
               "mode": "raw",
               "raw": "{\n  \"currency\": \"USD\",\n  \"webhookUrl\": \"https://merchant.example/hooks\"\n}"
-            },
-            "url": {
-              "raw": "{{baseUrl}}/api/v1/portal/merchants/{{merchantId}}/config",
-              "host": ["{{baseUrl}}"],
-              "path": ["api", "v1", "portal", "merchants", "{{merchantId}}", "config"]
-            },
-            "description": "`MerchantConfigCreateRequest` — required 3-letter ISO 4217 `currency`; `webhookUrl` optional. Returns 200 in current controller implementation."
+            }
           },
           "response": []
         },
@@ -492,19 +817,25 @@
           "request": {
             "method": "PATCH",
             "header": [
-              { "key": "Content-Type", "value": "application/json" },
-              { "key": "Authorization", "value": "Bearer {{accessToken}}" }
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
             ],
+            "url": "{{baseUrl}}/api/v1/portal/merchants/{{merchantId}}/config",
+            "description": "MerchantConfigUpdateRequest.",
             "body": {
               "mode": "raw",
               "raw": "{\n  \"currency\": \"EUR\",\n  \"webhookUrl\": \"https://merchant.example/v2/hooks\"\n}"
-            },
-            "url": {
-              "raw": "{{baseUrl}}/api/v1/portal/merchants/{{merchantId}}/config",
-              "host": ["{{baseUrl}}"],
-              "path": ["api", "v1", "portal", "merchants", "{{merchantId}}", "config"]
-            },
-            "description": "`MerchantConfigUpdateRequest` — fields optional."
+            }
           },
           "response": []
         },
@@ -513,33 +844,54 @@
           "request": {
             "method": "POST",
             "header": [
-              { "key": "Content-Type", "value": "application/json" },
-              { "key": "Authorization", "value": "Bearer {{accessToken}}" }
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
             ],
+            "url": "{{baseUrl}}/api/v1/portal/merchants/{{merchantId}}/payment-channel-configs",
+            "description": "MerchantPaymentChannelConfigCreateRequest.",
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"paymentChannelId\": 1,\n  \"paymentChannelName\": \"TEST\",\n  \"configJson\": \"{}\"\n}"
-            },
-            "url": {
-              "raw": "{{baseUrl}}/api/v1/portal/merchants/{{merchantId}}/payment-channel-configs",
-              "host": ["{{baseUrl}}"],
-              "path": ["api", "v1", "portal", "merchants", "{{merchantId}}", "payment-channel-configs"]
-            },
-            "description": "`MerchantPaymentChannelConfigCreateRequest` — `paymentChannelId` required; `paymentChannelName` optional enum (TEST, STRIPE, RAZORPAY, PAYMOB, XPLORPAY); `configJson` optional."
+              "raw": "{\n  \"configJson\": \"{\\\"provider\\\":\\\"stripe\\\",\\\"publishableKey\\\":\\\"pk_test_xxx\\\"}\"\n}"
+            }
           },
-          "response": []
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (pm.response.code === 201) {",
+                  "  const json = pm.response.json();",
+                  "  if (json.id) pm.collectionVariables.set('configId', String(json.id));",
+                  "}"
+                ]
+              }
+            }
+          ]
         },
         {
           "name": "List payment channel configs",
           "request": {
             "method": "GET",
-            "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }],
-            "url": {
-              "raw": "{{baseUrl}}/api/v1/portal/merchants/{{merchantId}}/payment-channel-configs",
-              "host": ["{{baseUrl}}"],
-              "path": ["api", "v1", "portal", "merchants", "{{merchantId}}", "payment-channel-configs"]
-            },
-            "description": "`List<MerchantPaymentChannelConfigResponse>`."
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "url": "{{baseUrl}}/api/v1/portal/merchants/{{merchantId}}/payment-channel-configs",
+            "description": ""
           },
           "response": []
         },
@@ -547,21 +899,14 @@
           "name": "Get payment channel config",
           "request": {
             "method": "GET",
-            "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }],
-            "url": {
-              "raw": "{{baseUrl}}/api/v1/portal/merchants/{{merchantId}}/payment-channel-configs/{{configId}}",
-              "host": ["{{baseUrl}}"],
-              "path": [
-                "api",
-                "v1",
-                "portal",
-                "merchants",
-                "{{merchantId}}",
-                "payment-channel-configs",
-                "{{configId}}"
-              ]
-            },
-            "description": "`MerchantPaymentChannelConfigResponse`."
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "url": "{{baseUrl}}/api/v1/portal/merchants/{{merchantId}}/payment-channel-configs/{{configId}}",
+            "description": ""
           },
           "response": []
         },
@@ -570,49 +915,40 @@
           "request": {
             "method": "PATCH",
             "header": [
-              { "key": "Content-Type", "value": "application/json" },
-              { "key": "Authorization", "value": "Bearer {{accessToken}}" }
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
             ],
+            "url": "{{baseUrl}}/api/v1/portal/merchants/{{merchantId}}/payment-channel-configs/{{configId}}",
+            "description": "MerchantPaymentChannelConfigUpdateRequest.",
             "body": {
               "mode": "raw",
               "raw": "{\n  \"isActive\": true,\n  \"configJson\": \"{\\\"key\\\":\\\"value\\\"}\"\n}"
-            },
-            "url": {
-              "raw": "{{baseUrl}}/api/v1/portal/merchants/{{merchantId}}/payment-channel-configs/{{configId}}",
-              "host": ["{{baseUrl}}"],
-              "path": [
-                "api",
-                "v1",
-                "portal",
-                "merchants",
-                "{{merchantId}}",
-                "payment-channel-configs",
-                "{{configId}}"
-              ]
-            },
-            "description": "`MerchantPaymentChannelConfigUpdateRequest` — `isActive`, `configJson` optional."
+            }
           },
           "response": []
         },
         {
-          "name": "Delete payment channel config (deactivate)",
+          "name": "Delete payment channel config",
           "request": {
             "method": "DELETE",
-            "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }],
-            "url": {
-              "raw": "{{baseUrl}}/api/v1/portal/merchants/{{merchantId}}/payment-channel-configs/{{configId}}",
-              "host": ["{{baseUrl}}"],
-              "path": [
-                "api",
-                "v1",
-                "portal",
-                "merchants",
-                "{{merchantId}}",
-                "payment-channel-configs",
-                "{{configId}}"
-              ]
-            },
-            "description": "204 No Content."
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "url": "{{baseUrl}}/api/v1/portal/merchants/{{merchantId}}/payment-channel-configs/{{configId}}",
+            "description": "204."
           },
           "response": []
         }
@@ -620,19 +956,20 @@
     },
     {
       "name": "Catalog",
-      "description": "`catalog.controller.CatalogController` — `/api/v1/catalog`. **GET** requires authentication. **POST/PATCH/DELETE** require `SUPER_ADMIN` role.",
+      "description": "catalog.controller.CatalogController — GET authenticated; mutations SUPER_ADMIN.",
       "item": [
         {
           "name": "List categories",
           "request": {
             "method": "GET",
-            "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }],
-            "url": {
-              "raw": "{{baseUrl}}/api/v1/catalog/categories",
-              "host": ["{{baseUrl}}"],
-              "path": ["api", "v1", "catalog", "categories"]
-            },
-            "description": "`List<CatalogCategoryResponse>`."
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "url": "{{baseUrl}}/api/v1/catalog/categories",
+            "description": ""
           },
           "response": []
         },
@@ -640,13 +977,14 @@
           "name": "Get category",
           "request": {
             "method": "GET",
-            "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }],
-            "url": {
-              "raw": "{{baseUrl}}/api/v1/catalog/categories/{{categoryId}}",
-              "host": ["{{baseUrl}}"],
-              "path": ["api", "v1", "catalog", "categories", "{{categoryId}}"]
-            },
-            "description": "`CatalogCategoryResponse`."
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "url": "{{baseUrl}}/api/v1/catalog/categories/{{categoryId}}",
+            "description": ""
           },
           "response": []
         },
@@ -655,40 +993,66 @@
           "request": {
             "method": "POST",
             "header": [
-              { "key": "Content-Type", "value": "application/json" },
-              { "key": "Authorization", "value": "Bearer {{accessToken}}" }
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
             ],
+            "url": "{{baseUrl}}/api/v1/catalog/categories",
+            "description": "SUPER_ADMIN only.",
             "body": {
               "mode": "raw",
               "raw": "{\n  \"name\": \"Housekeeping\",\n  \"description\": \"Cleaning and maintenance\",\n  \"displayOrder\": 1,\n  \"active\": true\n}"
-            },
-            "url": {
-              "raw": "{{baseUrl}}/api/v1/catalog/categories",
-              "host": ["{{baseUrl}}"],
-              "path": ["api", "v1", "catalog", "categories"]
-            },
-            "description": "`CatalogCategoryCreateRequest` — **SUPER_ADMIN** only. 201 Created."
+            }
           },
-          "response": []
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (pm.response.code === 201) {",
+                  "  const json = pm.response.json();",
+                  "  if (json.id) pm.collectionVariables.set('categoryId', String(json.id));",
+                  "}"
+                ]
+              }
+            }
+          ]
         },
         {
           "name": "Patch category",
           "request": {
             "method": "PATCH",
             "header": [
-              { "key": "Content-Type", "value": "application/json" },
-              { "key": "Authorization", "value": "Bearer {{accessToken}}" }
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
             ],
+            "url": "{{baseUrl}}/api/v1/catalog/categories/{{categoryId}}",
+            "description": "SUPER_ADMIN only.",
             "body": {
               "mode": "raw",
               "raw": "{\n  \"name\": \"Housekeeping & laundry\",\n  \"displayOrder\": 2\n}"
-            },
-            "url": {
-              "raw": "{{baseUrl}}/api/v1/catalog/categories/{{categoryId}}",
-              "host": ["{{baseUrl}}"],
-              "path": ["api", "v1", "catalog", "categories", "{{categoryId}}"]
-            },
-            "description": "`CatalogCategoryUpdateRequest` — **SUPER_ADMIN** only."
+            }
           },
           "response": []
         },
@@ -696,13 +1060,14 @@
           "name": "Delete category",
           "request": {
             "method": "DELETE",
-            "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }],
-            "url": {
-              "raw": "{{baseUrl}}/api/v1/catalog/categories/{{categoryId}}",
-              "host": ["{{baseUrl}}"],
-              "path": ["api", "v1", "catalog", "categories", "{{categoryId}}"]
-            },
-            "description": "**SUPER_ADMIN** only — 204 No Content."
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "url": "{{baseUrl}}/api/v1/catalog/categories/{{categoryId}}",
+            "description": "SUPER_ADMIN — 204."
           },
           "response": []
         },
@@ -710,13 +1075,14 @@
           "name": "List services in category",
           "request": {
             "method": "GET",
-            "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }],
-            "url": {
-              "raw": "{{baseUrl}}/api/v1/catalog/categories/{{categoryId}}/services",
-              "host": ["{{baseUrl}}"],
-              "path": ["api", "v1", "catalog", "categories", "{{categoryId}}", "services"]
-            },
-            "description": "`List<CatalogServiceResponse>` for category."
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "url": "{{baseUrl}}/api/v1/catalog/categories/{{categoryId}}/services",
+            "description": ""
           },
           "response": []
         },
@@ -725,33 +1091,54 @@
           "request": {
             "method": "POST",
             "header": [
-              { "key": "Content-Type", "value": "application/json" },
-              { "key": "Authorization", "value": "Bearer {{accessToken}}" }
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
             ],
+            "url": "{{baseUrl}}/api/v1/catalog/categories/{{categoryId}}/services",
+            "description": "SUPER_ADMIN only.",
             "body": {
               "mode": "raw",
               "raw": "{\n  \"name\": \"Deep clean\",\n  \"description\": \"Full apartment deep clean\",\n  \"displayOrder\": 1,\n  \"active\": true\n}"
-            },
-            "url": {
-              "raw": "{{baseUrl}}/api/v1/catalog/categories/{{categoryId}}/services",
-              "host": ["{{baseUrl}}"],
-              "path": ["api", "v1", "catalog", "categories", "{{categoryId}}", "services"]
-            },
-            "description": "`CatalogServiceCreateRequest` — **SUPER_ADMIN** only. 201 Created."
+            }
           },
-          "response": []
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (pm.response.code === 201) {",
+                  "  const json = pm.response.json();",
+                  "  if (json.id) pm.collectionVariables.set('serviceId', String(json.id));",
+                  "}"
+                ]
+              }
+            }
+          ]
         },
         {
           "name": "List all services",
           "request": {
             "method": "GET",
-            "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }],
-            "url": {
-              "raw": "{{baseUrl}}/api/v1/catalog/services",
-              "host": ["{{baseUrl}}"],
-              "path": ["api", "v1", "catalog", "services"]
-            },
-            "description": "All catalog services — `List<CatalogServiceResponse>`."
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "url": "{{baseUrl}}/api/v1/catalog/services",
+            "description": ""
           },
           "response": []
         },
@@ -759,13 +1146,14 @@
           "name": "Get service",
           "request": {
             "method": "GET",
-            "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }],
-            "url": {
-              "raw": "{{baseUrl}}/api/v1/catalog/services/{{serviceId}}",
-              "host": ["{{baseUrl}}"],
-              "path": ["api", "v1", "catalog", "services", "{{serviceId}}"]
-            },
-            "description": "`CatalogServiceResponse`."
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "url": "{{baseUrl}}/api/v1/catalog/services/{{serviceId}}",
+            "description": ""
           },
           "response": []
         },
@@ -774,19 +1162,25 @@
           "request": {
             "method": "PATCH",
             "header": [
-              { "key": "Content-Type", "value": "application/json" },
-              { "key": "Authorization", "value": "Bearer {{accessToken}}" }
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
             ],
+            "url": "{{baseUrl}}/api/v1/catalog/services/{{serviceId}}",
+            "description": "SUPER_ADMIN only.",
             "body": {
               "mode": "raw",
               "raw": "{\n  \"name\": \"Deep clean (4h)\",\n  \"categoryId\": 1\n}"
-            },
-            "url": {
-              "raw": "{{baseUrl}}/api/v1/catalog/services/{{serviceId}}",
-              "host": ["{{baseUrl}}"],
-              "path": ["api", "v1", "catalog", "services", "{{serviceId}}"]
-            },
-            "description": "`CatalogServiceUpdateRequest` — **SUPER_ADMIN** only; optional `categoryId` to move service."
+            }
           },
           "response": []
         },
@@ -794,13 +1188,61 @@
           "name": "Delete service",
           "request": {
             "method": "DELETE",
-            "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }],
-            "url": {
-              "raw": "{{baseUrl}}/api/v1/catalog/services/{{serviceId}}",
-              "host": ["{{baseUrl}}"],
-              "path": ["api", "v1", "catalog", "services", "{{serviceId}}"]
-            },
-            "description": "**SUPER_ADMIN** only — 204 No Content."
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "url": "{{baseUrl}}/api/v1/catalog/services/{{serviceId}}",
+            "description": "SUPER_ADMIN — 204."
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Integration (reserved)",
+      "description": "/api/v1/integration/** — secured by X-API-Key (ROLE_INTEGRATION). No controllers yet. Set apiKey from Create merchant response.",
+      "item": [
+        {
+          "name": "Placeholder — no handler",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "X-API-Key",
+                "value": "{{apiKey}}"
+              }
+            ],
+            "url": "{{baseUrl}}/api/v1/integration/",
+            "description": "Expected 404 until integration controllers exist. Validates API key auth filter."
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Actuator",
+      "description": "Spring Boot actuator — all endpoints exposed in dev profile.",
+      "item": [
+        {
+          "name": "Health",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/actuator/health",
+            "description": "Service health check (no auth)."
+          },
+          "response": []
+        },
+        {
+          "name": "Info",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/actuator/info",
+            "description": "Application info."
           },
           "response": []
         }

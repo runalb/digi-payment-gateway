@@ -22,6 +22,7 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+// Note - Not used in this project
 @RestController
 @RequestMapping("/api/v1/business")
 public class BusinessController {

@@ -3,9 +3,9 @@
 ## Contents
 
 
-| Document                                   | Description                                                                 |
-| ------------------------------------------ | --------------------------------------------------------------------------- |
-| [ARCHITECTURE.md](./ARCHITECTURE.md)       | Architecture, security, data model, API tables, extension guidelines        |
-| [Postman collection](../postman/Digi-Payment-Gateway.postman_collection.json) | Import into Postman — Integration (`X-API-Key`), portal (`Bearer`), auth, webhooks |
-
+| Document                             |     
+| ------------------------------------ | 
+| [ARCHITECTURE.md](./ARCHITECTURE.md) |     
+| [DATABASE.md](./DATABASE.md)         |     
+| [Postman collection](../postman/OnDemand-Service-API.postman_collection.json) |
 

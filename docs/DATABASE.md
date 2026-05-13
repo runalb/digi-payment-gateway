@@ -1,426 +1,449 @@
-# Digi Payment Gateway — Database Documentation
+# OnDemand Service — Database
 
-**Audience:** Database administrators, SRE, and backend engineers reviewing schema, backups, and migrations.
+This document describes the **PostgreSQL** schema used by the ondemand-service application (`com.runalb.ondemand_service`). Tables are created and updated by Hibernate from JPA entities (`spring.jpa.hibernate.ddl-auto=update` in dev, `validate` in prod).
 
-**Source of truth (application mapping):** JPA entities under `src/main/java/com/digirestro/digi_payment_gateway/entity/`.
-
-**Target DBMS:** PostgreSQL (see `application-dev.properties` for connection settings).
+For application structure and API behavior, see [ARCHITECTURE.md](./ARCHITECTURE.md).
 
 ---
 
-## 1. Deployment and schema management
+## Overview
 
-| Topic | Notes |
-| ----- | ----- |
-| **ORM** | Spring Data JPA / Hibernate |
-| **Development** | `spring.jpa.hibernate.ddl-auto=update` may apply DDL at startup — convenient for dev, **not** a controlled migration for production. |
-| **Physical column naming** | Spring Boot’s default Hibernate physical naming usually maps Java camelCase to **snake_case** (e.g. `apiKey` → `api_key`, `passwordHash` → `password_hash`) unless you override `spring.jpa.hibernate.naming.*`. **Exception:** `AuditableEntity` sets explicit names **`createdDateTime`** and **`updatedDateTime`** (see §3.1) — those columns are not snake_case. **Always validate** against `information_schema.columns` or Hibernate-exported DDL. |
-| **Auditing** | `@EnableJpaAuditing` on `DigiPaymentGatewayApplication`; all entities extending `AuditableEntity` get the columns in §3.1. |
+| Item | Value |
+|------|-------|
+| Database | PostgreSQL |
+| Dev database name | `db_ondemand_service` (see `application-dev.properties`) |
+| ORM | Spring Data JPA / Hibernate |
+| Schema management | Hibernate `ddl-auto` (no Flyway/Liquibase) |
+| Auditing | `createdDateTime`, `updatedDateTime` on all entities via `AuditableEntity` |
 
----
+### Naming conventions
 
-## 2. Entity–relationship diagram
+- **Table names** are set explicitly on `@Table(name = "...")`.
+- **Column names** use explicit `@Column(name = "...")` where defined on the entity; otherwise Spring Boot’s physical naming strategy maps Java camelCase fields to **snake_case** columns (e.g. `passwordHash` → `password_hash`).
+- **Audit columns** are explicitly named `createdDateTime` and `updatedDateTime` (camelCase) on every entity extending `AuditableEntity`.
 
-### 2.1 Simple ER diagram
+### Entity-relationship diagram
 
 ```mermaid
 erDiagram
-  users ||--o{ user_merchant : has_access_to
-  merchant ||--o{ user_merchant : managed_by
+    users ||--o{ user_role : has
+    roles ||--o{ user_role : assigned
+    users ||--o{ user_merchant : linked
+    merchant ||--o{ user_merchant : linked
+    users ||--o{ user_business : linked
+    business ||--o{ user_business : linked
+    users ||--o| providers : owns
+    users ||--o{ auth_refresh_token : has
+    merchant ||--o| merchant_config : has
+    merchant ||--o{ merchant_payment_channel_config : has
+    catalog_category ||--o{ catalog_service : contains
 
-  merchant ||--|| merchant_config : has_config
-  merchant ||--o{ merchant_channel_config : channel_setup
-  payment_channel ||--o{ merchant_channel_config : configured_for
+    users {
+        bigint id PK
+        varchar email UK
+        varchar mobile_number UK
+        varchar password_hash
+        varchar name
+        boolean is_active
+        boolean is_verified
+    }
 
-  merchant ||--o{ payment : creates
-  payment_channel ||--o{ payment : processes
-  merchant_channel_config ||--o{ payment : uses_config
+    roles {
+        bigint id PK
+        varchar role_name UK
+        varchar description
+    }
 
-  payment ||--o{ webhook_incoming_log : receives
-  payment ||--o{ webhook_merchant_log : notifies
-  payment ||--o{ payment_channel_api_log : api_calls
+    merchant {
+        bigint id PK
+        varchar name
+        varchar api_key UK
+        varchar email UK
+        boolean is_active
+    }
+
+    providers {
+        bigint id PK
+        bigint user_id UK,FK
+        text bio
+        boolean is_verified
+        double average_rating
+        int profile_completion_percentage
+        boolean is_active
+        text address
+    }
+
+    catalog_category {
+        bigint id PK
+        varchar name
+        varchar description
+        int display_order
+        boolean active
+    }
+
+    catalog_service {
+        bigint id PK
+        bigint catalog_category_id FK
+        varchar name
+        varchar description
+        int display_order
+        boolean active
+    }
 ```
 
-### 2.2 Detailed ER diagram
+---
 
-High-level relationships (cardinality as enforced or implied by the JPA model):
+## Shared audit columns
 
-```mermaid
-erDiagram
-  users ||--o{ user_merchant : "user_id"
-  merchant ||--o{ user_merchant : "merchant_id"
-  merchant ||--|| merchant_config : "1_to_1"
-  merchant ||--o{ merchant_channel_config : "merchant_id"
-  payment_channel ||--o{ merchant_channel_config : "payment_channel_id"
-  merchant ||--o{ payment : "merchant_id"
-  merchant_channel_config ||--o{ payment : "channel_config_id"
-  payment_channel ||--o{ payment : "payment_channel_id"
-  payment ||--o{ webhook_incoming_log : "payment_id"
-  payment_channel ||--o{ webhook_incoming_log : "payment_channel_id"
-  payment ||--o{ webhook_merchant_log : "payment_id"
-  payment_channel ||--o{ webhook_merchant_log : "payment_channel_id"
-  webhook_incoming_log ||--o{ webhook_merchant_log : "webhook_incoming_log_id"
-  payment ||--o{ payment_channel_api_log : "payment_id"
-  payment_channel ||--o{ payment_channel_api_log : "payment_channel_id"
-  merchant_channel_config ||--o{ payment_channel_api_log : "channel_config_id"
+Every entity extends `AuditableEntity` and includes:
 
-  users {
-    bigint id PK
-    string email UK
-    string password_hash
-    string name
-    boolean is_active
-    boolean is_verified
-    timestamp createdDateTime
-    timestamp updatedDateTime
-  }
+| Column | Type | Constraints | Notes |
+|--------|------|-------------|-------|
+| `createdDateTime` | `timestamp` | `NOT NULL` | Set on insert; not updatable |
+| `updatedDateTime` | `timestamp` | `NOT NULL` | Updated on each modification |
 
-  merchant {
-    bigint id PK
-    string name
-    string api_key UK
-    boolean is_active
-    timestamp createdDateTime
-    timestamp updatedDateTime
-  }
+Populated by Spring Data JPA auditing (`@EnableJpaAuditing` on `OnDemandServiceApplication`).
 
-  user_merchant {
-    bigint user_id PK
-    bigint merchant_id PK
-  }
+---
 
-  merchant_config {
-    bigint id PK
-    bigint merchant_id FK
-    text webhook_url
-    varchar currency
-    timestamp createdDateTime
-    timestamp updatedDateTime
-  }
+## Tables
 
-  payment_channel {
-    bigint id PK
-    varchar name UK
-    boolean is_active
-    timestamp createdDateTime
-    timestamp updatedDateTime
-  }
+### `users`
 
-  merchant_channel_config {
-    bigint id PK
-    bigint merchant_id FK
-    bigint payment_channel_id FK
-    boolean is_active
-    text config_json
-    timestamp createdDateTime
-    timestamp updatedDateTime
-  }
+Portal accounts. Passwords are stored as BCrypt hashes.
 
-  payment {
-    bigint id PK
-    bigint merchant_id FK
-    bigint channel_config_id FK
-    bigint payment_channel_id FK
-    string merchant_reference_payment_id
-    string payment_channel_txn_id
-    numeric amount
-    varchar currency
-    varchar status
-    string payment_link_url
-    text merchant_metadata_json
-    timestamp createdDateTime
-    timestamp updatedDateTime
-  }
+| Column | Type | Constraints | Entity field |
+|--------|------|-------------|--------------|
+| `id` | `bigint` | `PK`, identity | `id` |
+| `email` | `varchar` | `NOT NULL`, `UNIQUE` | `email` |
+| `mobile_number` | `varchar(20)` | `UNIQUE` | `mobileNumber` |
+| `password_hash` | `varchar` | `NOT NULL` | `passwordHash` |
+| `name` | `varchar` | `NOT NULL` | `name` |
+| `is_active` | `boolean` | `NOT NULL`, default `true` | `isActive` |
+| `is_verified` | `boolean` | `NOT NULL`, default `false` | `isVerified` |
+| `createdDateTime` | `timestamp` | `NOT NULL` | audit |
+| `updatedDateTime` | `timestamp` | `NOT NULL` | audit |
 
-  webhook_incoming_log {
-    bigint id PK
-    bigint payment_id FK
-    bigint payment_channel_id FK
-    text raw_payload
-    string status
-    timestamp createdDateTime
-    timestamp updatedDateTime
-  }
+**Entity:** `UserEntity`
 
-  webhook_merchant_log {
-    bigint id PK
-    bigint webhook_incoming_log_id FK
-    bigint payment_id FK
-    bigint payment_channel_id FK
-    string webhook_url
-    text payload
-    string status
-    integer retry_count
-    timestamp last_attempt_at
-    timestamp createdDateTime
-    timestamp updatedDateTime
-  }
+**Relationships:**
 
-  payment_channel_api_log {
-    bigint id PK
-    bigint payment_id FK
-    bigint payment_channel_id FK
-    bigint channel_config_id FK
-    string operation
-    string request_method
-    string request_url
-    text request_headers
-    text request_body
-    int response_status_code
-    text response_headers
-    text response_body
-    int duration_ms
-    timestamp createdDateTime
-    timestamp updatedDateTime
-  }
+- M:N → `roles` via `user_role`
+- M:N → `merchant` via `user_merchant`
+- M:N → `business` via `user_business`
+- 1:1 ← `providers` (`providers.user_id`)
+- 1:N ← `auth_refresh_token` (`auth_refresh_token.user_id`)
+
+**Common queries:** `findByEmail`, `findByMobileNumber`, `existsByMobileNumber`, `existsByIdAndMerchants_Id`, `existsByIdAndBusinesses_Id`
+
+---
+
+### `roles`
+
+Lookup table for assignable roles. Rows must exist before user registration.
+
+| Column | Type | Constraints | Entity field |
+|--------|------|-------------|--------------|
+| `id` | `bigint` | `PK`, identity | `id` |
+| `role_name` | `varchar(64)` | `NOT NULL`, `UNIQUE` | `roleName` (`RoleNameEnum`, stored as string) |
+| `description` | `varchar(255)` | | `description` |
+| `createdDateTime` | `timestamp` | `NOT NULL` | audit |
+| `updatedDateTime` | `timestamp` | `NOT NULL` | audit |
+
+**Entity:** `RoleEntity`
+
+**Enum values (`RoleNameEnum`):**
+
+| Value | Description (seed) |
+|-------|-------------------|
+| `CUSTOMER` | End customer / marketplace buyer |
+| `PROVIDER` | Service provider |
+| `ADMIN` | Tenant or operations admin |
+| `SUPER_ADMIN` | Full administrative access |
+
+**Seed script:** `scripts/seed-roles.sql` (idempotent `ON CONFLICT (role_name) DO NOTHING`)
+
+---
+
+### `user_role`
+
+Join table: users ↔ roles.
+
+| Column | Type | Constraints |
+|--------|------|-------------|
+| `user_id` | `bigint` | `FK` → `users.id` |
+| `role_id` | `bigint` | `FK` → `roles.id` |
+
+Composite primary key on `(user_id, role_id)` (Hibernate default for `@JoinTable`).
+
+---
+
+### `user_merchant`
+
+Join table: users ↔ merchants (portal ownership / access).
+
+| Column | Type | Constraints |
+|--------|------|-------------|
+| `user_id` | `bigint` | `FK` → `users.id` |
+| `merchant_id` | `bigint` | `FK` → `merchant.id` |
+
+---
+
+### `user_business`
+
+Join table: users ↔ business records.
+
+| Column | Type | Constraints |
+|--------|------|-------------|
+| `user_id` | `bigint` | `FK` → `users.id` |
+| `business_id` | `bigint` | `FK` → `business.id` |
+
+---
+
+### `auth_refresh_token`
+
+Opaque refresh tokens for session renewal. Only a **SHA-256 hash** of the token is stored.
+
+| Column | Type | Constraints | Entity field |
+|--------|------|-------------|--------------|
+| `id` | `bigint` | `PK`, identity | `id` |
+| `user_id` | `bigint` | `NOT NULL`, `FK` → `users.id` | `user` |
+| `token_hash` | `varchar(64)` | `NOT NULL`, `UNIQUE` | `tokenHash` |
+| `expires_at` | `timestamp` | `NOT NULL` | `expiresAt` |
+| `revoked_at` | `timestamp` | nullable | `revokedAt` (set on logout / rotation) |
+| `createdDateTime` | `timestamp` | `NOT NULL` | audit |
+| `updatedDateTime` | `timestamp` | `NOT NULL` | audit |
+
+**Entity:** `AuthRefreshTokenEntity`
+
+**Common queries:** `findByTokenHashAndRevokedAtIsNull`
+
+---
+
+### `business`
+
+Business tenant records. List/update/delete API endpoints are not fully implemented (`501`).
+
+| Column | Type | Constraints | Entity field |
+|--------|------|-------------|--------------|
+| `id` | `bigint` | `PK`, identity | `id` |
+| `name` | `varchar` | `NOT NULL` | `name` |
+| `email` | `varchar` | `NOT NULL`, `UNIQUE` | `email` |
+| `address` | `text` | | `address` |
+| `mobile_number` | `varchar(20)` | `UNIQUE` | `mobileNumber` |
+| `is_active` | `boolean` | `NOT NULL`, default `true` | `isActive` |
+| `createdDateTime` | `timestamp` | `NOT NULL` | audit |
+| `updatedDateTime` | `timestamp` | `NOT NULL` | audit |
+
+**Entity:** `BusinessEntity`
+
+**Relationships:** M:N ← `users` via `user_business`
+
+**Common queries:** `findByEmail`
+
+---
+
+### `merchant`
+
+Merchant accounts. Each row gets a unique `api_key` (UUID) on create for future integration authentication.
+
+| Column | Type | Constraints | Entity field |
+|--------|------|-------------|--------------|
+| `id` | `bigint` | `PK`, identity | `id` |
+| `name` | `varchar` | `NOT NULL` | `name` |
+| `api_key` | `varchar` | `NOT NULL`, `UNIQUE` | `apiKey` |
+| `email` | `varchar` | `NOT NULL`, `UNIQUE` | `email` |
+| `is_active` | `boolean` | `NOT NULL`, default `true` | `isActive` |
+| `createdDateTime` | `timestamp` | `NOT NULL` | audit |
+| `updatedDateTime` | `timestamp` | `NOT NULL` | audit |
+
+**Entity:** `MerchantEntity`
+
+**Relationships:**
+
+- 1:1 → `merchant_config`
+- 1:N → `merchant_payment_channel_config`
+- M:N ← `users` via `user_merchant`
+
+**Common queries:** `findByApiKey`, `findByEmail`, `findByUsers_IdOrderByIdAsc`
+
+---
+
+### `merchant_config`
+
+Per-merchant settings (webhook URL, default currency).
+
+| Column | Type | Constraints | Entity field |
+|--------|------|-------------|--------------|
+| `id` | `bigint` | `PK`, identity | `id` |
+| `merchant_id` | `bigint` | `NOT NULL`, `UNIQUE`, `FK` → `merchant.id` | `merchant` |
+| `webhook_url` | `text` | | `webhookUrl` |
+| `currency` | `varchar(3)` | `NOT NULL` | `currency` (ISO 4217, e.g. `USD`) |
+| `createdDateTime` | `timestamp` | `NOT NULL` | audit |
+| `updatedDateTime` | `timestamp` | `NOT NULL` | audit |
+
+**Entity:** `MerchantConfigEntity`
+
+One config row per merchant (`merchant_id` unique).
+
+**Common queries:** `findByMerchant_Id`
+
+---
+
+### `merchant_payment_channel_config`
+
+Per-merchant payment channel credentials/settings stored as opaque JSON. No `payment_channel` master table is wired in the current codebase (FK commented out in entity).
+
+| Column | Type | Constraints | Entity field |
+|--------|------|-------------|--------------|
+| `id` | `bigint` | `PK`, identity | `id` |
+| `merchant_id` | `bigint` | `NOT NULL`, `FK` → `merchant.id` | `merchant` |
+| `is_active` | `boolean` | `NOT NULL`, default `true` | `isActive` |
+| `config_json` | `text` | | `configJson` |
+| `createdDateTime` | `timestamp` | `NOT NULL` | audit |
+| `updatedDateTime` | `timestamp` | `NOT NULL` | audit |
+
+**Entity:** `MerchantPaymentChannelConfigEntity`
+
+**Common queries:** `findByMerchant_IdOrderByIdAsc`, `findByIdAndMerchant_Id`
+
+> **Note:** `scripts/update-payment-channel-name-check.sql` references a legacy `payment_channel` table that is not present in current JPA entities.
+
+---
+
+### `providers`
+
+Service provider profile extension; exactly one row per user with the `PROVIDER` role.
+
+| Column | Type | Constraints | Entity field |
+|--------|------|-------------|--------------|
+| `id` | `bigint` | `PK`, identity | `id` |
+| `user_id` | `bigint` | `NOT NULL`, `UNIQUE`, `FK` → `users.id` | `user` |
+| `bio` | `text` | | `bio` |
+| `is_verified` | `boolean` | `NOT NULL`, default `false` | `isVerified` |
+| `average_rating` | `double precision` | `NOT NULL`, default `0.0` | `averageRating` |
+| `profile_completion_percentage` | `integer` | `NOT NULL` | `profileCompletionPercentage` |
+| `is_active` | `boolean` | `NOT NULL`, default `true` | `isActive` |
+| `address` | `text` | | `address` |
+| `createdDateTime` | `timestamp` | `NOT NULL` | audit |
+| `updatedDateTime` | `timestamp` | `NOT NULL` | audit |
+
+**Entity:** `ProviderEntity`
+
+**Common queries:** `existsByUser_Id`, `findByIdWithUserAndRoles`, `findByUserIdWithUserAndRoles`
+
+---
+
+### `catalog_category`
+
+Top-level catalog grouping for on-demand services.
+
+| Column | Type | Constraints | Entity field |
+|--------|------|-------------|--------------|
+| `id` | `bigint` | `PK`, identity | `id` |
+| `name` | `varchar(255)` | `NOT NULL` | `name` |
+| `description` | `varchar(2000)` | | `description` |
+| `display_order` | `integer` | `NOT NULL`, default `0` | `displayOrder` |
+| `active` | `boolean` | `NOT NULL`, default `true` | `active` |
+| `createdDateTime` | `timestamp` | `NOT NULL` | audit |
+| `updatedDateTime` | `timestamp` | `NOT NULL` | audit |
+
+**Entity:** `CatalogCategoryEntity`
+
+**Common queries:** `findByActiveTrue`, `existsByNameIgnoreCase`
+
+---
+
+### `catalog_service`
+
+Individual catalog entries under a category.
+
+| Column | Type | Constraints | Entity field |
+|--------|------|-------------|--------------|
+| `id` | `bigint` | `PK`, identity | `id` |
+| `catalog_category_id` | `bigint` | `NOT NULL`, `FK` → `catalog_category.id` | `catalogCategory` |
+| `name` | `varchar(512)` | `NOT NULL` | `name` |
+| `description` | `varchar(4000)` | | `description` |
+| `display_order` | `integer` | `NOT NULL`, default `0` | `displayOrder` |
+| `active` | `boolean` | `NOT NULL`, default `true` | `active` |
+| `createdDateTime` | `timestamp` | `NOT NULL` | audit |
+| `updatedDateTime` | `timestamp` | `NOT NULL` | audit |
+
+**Entity:** `CatalogServiceEntity`
+
+**Common queries:** `findByCatalogCategory_IdAndActiveTrueOrderByDisplayOrderAscIdAsc`, `existsByCatalogCategory_IdAndNameIgnoreCase`
+
+---
+
+## Data not persisted
+
+The following application data is **in-memory only** and has no database tables:
+
+| Data | Location | Notes |
+|------|----------|-------|
+| Email login OTP sessions | `AuthService` | Lost on restart; not cluster-safe |
+| Forgot-password OTP sessions | `AuthService` | Same |
+| Mobile login OTP sessions | `AuthService` | Same |
+
+---
+
+## Setup and operations
+
+### Local development
+
+1. Create PostgreSQL database `db_ondemand_service`.
+2. Start the application with the `dev` profile (default). Hibernate creates/updates tables (`ddl-auto=update`).
+3. Seed roles:
+
+```bash
+psql -h localhost -U postgres -d db_ondemand_service -f scripts/seed-roles.sql
 ```
 
-### 2.3 Relationship summary
+### Production
 
-| From | To | Cardinality | Implementation notes |
-| ---- | -- | ----------- | -------------------- |
-| `users` | `merchant` | **M:N** | Join table `user_merchant` (`user_id`, `merchant_id`). Composite PK recommended for DBA control (JPA may not declare PK on join table — verify DDL). |
-| `merchant` | `merchant_config` | **1:0..1** | `merchant_config.merchant_id` **UNIQUE** + NOT NULL → at most one config row per merchant. |
-| `merchant` | `merchant_channel_config` | **1:N** | Multiple channel configs per merchant (e.g. per `payment_channel`). |
-| `payment_channel` | `merchant_channel_config` | **1:N** | Same channel can be configured for many merchants. |
-| `merchant` | `payment` | **1:N** | |
-| `merchant_channel_config` | `payment` | **1:N** | |
-| `payment_channel` | `payment` | **1:N** | `payment.payment_channel_id` references the channel row; channel key is `payment_channel.name` (enum string), not duplicated on `payment`. |
-| `payment` | `webhook_incoming_log` | **1:N** | `payment_id` nullable on entity → optional FK in DB. |
-| `payment` | `webhook_merchant_log` | **1:N** | `payment_id` NOT NULL. |
-| `webhook_incoming_log` | `webhook_merchant_log` | **1:N** | `webhook_incoming_log_id` nullable. |
-| `payment` | `payment_channel_api_log` | **1:N** | `payment_id` nullable. |
+- Set `DB_URL`, `DB_USERNAME`, `DB_PASSWORD`, and `JWT_SECRET`.
+- Use `ddl-auto=validate` — schema must already match entities.
+- Run `scripts/seed-roles.sql` once per environment before accepting user registrations.
 
----
+### Inspecting schema
 
-## 3. Table specifications
+```sql
+-- List tables
+SELECT tablename FROM pg_tables WHERE schemaname = 'public' ORDER BY tablename;
 
-Naming below: non-audit fields use **snake_case** as typically produced by Spring Boot’s default physical naming. **Audit** columns are the exception (see §3.1).
+-- Example: users table
+\d users
+```
 
-### 3.1 Auditing columns (inherited)
-
-Present on every entity that extends `AuditableEntity` (`UserEntity`, `MerchantEntity`, `MerchantConfigEntity`, `PaymentChannelEntity`, `MerchantChannelConfigEntity`, `PaymentEntity`, `WebhookIncomingLogEntity`, `WebhookMerchantLogEntity`, `PaymentChannelApiLogEntity`). Mapped in `AuditableEntity` with explicit `@Column` names:
-
-| Column | Type | Nullable | Description |
-| ------ | ---- | -------- | ----------- |
-| `createdDateTime` | `timestamp` | NOT NULL | Set on insert (`@CreatedDate`). |
-| `updatedDateTime` | `timestamp` | NOT NULL | Updated on each change (`@LastModifiedDate`). |
-
-On PostgreSQL, Hibernate typically emits quoted identifiers for these names so casing matches the mapping. Per-table “+ audit” rows in §3.2–§3.11 refer to these two columns.
+With `spring.jpa.show-sql=true` (dev), Hibernate logs DDL and DML to the application log.
 
 ---
 
-### 3.2 `users`
+## Entity index
 
-Back-office / UI users; many-to-many with merchants.
-
-| Column | Type | Constraints | Description |
-| ------ | ---- | ----------- | ----------- |
-| `id` | `bigint` | PK, identity | Surrogate key. |
-| `email` | `varchar` | NOT NULL, UNIQUE | Login identifier. |
-| `password_hash` | `varchar` | NOT NULL | Password storage (e.g. BCrypt). |
-| `name` | `varchar` | NOT NULL | Display name. |
-| `is_active` | `boolean` | NOT NULL | Account enabled. |
-| `is_verified` | `boolean` | NOT NULL | Verification flag. |
-| + audit | `createdDateTime`, `updatedDateTime` | NOT NULL | §3.1 |
-
-**Indexes (recommended):** PK on `id`, UNIQUE on `email`.
-
----
-
-### 3.3 `user_merchant`
-
-Join table for `users` ↔ `merchant`.
-
-| Column | Type | Constraints | Description |
-| ------ | ---- | ----------- | ----------- |
-| `user_id` | `bigint` | FK → `users.id` | |
-| `merchant_id` | `bigint` | FK → `merchant.id` | |
-
-**Indexes (recommended):** Composite PK `(user_id, merchant_id)`; index on `merchant_id` for reverse lookups.
+| Table | JPA entity | Package |
+|-------|------------|---------|
+| `users` | `UserEntity` | `user.entity` |
+| `roles` | `RoleEntity` | `role.entity` |
+| `user_role` | *(join table)* | — |
+| `user_merchant` | *(join table)* | — |
+| `user_business` | *(join table)* | — |
+| `auth_refresh_token` | `AuthRefreshTokenEntity` | `auth.entity` |
+| `business` | `BusinessEntity` | `business.entity` |
+| `merchant` | `MerchantEntity` | `merchant.entity` |
+| `merchant_config` | `MerchantConfigEntity` | `merchant.entity` |
+| `merchant_payment_channel_config` | `MerchantPaymentChannelConfigEntity` | `merchant.entity` |
+| `providers` | `ProviderEntity` | `provider.entity` |
+| `catalog_category` | `CatalogCategoryEntity` | `catalog.entity` |
+| `catalog_service` | `CatalogServiceEntity` | `catalog.entity` |
 
 ---
 
-### 3.4 `merchant`
+## Related documentation
 
-Core merchant record; API key for server-to-server integration.
-
-| Column | Type | Constraints | Description |
-| ------ | ---- | ----------- | ----------- |
-| `id` | `bigint` | PK, identity | |
-| `name` | `varchar` | NOT NULL | |
-| `api_key` | `varchar` | NOT NULL, UNIQUE | Merchant API key (e.g. UUID string). |
-| `is_active` | `boolean` | NOT NULL | |
-| + audit | `createdDateTime`, `updatedDateTime` | NOT NULL | §3.1 |
-
-**Indexes:** PK, UNIQUE(`api_key`).
-
----
-
-### 3.5 `merchant_config`
-
-**One row per merchant** (integration defaults and callbacks).
-
-| Column | Type | Constraints | Description |
-| ------ | ---- | ----------- | ----------- |
-| `id` | `bigint` | PK, identity | |
-| `merchant_id` | `bigint` | NOT NULL, FK → `merchant.id`, **UNIQUE** | Enforces 1:1. |
-| `webhook_url` | `text` | NULL | Consumer webhook URL for outbound notifications. |
-| `currency` | `varchar(3)` | NOT NULL | ISO 4217 alphabetic code (e.g. `USD`). Used when creating payments / links. |
-| + audit | `createdDateTime`, `updatedDateTime` | NOT NULL | §3.1 |
-
-**Indexes:** UNIQUE(`merchant_id`); FK to `merchant`.
-
----
-
-### 3.6 `payment_channel`
-
-Catalog of integrated payment providers. Mapped by **`PaymentChannelEntity`**, which **extends `AuditableEntity`** (same audit columns as §3.1).
-
-| Column | Type | Constraints | Description |
-| ------ | ---- | ----------- | ----------- |
-| `id` | `bigint` | PK, identity | |
-| `name` | `varchar` | NOT NULL, UNIQUE | Enum string — see §4.1. |
-| `is_active` | `boolean` | NOT NULL | Whether this channel is available for new routing / configuration. |
-| + audit | `createdDateTime`, `updatedDateTime` | NOT NULL | §3.1 |
-
----
-
-### 3.7 `merchant_channel_config`
-
-Per-merchant, per-channel credentials and settings (often JSON).
-
-| Column | Type | Constraints | Description |
-| ------ | ---- | ----------- | ----------- |
-| `id` | `bigint` | PK, identity | |
-| `merchant_id` | `bigint` | NOT NULL, FK → `merchant.id` | |
-| `payment_channel_id` | `bigint` | NOT NULL, FK → `payment_channel.id` | |
-| `is_active` | `boolean` | NOT NULL | Only active configs should be used by orchestration. |
-| `config_json` | `text` | NULL | Channel-specific secrets/config (protect at rest). |
-| + audit | `createdDateTime`, `updatedDateTime` | NOT NULL | §3.1 |
-
-**Indexes (recommended):** `(merchant_id, is_active)` for “resolve active config” queries; FKs.
-
----
-
-### 3.8 `payment`
-
-Payment attempt / transaction record.
-
-| Column | Type | Constraints | Description |
-| ------ | ---- | ----------- | ----------- |
-| `id` | `bigint` | PK, identity | Internal payment id (exposed to consumers as appropriate). |
-| `merchant_id` | `bigint` | NOT NULL, FK → `merchant.id` | |
-| `channel_config_id` | `bigint` | NOT NULL, FK → `merchant_channel_config.id` | |
-| `payment_channel_id` | `bigint` | NOT NULL, FK → `payment_channel.id` | Channel key is **`payment_channel.name`** (see §4.1); there is no separate name column on `payment`. |
-| `merchant_reference_payment_id` | `varchar` | NOT NULL | Idempotent / correlation id from consumer. |
-| `payment_channel_txn_id` | `varchar` | NULL | Provider transaction id after link creation / updates. |
-| `amount` | `numeric(19,4)` | NOT NULL | |
-| `currency` | `varchar(3)` | NOT NULL | Copied from `merchant_config.currency` at creation (not from raw API body in current design). |
-| `status` | `varchar` | NOT NULL | Enum string — see §4. Default `PENDING`. |
-| `payment_link_url` | `varchar` | NULL | Generated checkout URL. |
-| `merchant_metadata_json` | `text` | NULL | Opaque merchant metadata. |
-| + audit | `createdDateTime`, `updatedDateTime` | NOT NULL | §3.1 |
-
-**Indexes (recommended):** FK indexes; optional UNIQUE(`merchant_id`, `merchant_reference_payment_id`) if business rules require global idempotency per merchant.
-
----
-
-### 3.9 `webhook_incoming_log`
-
-Inbound webhook payload audit from payment channels.
-
-| Column | Type | Constraints | Description |
-| ------ | ---- | ----------- | ----------- |
-| `id` | `bigint` | PK, identity | |
-| `payment_id` | `bigint` | FK → `payment.id`, NULL | Optional link to payment. |
-| `payment_channel_id` | `bigint` | FK → `payment_channel.id`, NULL | |
-| `raw_payload` | `text` | NOT NULL | Raw body. |
-| `status` | `varchar` | NOT NULL | Application-defined processing status. |
-| + audit | `createdDateTime`, `updatedDateTime` | NOT NULL | §3.1 |
-
----
-
-### 3.10 `webhook_merchant_log`
-
-Outbound calls to the consumer webhook URL (and retries).
-
-| Column | Type | Constraints | Description |
-| ------ | ---- | ----------- | ----------- |
-| `id` | `bigint` | PK, identity | |
-| `webhook_incoming_log_id` | `bigint` | FK → `webhook_incoming_log.id`, NULL | |
-| `payment_id` | `bigint` | NOT NULL, FK → `payment.id` | |
-| `payment_channel_id` | `bigint` | NOT NULL, FK → `payment_channel.id` | |
-| `webhook_url` | `varchar` | NOT NULL | URL used for this attempt (copy at send time). |
-| `payload` | `text` | NOT NULL | JSON (or similar) sent to consumer. |
-| `status` | `varchar` | NOT NULL | e.g. PENDING / SUCCESS / FAILED. |
-| `retry_count` | `integer` | NOT NULL | Default 0. |
-| `last_attempt_at` | `timestamp` | NULL | |
-| + audit | `createdDateTime`, `updatedDateTime` | NOT NULL | §3.1 |
-
----
-
-### 3.11 `payment_channel_api_log`
-
-Outbound HTTP audit to payment channel APIs.
-
-| Column | Type | Constraints | Description |
-| ------ | ---- | ----------- | ----------- |
-| `id` | `bigint` | PK, identity | |
-| `payment_id` | `bigint` | FK → `payment.id`, NULL | |
-| `payment_channel_id` | `bigint` | FK → `payment_channel.id`, NULL | |
-| `channel_config_id` | `bigint` | FK → `merchant_channel_config.id`, NULL | |
-| `operation` | `varchar` | NOT NULL | e.g. `CREATE_PAYMENT_LINK`. |
-| `request_method` | `varchar` | NOT NULL | GET, POST, … |
-| `request_url` | `varchar` | NOT NULL | |
-| `request_headers` | `text` | NULL | Mask secrets in application layer. |
-| `request_body` | `text` | NULL | |
-| `response_status_code` | `integer` | NULL | |
-| `response_headers` | `text` | NULL | |
-| `response_body` | `text` | NULL | |
-| `duration_ms` | `integer` | NULL | |
-| + audit | `createdDateTime`, `updatedDateTime` | NOT NULL | §3.1 |
-
-**Retention:** Log tables can grow quickly — define **retention/archival** policy (partitioning by month, TTL job, etc.).
-
----
-
-## 4. Enumerated values (application layer)
-
-Stored as **strings** in VARCHAR columns (`EnumType.STRING`).
-
-### 4.1 `payment_channel.name` — `PaymentChannelNameEnum`
-
-`XPLORPAY`, `PAYMOB`, `STRIPE`, `RAZORPAY`, `TEST`
-
-If the database was created with an older CHECK constraint (for example only `DUMMY` or without `TEST`), manual inserts or Hibernate may fail with:
-
-`violates check constraint "payment_channel_name_check"`.
-
-Reconcile the constraint with the enum by running:
-
-`scripts/sql/postgresql/update-payment-channel-name-check.sql`
-
-If any row still uses `DUMMY`, update it to `TEST` before applying the script (see comment in that file).
-
-### 4.2 `payment.status` — `PaymentStatusEnum`
-
-`PENDING`, `SUCCESS`, `FAILED`, `CANCELLED`, `EXPIRED`
-
----
-
-## 5. Operational checklist for DBAs
-
-1. **FK consistency:** Nullable FKs on log tables allow partial records; monitor orphan rates if you add NOT NULL constraints later.
-2. **1:1 enforcement:** Rely on **UNIQUE** constraint on `merchant_config.merchant_id` (duplicate rows must fail).
-3. **Currency:** `merchant_config.currency` and `payment.currency` should stay aligned with product rules (ISO 4217).
-
----
-
-## 6. Document history
-
-| Version | Date | Author / note | Changes |
-| ------- | ---- | ------------- | ------- |
-| 1.0 | 2025-03-23 | Engineering | Initial DBA-oriented schema doc from JPA entities. |
-| 1.1 | 2025-03-23 | Engineering | `payment_channel`: `PaymentChannelEntity` extends `AuditableEntity`; document `is_active` and audit columns. |
-| 1.2 | 2026-03-25 | Engineering | Align with JPA: audit columns **`createdDateTime`** / **`updatedDateTime`** (`AuditableEntity`); remove obsolete `payment.payment_channel_name`; ER diagram and §1 naming notes; `@EnableJpaAuditing` reference. |
+| Document | Description |
+|----------|-------------|
+| [ARCHITECTURE.md](./ARCHITECTURE.md) | Application layers, security, API |
+| [README.md](./README.md) | Documentation index |
+| `scripts/seed-roles.sql` | Required role seed data |
+| `scripts/update-payment-channel-name-check.sql` | Legacy `payment_channel` constraint fix (optional) |

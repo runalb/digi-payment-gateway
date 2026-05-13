@@ -1,450 +1,456 @@
-# Digi Payment Gateway — Architecture Documentation
+# OnDemand Service — Architecture
 
-This document describes the **digi-payment-gateway** service as implemented in the repository: responsibilities, layering, APIs, security, data model, and extension points. It reflects the current code (Spring Boot 4.0.3, Java 21, PostgreSQL).
+This document describes the **ondemand-service** Spring Boot application in this repository (`com.runalb.ondemand_service`). It is the backend API for user identity, merchant configuration, service catalog, and provider profiles. Payment processing, integration endpoints, and inbound webhooks are partially scaffolded but not yet implemented.
 
----
-
-## 1. Purpose and scope
-
-The service is a **backend payment orchestration API** that:
-
-- Exposes **integration APIs** for **third-party merchant systems**: those clients authenticate **only with an API key** (`X-API-Key`); they do not use JWT for integration routes.
-- Exposes **portal APIs** consumed by **our UI**: operators sign **in first** (password or OTP flows) to receive a **JWT** (and refresh token), then call protected portal endpoints with `Authorization: Bearer <token>`.
-- Provides **authentication** endpoints (login, email/mobile OTP, refresh, logout) and **user registration** as public pre-login steps where applicable.
-- Accepts **payment channel webhooks** (currently wired for a **test** adapter) to update payment status.
-- Persists merchants, users, payments, and configuration in **PostgreSQL** via **JPA/Hibernate**.
-
-It is **not** a full front-end application. **Merchant** list, get, patch, and payment-channel-config list/get/patch routes still return **501 Not Implemented**. **User** self-service (get, update, deactivate, reactivate) is implemented and gated so the caller may only act on their own `userId` (see §6.2). **Merchant** create/delete and payment-channel-config create/delete require a JWT and enforce **user–merchant** ownership via `AuthService` and `UserService.userOwnsMerchant`.
+For table-level schema detail, see [DATABASE.md](./DATABASE.md).
 
 ---
 
-## 2. Client access model
+## Overview
 
-
-| Client                                                         | APIs                                                                                                                                      | Authentication                                                                                                                                           |
-| -------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **Third-party client** (merchant backend, partner integration) | **Integration only** — `/api/v1/integration/**` (payment links, transactions, terminal test placeholder)                                  | **API key** in header `X-API-Key`. JWT is **not** used on these paths.                                                                                   |
-| **UI portal** (first-party admin/merchant portal)              | **Portal resource APIs** — `/api/v1/portal/**` (merchants, users). **Auth APIs** — `/api/v1/auth/**` (login, OTP, refresh, logout). | **JWT** after login: obtain access token from auth endpoints, then send `Authorization: Bearer <access_token>`. Refresh via `POST /api/v1/auth/refresh`. |
-
-
-**Flow in practice**
-
-1. **Third-party system:** Configure the merchant’s API key (issued at onboarding). Call integration endpoints server-to-server with that key only.
-2. **Portal user:** Open the UI → register or use existing account → **login** (password or OTP) → store access/refresh tokens → attach Bearer token to every subsequent portal API request until expiry, then refresh or log in again.
-
-**Public (unauthenticated) paths** are limited to what Spring Security and `JwtAuthenticationFilter` allow without a JWT: for example user signup (`POST /api/v1/portal/users`), auth login/OTP/refresh/logout under `/api/v1/auth/**`, and `OPTIONS`. Other `/api/**` routes typically require a valid JWT.
-
-**Webhooks** (`/webhook/**`) are a separate inbound channel from payment providers; they are not called by the third-party client or the portal user browser for normal API access.
-
----
-
-## 3. Technology stack
-
-
-| Area        | Choice                                                                                     |
-| ----------- | ------------------------------------------------------------------------------------------ |
-| Runtime     | Java 21                                                                                    |
-| Framework   | Spring Boot 4.0.3 (`spring-boot-starter-webmvc`, validation, security, data-jpa, actuator) |
-| Persistence | Spring Data JPA, Hibernate (`ddl-auto`: `update` in dev, `validate` in prod)               |
-| Database    | PostgreSQL                                                                                 |
-| Security    | Spring Security; custom **JWT** (HMAC-SHA256); **API key** header for integration routes   |
-| Build       | Maven (`pom.xml`)                                                                          |
-| HTTP client | `RestTemplate` bean (`config/RestTemplateConfig`) for future outbound calls                |
-| Utilities   | Lombok                                                                                     |
-
-
----
-
-## 4. High-level architecture
+The service exposes a versioned REST API under `/api/v1`. It uses **PostgreSQL** for persistence, **Spring Security** with a dual authentication model (JWT for portal users, API key for merchant integration), and a layered **controller → service → repository** structure per domain package.
 
 ```mermaid
 flowchart TB
     subgraph clients [Clients]
-        MerchantBackend[Third-party client — API key only]
-        PortalClient[Portal client — browser or app]
-        PaymentChannel[Payment channel provider]
+        Web[Web / mobile portal]
+        Admin[Super admin]
+        Merchant[Merchant integration]
     end
 
-    subgraph app [digi-payment-gateway]
-        subgraph sec [Security — filter chain]
-            ApiKey[ApiKeyAuthenticationFilter<br/>integration.security]
-            Jwt[JwtAuthenticationFilter<br/>security]
-        end
-        subgraph web [Web layer — REST controllers]
-            IntCtrl["Integration API<br/>/api/v1/integration/**"]
-            PortalCtrl["Portal API<br/>controller/portal — /api/v1/portal/**"]
-            AuthCtrl["Auth API<br/>/api/v1/auth/**"]
-            WhCtrl["Webhooks<br/>/webhook/**"]
-        end
-        subgraph domain [Application services]
-            Orch[PaymentOrchestrationService<br/>integration.service]
-            PaySvc[PaymentService<br/>service — shared]
-            MerchSvc[MerchantService]
-            UserSvc[UserService]
-            AuthSvc[AuthService]
-        end
-        subgraph adapters [Channel adapters]
-            PCA[PaymentChannelAdapter implementations]
-        end
-        subgraph data [Persistence]
-            Repo[JPA repositories]
-            PG[(PostgreSQL)]
-        end
+    subgraph api [Spring Boot API]
+        Filters[Security filters]
+        Controllers[REST controllers]
+        Services[Domain services]
+        JPA[Spring Data JPA]
     end
 
-    MerchantBackend -->|HTTPS + X-API-Key| ApiKey
-    ApiKey -->|valid key → MerchantEntity in context| IntCtrl
+    DB[(PostgreSQL)]
 
-    PortalClient -->|HTTPS; Bearer JWT on protected routes| Jwt
-    Jwt -->|DispatcherServlet → handler| PortalCtrl
-    Jwt -->|DispatcherServlet → handler| AuthCtrl
-
-    PaymentChannel -->|HTTPS POST callback| WhCtrl
-
-    IntCtrl --> Orch
-    PortalCtrl --> MerchSvc
-    PortalCtrl --> UserSvc
-    PortalCtrl --> AuthSvc
-    AuthCtrl --> AuthSvc
-    WhCtrl --> PCA
-
-    Orch --> MerchSvc
-    Orch --> PaySvc
-    Orch --> PCA
-    AuthSvc --> UserSvc
-    MerchSvc --> Repo
-    PaySvc --> Repo
-    UserSvc --> Repo
-    AuthSvc --> Repo
-    Repo --> PG
+    Web --> Filters
+    Admin --> Filters
+    Merchant --> Filters
+    Filters --> Controllers
+    Controllers --> Services
+    Services --> JPA
+    JPA --> DB
 ```
 
+---
 
+## Technology stack
 
-**Request flow summary**
+| Area | Choice |
+|------|--------|
+| Runtime | Java **21** |
+| Framework | Spring Boot **4.0.3** |
+| Artifact | `com.runalb:ondemand-service-api:0.0.1-SNAPSHOT` |
+| Web | `spring-boot-starter-webmvc`, validation, JSON |
+| Persistence | `spring-boot-starter-data-jpa`, PostgreSQL driver |
+| Security | `spring-boot-starter-security`, BCrypt passwords |
+| Observability | `spring-boot-starter-actuator` |
+| Boilerplate | Lombok |
+| JWT | Custom HS256 implementation in `JwtService` (no third-party JWT library) |
+| HTTP client | `RestTemplate` bean (`RestTemplateConfig`) — defined but unused by services today |
 
-- **Integration** (`/api/v1/integration/**`) — **third-party clients only:** Every request is evaluated by `integration.security.ApiKeyAuthenticationFilter` before it reaches integration controllers; there is **no** direct client-to-controller path. The filter resolves `X-API-Key` to a `MerchantEntity` and sets `ROLE_INTEGRATION`. `JwtAuthenticationFilter` **skips** these paths, so integration APIs are **not** accessible with Bearer JWT in lieu of an API key.
-- **Portal** (`/api/v1/portal/**`) and **auth** (`/api/v1/auth/**`) — **portal after login:** `JwtAuthenticationFilter` runs on `/api/**` (except integration); it validates `Authorization: Bearer <jwt>` on protected routes. Public routes include `POST /api/v1/portal/users` (signup), auth login/OTP/refresh/logout under `/api/v1/auth/**`, as mirrored in `SecurityConfig` and `JwtAuthenticationFilter`.
-- **Webhooks** (`/webhook/**`): Permitted without authentication (verify signatures at the edge or in adapters before production use).
+### Application bootstrap
+
+`OnDemandServiceApplication` enables:
+
+- `@SpringBootApplication` — component scan and auto-configuration
+- `@EnableJpaAuditing` — `createdDateTime` / `updatedDateTime` on entities extending `AuditableEntity`
+- `@EnableScheduling` — OTP session cleanup in `AuthService`
+
+### Configuration profiles
+
+| Property | Default / dev | Production |
+|----------|---------------|------------|
+| `spring.application.name` | `ondemand-service` | same |
+| Active profile | `dev` | set via deployment |
+| Server port | `8080` | `8080` |
+| JWT access TTL | `3600` s | `3600` s |
+| JWT refresh TTL | `1209600` s (14 days) | same |
+| OTP resend cooldown | `45` s | same |
+| OTP cleanup interval | `60000` ms | same |
+| Hibernate `ddl-auto` | `update` (dev) | `validate` (prod) |
+| JWT secret | dev placeholder in `application-dev.properties` | `JWT_SECRET` env var |
+| Database | local `db_ondemand_service` | `DB_URL`, `DB_USERNAME`, `DB_PASSWORD` |
 
 ---
 
-## 5. Package and layer structure
+## Package structure
 
-Root Java package is `com.digirestro.digi_payment_gateway` under `src/main/java` (aligned with the Maven `groupId` and artifact in `pom.xml`).
+Source root: `src/main/java/com/runalb/ondemand_service/`
 
-**`integration` package (aggregate):** Holds everything specific to the **third-party integration surface**: REST controllers under `integration/controller/`, inbound `integration/webhooks/`, `integration/security.ApiKeyAuthenticationFilter`, orchestration and principal extraction in `integration/service/`, request/response types in `integration/dto/` (plus `integration/dto/adaptor/` for adapter payloads), and `integration/adapter/` for payment-channel implementations. Shared domain operations that integration also needs (e.g. `MerchantService`, `PaymentService`, `PaymentChannelService`) stay in top-level `service/`.
+| Package | Responsibility |
+|---------|----------------|
+| `auth` | Login, OTP flows, password reset, refresh/logout; `AuthRefreshTokenEntity` |
+| `business` | `BusinessEntity` CRUD scaffolding (`BusinessController` mostly returns `501`) |
+| `catalog` | Admin-managed service catalog (categories and services) |
+| `common.persistence` | `AuditableEntity` base class |
+| `config` | `SecurityConfig`, `RestTemplateConfig` |
+| `exception` | `GlobalExceptionHandler` (`@RestControllerAdvice`) |
+| `merchant` | Merchant portal CRUD, merchant config, payment-channel config storage |
+| `provider` | Provider profile CRUD (1:1 with user) |
+| `role` | `RoleEntity`, `RoleNameEnum` |
+| `security` | `JwtService`, `JwtAuthenticationFilter`, `ApiKeyAuthenticationFilter`, `JwtPayload` |
+| `user` | User registration and self-service profile |
+| `util` | `InputSanitizer` — email, mobile, name, ISO 4217 currency normalization |
 
-
-| Layer / concern      | Location                                                            | Role                                                                                                                                                             |
-| -------------------- | ------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Bootstrap            | `DigiPaymentGatewayApplication`                                     | `@SpringBootApplication`, `@EnableJpaAuditing`, `@EnableScheduling`                                                                                              |
-| Config               | `config/SecurityConfig`, `config/RestTemplateConfig`                | `SecurityFilterChain`, CORS, `PasswordEncoder`; shared `RestTemplate` bean                                                                                       |
-| Web — integration    | `integration/controller/`, `integration/webhooks/`                  | Payment links, transactions, terminal placeholder, payment channel webhooks                                                                                      |
-| Web — portal         | `controller/portal/`                                                | Users, merchants (`UserController`, `MerchantController`)                                                                                                        |
-| Web — auth           | `auth/controller/`                                                  | Login, OTP, refresh, logout                                                                                                                                      |
-| Security             | `security/`, `integration/security/`                                | JWT creation/validation; `integration/security` — API key filter for integration routes                                                                          |
-| Domain services      | `service/`                                                          | `MerchantService`, `PaymentChannelService`, `UserService`, `PaymentService` (payment load/save/list-by-merchant; used by integration orchestration and adapters) |
-| Integration services | `integration/service/`                                              | `PaymentOrchestrationService`, `IntegrationAuthenticationService` (resolve `MerchantEntity` from API-key security context)                                       |
-| Auth domain          | `auth/service/`, `auth/entity/`, `auth/repository/`                 | Login/refresh/logout, OTP (in-memory), JWT issuance; portal authorization helpers (`loadAuthenticatedActiveUser`, merchant/user ownership assertions)           |
-| Adapters             | `integration/adapter/`                                              | `PaymentChannelAdapter` + `TestPaymentChannelAdapter`                                                                                                            |
-| Persistence          | `entity/`, `repository/`                                            | JPA entities and Spring Data repositories                                                                                                                        |
-| API contracts        | `dto/`, `auth/dto/`, `integration/dto/`, `integration/dto/adaptor/` | Portal DTOs; integration request/response and adapter DTOs                                                                                                       |
-| Cross-cutting        | `exception/GlobalExceptionHandler`, `util/ContactNormalizer`        | JSON error envelopes; email/mobile normalization for auth lookups                                                                                               |
-| Enums                | `enums/`                                                            | Payment status, channel names                                                                                                                                    |
-
+**Not yet implemented:** `payment` package (referenced in comments on `MerchantPaymentChannelConfigEntity`); integration controllers under `/api/v1/integration/**`; webhook handlers under `/webhook/**`.
 
 ---
 
-## 6. API surface
+## Domain model
 
-HTTP examples (variables, sample JSON) live in the Postman collection — see [§14](#14-postman-collection-http-cookbook).
+All persistent entities extend `AuditableEntity` (`createdDateTime`, `updatedDateTime`).
 
-### 6.1 Integration API (third-party clients — API key only)
+### Entity relationships
 
-Base path: `/api/v1/integration` (prefix configurable via `security.integration.path-prefix`, default `/api/v1/integration/`).
+```
+UserEntity ──M:N──► RoleEntity          (join: user_role)
+UserEntity ──M:N──► MerchantEntity      (join: user_merchant)
+UserEntity ──M:N──► BusinessEntity      (join: user_business)
+UserEntity ◄──1:1── ProviderEntity      (FK: user_id)
 
-Do **not** send `merchantId` in the payment-link body; the merchant is resolved from `X-API-Key` only (`integration.security.ApiKeyAuthenticationFilter`).
+MerchantEntity ◄──1:1── MerchantConfigEntity              (FK: merchant_id)
+MerchantEntity ◄──1:N── MerchantPaymentChannelConfigEntity (FK: merchant_id)
 
+CatalogCategoryEntity ◄──1:N── CatalogServiceEntity     (FK: catalog_category_id)
 
-| Method | Path                     | Auth        | Request / response notes                                                                                                                                 |
-| ------ | ------------------------ | ----------- | -------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| POST   | `/payment-link/generate` | `X-API-Key` | Body: `integration.dto.PaymentLinkRequest` — `merchantReferencePaymentId`, `amount` (≥ 0.01), optional `merchantMetadataJson`. **201** + `PaymentLinkResponse`. TEST adapter URLs resemble `http://localhost:8080/test-payment-link.html?paymentId=...&merchantId=...`. |
-| GET    | `/transactions`          | `X-API-Key` | `List<integration.dto.PaymentDetailsResponse>` for the authenticated merchant.                                                                           |
-| GET    | `/transactions/{id}`     | `X-API-Key` | `PaymentDetailsResponse` for `id` if owned by that merchant.                                                                                               |
-| GET    | `/terminal-payment/test` | `X-API-Key` | Placeholder (`TerminalPaymentIntegrationController`); plain-text smoke response.                                                                         |
-
-
-Principal type: `MerchantEntity` (`integration.service.IntegrationAuthenticationService.extractMerchant`).
-
-### 6.2 Portal API (JWT after login)
-
-Base path: `/api/v1/portal`.
-
-These routes are for **our UI portal** (first-party app), not for third-party server integration. The portal must **complete login** (see section 6.3) and send the **Bearer access token** on protected calls; third-party systems should use **section 6.1** with an API key instead.
-
-**Users** (`UserController`, `/api/v1/portal/users`)
-
-
-| Method | Path                    | Auth                         | Behavior                                                                                                                                 |
-| ------ | ----------------------- | ---------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------- |
-| POST   | `/users`                | Public                       | Signup — `dto.UserCreateRequest` (`email`, `password`, `name`, optional `mobileNumber` E.164) → `UserResponse`. **201**                    |
-| GET    | `/users`                | —                            | **No handler** (list mapping is commented out) — expect **404**, not 501.                                                                |
-| GET    | `/users/{userId}`       | Bearer + self                | `AuthService.assertAuthenticatedUserOwnsUserId` → `UserResponse`.                                                                        |
-| PATCH  | `/users/{userId}`       | Bearer + self                | `dto.UserUpdateRequest` → updated `UserResponse`.                                                                                        |
-| DELETE | `/users/{userId}`       | Bearer + self                | Soft-deactivate via `UserService.deactivateUser` — **204**                                                                               |
-| POST   | `/users/{userId}/reactivate` | Bearer + self           | `UserService.reactivateUser` → `UserResponse`.                                                                                           |
-
-**Merchants** (`MerchantController`, `/api/v1/portal/merchants`)
-
-
-| Method | Path                                                        | Auth          | Behavior                                                                                                                                 |
-| ------ | ----------------------------------------------------------- | ------------- | ---------------------------------------------------------------------------------------------------------------------------------------- |
-| POST   | `/merchants`                                                | Bearer        | `dto.MerchantRegistrationRequest` (`name`, optional ISO 4217 `currency`, optional `webhookUrl`) → `MerchantRegistrationResponse` including **apiKey**. **201** |
-| GET    | `/merchants`                                                | Bearer        | **501** — stub message.                                                                                                                  |
-| GET    | `/merchants/{merchantId}`                                   | Bearer        | **501** — stub message.                                                                                                                  |
-| PATCH  | `/merchants/{merchantId}`                                   | Bearer        | **501** — stub message (body: generic `Map` in controller).                                                                              |
-| DELETE | `/merchants/{merchantId}`                                   | Bearer + owner | `assertAuthenticatedUserOwnsMerchant` → `MerchantService.deactivateMerchant` — **204**                                                  |
-| POST   | `/merchants/{merchantId}/payment-channel-configs`           | Bearer + owner | `dto.MerchantPaymentChannelConfigCreateRequest` — required `paymentChannelId`; optional `paymentChannelName` (`PaymentChannelNameEnum`: XPLORPAY, PAYMOB, STRIPE, RAZORPAY, TEST); optional `configJson`. **201** |
-| GET    | `/merchants/{merchantId}/payment-channel-configs`           | Bearer        | **501** — stub message.                                                                                                                  |
-| GET    | `/merchants/{merchantId}/payment-channel-configs/{configId}` | Bearer       | **501** — stub message.                                                                                                                  |
-| PATCH  | `/merchants/{merchantId}/payment-channel-configs/{configId}` | Bearer      | **501** — stub message.                                                                                                                  |
-| DELETE | `/merchants/{merchantId}/payment-channel-configs/{configId}` | Bearer + owner | `assertAuthenticatedUserOwnsMerchant` → deactivate config — **204**                                                                    |
-
-### 6.3 Auth API (portal login — public until token issued)
-
-Base: `/api/v1/auth`.
-
-
-| Endpoint                                                     | Purpose                                              |
-| ------------------------------------------------------------ | ---------------------------------------------------- |
-| POST `/login`                                                | Email + password → access + refresh tokens           |
-| POST `/login/email/request-otp`, `/login/email/verify-otp`   | Email OTP (OTP logged in dev; no email provider yet) |
-| POST `/login/mobile/request-otp`, `/login/mobile/verify-otp` | Mobile OTP (same placeholder behavior)               |
-| POST `/refresh`                                              | New tokens from refresh token                        |
-| POST `/logout`                                               | Invalidates refresh token                            |
-
-
-JWT **subject** is the user’s **email** (`JwtService.generateToken(user.getEmail())` in `AuthService.issueTokens`). After `JwtAuthenticationFilter` validates the token, the security principal is that email string; `AuthService.resolveAuthenticatedActiveUser` loads the active `UserEntity` via `ContactNormalizer.normalizeEmail` and `UserService.findActiveUserByEmail`. Refresh tokens are stored hashed in `auth_refresh_token` (entity `AuthRefreshTokenEntity`).
-
-OTP state lives in **in-memory** `ConcurrentHashMap` instances in `AuthService` (not clustered); scheduled cleanup uses `security.otp.cleanup-interval-ms`. Resend throttling uses `security.otp.resend-cooldown-seconds` (default 45s).
-
-### 6.4 Webhooks
-
-- `POST /webhook/v1/payment-channel-webhooks/test` — **No** API key or JWT (`/webhook/**` is permit-all; harden with provider signatures in production). JSON body: `paymentStatus` (`PaymentStatusEnum`: INITIATED, PAYMENT_LINK_GENERATED, SUCCESS, FAILED, REFUNDED, VOIDED), numeric `paymentId`. `integration.webhooks.PaymentChannelWebhookController` delegates to `TestPaymentChannelAdapter.validateAndParseWebhook`; response type `integration.dto.adaptor.AdaptorWebhookResponse`.
-
----
-
-## 7. Payment orchestration and adapter pattern
-
-### 7.1 Orchestration (`integration.service.PaymentOrchestrationService`)
-
-Uses `MerchantService` for merchant/channel config and `PaymentService` for persisting and loading `PaymentEntity` rows (the same `PaymentService` is used by channel adapters, e.g. webhook handling).
-
-For **generate payment link**:
-
-1. Load `MerchantConfigEntity` (currency) and **first active** `MerchantPaymentChannelConfigEntity` for the merchant.
-2. Resolve `integration.adapter.PaymentChannelAdapter` where `adapter.getChannel().getName()` equals the config’s channel name.
-3. Persist a new `PaymentEntity` (`INITIATED`, amount, merchant reference, metadata JSON).
-4. Call `adapter.createPaymentLink(payment)`; persist returned URL, channel txn id, and status.
-5. Return `PaymentLinkResponse` (`integration.dto`).
-
-**Implication:** Exactly one “active” channel config is chosen via `findFirstByMerchant_IdAndIsActiveTrue`; ordering is repository-defined unless refined later.
-
-### 7.2 Adapter contract (`integration.adapter.PaymentChannelAdapter`)
-
-```text
-getChannel()
-createPaymentLink(PaymentEntity)
-validateAndParseWebhook(Map<String, Object>)
+UserEntity ◄──N:1── AuthRefreshTokenEntity                (FK: user_id)
 ```
 
-Implementations are Spring **beans**; orchestration injects `List<PaymentChannelAdapter>` and picks by channel name.
+### Roles (`RoleNameEnum`)
 
-**Current implementation:** `integration.adapter.TestPaymentChannelAdapter` — synthetic txn id, local test URL, webhook updates status via `service.PaymentService` from payload keys `paymentId`, `paymentStatus` (enum name).
+| Value | Typical use |
+|-------|-------------|
+| `CUSTOMER` | Marketplace buyer |
+| `PROVIDER` | Service provider (required for `/api/v1/providers/**`) |
+| `ADMIN` | Tenant / operations admin |
+| `SUPER_ADMIN` | Catalog mutations (`POST`/`PATCH`/`DELETE` on `/api/v1/catalog/**`) |
 
-**Declared channel names** (`PaymentChannelNameEnum`): `XPLORPAY`, `PAYMOB`, `STRIPE`, `RAZORPAY`, `TEST`. Only **TEST** has an adapter class in-tree; **payment_channel** rows must exist in the database for adapters to resolve (`PaymentChannelService.findByName`).
+Roles must exist in the database before user registration. Seed with `scripts/seed-roles.sql`.
 
----
+### Key entities
 
-## 8. Security model
-
-### 8.1 Spring Security (`SecurityConfig`)
-
-- **CSRF** disabled (stateless API style).
-- **CORS** allows all origin patterns, common methods, all headers, credentials false.
-- **PermitAll:** `OPTIONS /**`, `/webhook/**`, selected auth and user-registration paths.
-- **Authenticated:** `/api/v1/integration/**` and remaining `/api/**`.
-
-Filters (order): `integration.security.ApiKeyAuthenticationFilter` → `security.JwtAuthenticationFilter` → (defaults).
-
-### 8.2 API key integration (third-party → integration APIs only)
-
-- Type: `integration.security.ApiKeyAuthenticationFilter` (Spring `@Component`).
-- Header: `X-API-Key`.
-- Lookup: `MerchantRepository.findByApiKey`; merchant must be **active**.
-- Sets `UsernamePasswordAuthenticationToken` with principal = `MerchantEntity`, authority `ROLE_INTEGRATION`.
-
-### 8.3 JWT (portal / UI)
-
-- Custom `JwtService` (HS256, configurable `security.jwt.secret`, `security.jwt.expiration-seconds`).
-- Filter applies to `/api/**` except integration paths, webhooks, and explicitly public auth/signup routes.
-- Successful authentication sets `UsernamePasswordAuthenticationToken` with principal = **email** and authority `ROLE_USER`.
-
-**Operational note:** `SecurityConfig` permits email/mobile OTP endpoints without authentication; keep `JwtAuthenticationFilter.requiresJwtAuth` aligned with those paths so clients are not asked for a Bearer token on OTP steps.
-
-### 8.4 Secrets and profiles
-
-
-| Property / env                                                               | Use                                                                           |
-| ---------------------------------------------------------------------------- | ----------------------------------------------------------------------------- |
-| `security.jwt.secret`                                                        | JWT signing (dev default in `application-dev.properties`; prod: `JWT_SECRET`) |
-| `spring.datasource.`* / `DB_*`                                               | PostgreSQL                                                                    |
-| `security.jwt.expiration-seconds`, `security.jwt.refresh-expiration-seconds` | Token lifetimes                                                               |
-| `security.otp.cleanup-interval-ms`, `security.otp.resend-cooldown-seconds`   | OTP session sweep; minimum seconds between OTP requests per channel           |
-| `security.integration.path-prefix`                                           | Integration URL prefix for API key filter                                     |
-
+| Entity | Table | Notes |
+|--------|-------|-------|
+| `UserEntity` | `users` | Email and mobile unique; BCrypt `passwordHash`; `isActive`, `isVerified` |
+| `RoleEntity` | `roles` | `roleName` maps to `RoleNameEnum` |
+| `AuthRefreshTokenEntity` | `auth_refresh_token` | Opaque refresh token stored as SHA-256 hash; `revokedAt` for rotation |
+| `MerchantEntity` | `merchant` | Auto-generated UUID `apiKey` on create; used for integration auth |
+| `MerchantConfigEntity` | `merchant_config` | `webhookUrl`, ISO 4217 `currency` |
+| `MerchantPaymentChannelConfigEntity` | `merchant_payment_channel_config` | Opaque `configJson`; payment channel FK commented out |
+| `ProviderEntity` | `providers` | Bio, ratings, profile completion; 1:1 with user |
+| `BusinessEntity` | `business` | Name, email, address; M:N with users |
+| `CatalogCategoryEntity` | `catalog_category` | Ordered, activatable categories |
+| `CatalogServiceEntity` | `catalog_service` | Services under a category |
 
 ---
 
-## 9. Data model
+## API surface
 
-All persistent entities extend `AuditableEntity` (`createdDateTime`, `updatedDateTime`) with JPA auditing enabled.
+All controllers use `@RestController`. JSON request bodies are validated with Jakarta Bean Validation (`@Valid`).
+
+### Authentication — `/api/v1/auth` (public `POST`)
+
+| Endpoint | Purpose |
+|----------|---------|
+| `POST /login` | Email + password → access JWT + refresh token |
+| `POST /login/email/request-otp` | Request email OTP |
+| `POST /login/email/verify-otp` | Verify email OTP → tokens |
+| `POST /forgot-password/email/request-otp` | Forgot-password OTP |
+| `POST /forgot-password/email/reset-password` | Reset password with OTP |
+| `POST /login/mobile/request-otp` | Request mobile OTP |
+| `POST /login/mobile/verify-otp` | Verify mobile OTP → tokens |
+| `POST /refresh-token` | Rotate refresh token; issue new access JWT |
+| `POST /logout` | Revoke refresh token |
+
+### Users — `/api/v1/users`
+
+| Endpoint | Auth |
+|----------|------|
+| `POST /` | Public (registration) |
+| `GET /{userId}` | JWT; owner only |
+| `PATCH /{userId}` | JWT; owner only |
+| `DELETE /{userId}` | JWT; owner only (soft deactivate) |
+| `POST /{userId}/reactivate` | JWT; owner only |
+
+### Merchants — `/api/v1/portal/merchants`
+
+> Controller is annotated *"Not used in this project"* but fully implemented for merchant CRUD, config, and payment-channel config.
+
+| Endpoint | Purpose |
+|----------|---------|
+| `POST /` | Create merchant |
+| `GET /`, `GET /{merchantId}` | List / get |
+| `PATCH /{merchantId}`, `DELETE /{merchantId}` | Update / deactivate |
+| `GET|POST|PATCH /{merchantId}/config` | Merchant config |
+| `POST|GET|GET|PATCH|DELETE` under `/{merchantId}/payment-channel-configs` | Payment channel config CRUD |
+
+Ownership is enforced via `AuthService.assertAuthenticatedUserOwnsMerchant`.
+
+### Providers — `/api/v1/providers`
+
+Requires `ROLE_PROVIDER` at the security layer plus service-level ownership checks.
+
+| Endpoint | Purpose |
+|----------|---------|
+| `POST /` | Create provider profile |
+| `PUT /{providerId}` | Update profile |
+| `GET /{providerId}` | Get profile |
+
+### Catalog — `/api/v1/catalog`
+
+| Endpoint | Auth |
+|----------|------|
+| `GET /categories`, `GET /categories/{categoryId}` | Authenticated |
+| `GET /categories/{categoryId}/services`, `GET /services`, `GET /services/{serviceId}` | Authenticated |
+| `POST|PATCH|DELETE` on categories and services | `SUPER_ADMIN` only |
+
+### Business — `/api/v1/business`
+
+| Endpoint | Status |
+|----------|--------|
+| `POST /` | Implemented |
+| `GET /`, `GET /{businessId}`, `PATCH /{businessId}`, `DELETE /{businessId}` | `501 NOT_IMPLEMENTED` |
+
+### Reserved routes (security configured, no controllers)
+
+| Prefix | Auth mechanism | Status |
+|--------|----------------|--------|
+| `/api/v1/integration/**` | `X-API-Key` → `ROLE_INTEGRATION` | No handlers yet; use `IntegrationAuthService.extractMerchant()` when built |
+| `/webhook/**` | `permitAll` | No handlers yet |
+
+### Actuator
+
+In the `dev` profile, all actuator web endpoints are exposed (`management.endpoints.web.exposure.include=*`), typically under `/actuator/*`.
+
+---
+
+## Security architecture
+
+### Dual authentication
 
 ```mermaid
-erDiagram
-    merchant ||--o| merchant_config : has
-    merchant ||--o{ merchant_payment_channel_config : has
-    payment_channel ||--o{ merchant_payment_channel_config : referenced_by
-    merchant ||--o{ payment : owns
-    payment_channel ||--o{ payment : channel
-    merchant_payment_channel_config ||--o{ payment : used_by
-    users }o--o{ merchant : user_merchant
-    users ||--o{ auth_refresh_token : refresh_tokens
+sequenceDiagram
+    participant Client
+    participant ApiKey as ApiKeyAuthenticationFilter
+    participant Jwt as JwtAuthenticationFilter
+    participant Chain as SecurityFilterChain
+    participant Ctrl as Controller
 
-    merchant {
-        bigint id PK
-        string name
-        string apiKey UK
-        boolean isActive
-    }
-    merchant_config {
-        bigint id PK
-        bigint merchant_id FK UK
-        text webhookUrl
-        string currency
-    }
-    merchant_payment_channel_config {
-        bigint id PK
-        bigint merchant_id FK
-        bigint payment_channel_id FK
-        boolean isActive
-        text configJson
-    }
-    payment_channel {
-        bigint id PK
-        enum name UK
-        boolean isActive
-    }
-    payment {
-        bigint id PK
-        bigint merchant_id FK
-        bigint merchant_payment_channel_config_id FK
-        bigint payment_channel_id FK
-        string merchantReferencePaymentId
-        string paymentChannelTxnId
-        decimal amount
-        string currency
-        enum status
-        string paymentLinkUrl
-        text merchantMetadataJson
-    }
-    users {
-        bigint id PK
-        string email UK
-        string mobileNumber UK
-        string passwordHash
-        string name
-        boolean isActive
-        boolean isVerified
-    }
-    auth_refresh_token {
-        bigint id PK
-        bigint user_id FK
-        string tokenHash UK
-        datetime expiresAt
-        datetime revokedAt
-    }
+    Client->>ApiKey: HTTP request
+    alt path starts with /api/v1/integration/
+        ApiKey->>ApiKey: X-API-Key → MerchantEntity + ROLE_INTEGRATION
+    end
+  alt Bearer JWT required
+        Jwt->>Jwt: validate HS256 token → userId + ROLE_* authorities
+    end
+    ApiKey->>Chain: authorizeHttpRequests
+    Chain->>Ctrl: dispatch if authorized
 ```
 
+#### 1. JWT (portal / admin APIs) — `JwtAuthenticationFilter`
 
+- Header: `Authorization: Bearer <token>`
+- Principal in `SecurityContext`: `Long` userId
+- Authorities: `ROLE_<RoleNameEnum>` from JWT `roles` claim
+- Skipped for: `OPTIONS`, non-`/api/**`, `/api/v1/integration/**`, `/webhook/**`, public registration, all public `POST /api/v1/auth/**` paths
 
-**Payment statuses** (`PaymentStatusEnum`): `INITIATED`, `PAYMENT_LINK_GENERATED`, `SUCCESS`, `FAILED`, `REFUNDED`, `VOIDED`.
+#### 2. API key (integration APIs) — `ApiKeyAuthenticationFilter`
 
-**Supporting / logging entities** (present in codebase): `PaymentChannelApiLogEntity`, `WebhookIncomingPaymentChannelLogEntity`, `WebhookOutgoingMerchantLogEntity` — intended for observability and outbound merchant notifications; webhook controller path shown above uses the test adapter directly.
+- Applies to paths under `security.integration.path-prefix` (default `/api/v1/integration/`)
+- Header: `X-API-Key`
+- Resolves active `MerchantEntity` via `MerchantRepository.findByApiKey`
+- Principal: `MerchantEntity`; authority: `ROLE_INTEGRATION`
+
+### JWT format (`JwtService`)
+
+Custom HS256 JWT with claims:
+
+| Claim | Content |
+|-------|---------|
+| `sub` | User id (`Long`) |
+| `roles` | Array of `RoleNameEnum` names |
+| `iat` | Issued-at (epoch seconds) |
+| `exp` | Expiry (epoch seconds) |
+
+Secret: `security.jwt.secret`. Access TTL: `security.jwt.expiration-seconds`.
+
+### Refresh tokens
+
+- Opaque URL-safe random token (48 bytes, Base64)
+- Persisted as SHA-256 hash in `auth_refresh_token`
+- Rotated on refresh (previous token revoked via `revokedAt`)
+- Logout revokes by refresh token hash in request body
+
+### OTP (in-memory)
+
+`AuthService` maintains three `ConcurrentHashMap` session stores: email login, forgot-password email, and mobile login.
+
+| Property | Value |
+|----------|-------|
+| OTP length | 6 digits |
+| Expiry | 300 seconds |
+| Resend cooldown | `security.otp.resend-cooldown-seconds` (default 45) |
+| Delivery | **Placeholder** — OTP logged via `log.info`; email/SMS providers not wired |
+| Cleanup | `@Scheduled` `removeExpiredOtpSessions()` every `security.otp.cleanup-interval-ms` |
+
+OTP sessions are **not cluster-safe** and are lost on process restart.
+
+### Passwords
+
+BCrypt via `PasswordEncoder` bean in `SecurityConfig`.
+
+### Authorization rules (`SecurityConfig`)
+
+Rules are evaluated in declaration order:
+
+| Pattern | Rule |
+|---------|------|
+| `OPTIONS /**` | `permitAll` |
+| `/webhook/**` | `permitAll` |
+| `POST /api/v1/users` | `permitAll` |
+| `POST /api/v1/auth/**` | `permitAll` |
+| `GET /api/v1/catalog/**` | `authenticated` |
+| Non-GET `/api/v1/catalog/**` | `hasRole("SUPER_ADMIN")` |
+| `/api/v1/integration/**` | `authenticated` (API key filter sets context) |
+| `/api/v1/providers/**` | `hasRole("PROVIDER")` |
+| `/api/**` | `authenticated` |
+| Other | `permitAll` |
+
+CSRF is disabled. CORS allows all origins (`*`), common HTTP methods, all headers; `allowCredentials=false`.
+
+### Service-layer authorization (`AuthService`)
+
+| Method | Purpose |
+|--------|---------|
+| `assertAuthenticatedUserOwnsUserId` | User can only access own profile |
+| `assertAuthenticatedUserOwnsMerchant` | User must be linked to merchant |
+| `assertAuthenticatedUserHasProviderRole` | Provider operations |
+| `loadAuthenticatedActiveUser` | Resolve JWT principal to active `UserEntity` with roles |
+
+Filter-level auth failures return minimal JSON: `{"error":"..."}` and are **not** handled by `GlobalExceptionHandler`.
 
 ---
 
-## 10. Runtime and operations
+## Request lifecycle
 
-- **Actuator** is on the classpath (`spring-boot-starter-actuator`); expose/management settings can be tightened per environment (not detailed in base `application.properties`).
-- **Scheduling** enabled for OTP maintenance in `AuthService`.
-- **Dev profile** (`application-dev.properties`): local PostgreSQL URL, `ddl-auto=update`, JWT dev secret placeholder.
-- **Prod profile** (`application-prod.properties`): `ddl-auto=validate`, datasource and JWT from environment.
+1. **CORS** preflight or request enters the servlet container.
+2. **`ApiKeyAuthenticationFilter`** runs first for integration paths; sets merchant principal or returns `401`.
+3. **`JwtAuthenticationFilter`** parses Bearer token for applicable `/api/**` routes; sets user principal and roles or continues unauthenticated for public routes.
+4. **`SecurityFilterChain`** applies `authorizeHttpRequests` rules.
+5. **Controller** receives validated DTO; may call `AuthService` ownership helpers.
+6. **Service** applies business logic, `InputSanitizer` normalization, and `@Transactional` persistence via repositories.
+7. **Response** returned as `ResponseEntity` with response DTOs.
+8. **Uncaught exceptions** routed to `GlobalExceptionHandler`.
 
----
+### Example: registration and login
 
-## 11. Error handling
+1. `POST /api/v1/users` — `UserService.createUser` hashes password, assigns roles from request (must exist in DB).
+2. `POST /api/v1/auth/login` — `AuthService.issueTokens` returns access JWT + opaque refresh token row.
 
-`GlobalExceptionHandler` returns JSON with `timestamp`, `status`, `error`, `message`, `path` for:
+### Example: authenticated merchant operation
 
-- `IllegalArgumentException` → 400  
-- `EntityNotFoundException` → 404  
-- Other `Exception` → 500
-
-`ResponseStatusException` (used in `AuthService` and services for 401/403/404/409, etc.) is **not** mapped in `GlobalExceptionHandler`; Spring MVC’s default handling usually still applies the intended status, but if you see unexpected **500** responses for those cases, add an explicit `@ExceptionHandler(ResponseStatusException.class)` or align with `ResponseEntityExceptionHandler`.
-
----
-
-## 12. Extension guidelines
-
-1. **New payment channel:** Add enum value if needed, ensure DB row in `payment_channel`, implement `integration.adapter.PaymentChannelAdapter` in `integration.adapter` as a `@Component`, store secrets/config in `merchant_payment_channel_config.configJson` (consumption is adapter-specific).
-2. **Merchant webhooks:** `merchant_config.webhookUrl` is available for future outbound notifications when payments change (wire in orchestration or a domain event handler).
-3. **Multi-channel selection:** Replace or augment `findFirstByMerchant_IdAndIsActiveTrue` with explicit channel selection in the API if merchants support multiple active channels.
-4. **UI authorization:** Merchant delete and payment-channel-config mutations, plus user profile routes, already assert ownership (`AuthService` + `UserService.userOwnsMerchant` / same-user id). Remaining gaps: **501** read/list merchant and config APIs, and any future **admin** or cross-user flows.
+1. Client sends `Authorization: Bearer <jwt>`.
+2. `JwtAuthenticationFilter` sets `userId` principal.
+3. `MerchantController` calls `authService.assertAuthenticatedUserOwnsMerchant(merchantId)`.
+4. `MerchantService` reads or writes merchant, config, or payment-channel config.
 
 ---
 
-## 13. Current limitations (as of this codebase)
+## Cross-cutting concerns
 
-- No `data.sql`/migration in repo for seeding `payment_channel`; TEST channel must exist for `TestPaymentChannelAdapter` to start.
-- Webhook endpoint is **unauthenticated**; production should validate provider signatures and map routes per channel.
-- OTP delivery is **log-only**; no SMS/email integration.
-- OTP sessions are **single-node** in-memory.
-- Merchant and payment-channel-config **read/list** portal endpoints are still **501**; user read/update/reactivate are implemented (self-service only).
-- Integration API trusts **API key only**; consider IP allowlists, rotating keys, and audit logging for high-risk deployments.
+### Error handling (`GlobalExceptionHandler`)
+
+JSON error body shape:
+
+```json
+{
+  "timestamp": "<ISO-8601 instant>",
+  "status": 400,
+  "error": "Bad Request",
+  "message": "<detail>",
+  "path": "/api/v1/..."
+}
+```
+
+| Exception | HTTP status |
+|-----------|-------------|
+| `IllegalArgumentException` | 400 |
+| `EntityNotFoundException` | 404 |
+| `ResponseStatusException` | Status from exception |
+| `Exception` (catch-all) | 500 |
+
+### Input normalization (`InputSanitizer`)
+
+Used across auth, user, merchant, provider, and business services:
+
+- `normalizeEmail`, `normalizeMobile`, `normalizeName`
+- `trimToNull`
+- `normalizeISO4217Currency` (merchant config)
+
+### Transactions
+
+Service methods that mutate data are annotated `@Transactional`.
 
 ---
 
-## 14. Postman collection (HTTP cookbook)
+## External integrations
 
-Import [`postman/Digi-Payment-Gateway.postman_collection.json`](../postman/Digi-Payment-Gateway.postman_collection.json) into Postman. Folder layout: **Integration API** (API key), **Payment channel webhooks**, **Portal & auth** (Bearer + public auth/signup). Keep request descriptions in the collection aligned with this document when controllers change.
+| Integration | Status |
+|-------------|--------|
+| **PostgreSQL** | Active — JPA/Hibernate |
+| **Email OTP** | Placeholder (logged only) |
+| **SMS OTP** | Placeholder (logged only) |
+| **Payment providers** | Not implemented; `configJson` on `MerchantPaymentChannelConfigEntity` is opaque storage |
+| **Merchant webhooks** | `webhookUrl` stored on `MerchantConfigEntity`; no outbound sender |
+| **Inbound webhooks** | `/webhook/**` permitted; no controller |
+| **Integration API** | `/api/v1/integration/**` secured; no controller |
+| **RestTemplate** | Bean present; no outbound HTTP in current services |
+
+A static test page exists at `src/main/resources/static/test-payment-link.html` for future payment-link testing.
 
 ---
 
-## 15. Related files (quick reference)
+## Implementation maturity
 
+| Area | State |
+|------|-------|
+| Auth (login, OTP, refresh, logout) | Implemented |
+| User self-service | Implemented |
+| Catalog read (authenticated) / write (super admin) | Implemented |
+| Provider profiles | Implemented |
+| Merchant portal API | Implemented but marked unused in controller comment |
+| Business API | Create only; list/update/delete return `501` |
+| Payment processing | Not started |
+| Integration API (`X-API-Key`) | Security only |
+| Webhooks | Security only |
+| Role seeding | Manual via `scripts/seed-roles.sql` |
 
-| Topic                        | Primary types                                                                                                          |
-| ---------------------------- | ---------------------------------------------------------------------------------------------------------------------- |
-| Security chain               | `config/SecurityConfig.java`                                                                                           |
-| Integration auth             | `integration/security/ApiKeyAuthenticationFilter.java`, `integration/service/IntegrationAuthenticationService.java`    |
-| JWT                          | `security/JwtService.java`, `security/JwtAuthenticationFilter.java`                                                    |
-| Payment link flow            | `integration/service/PaymentOrchestrationService.java`, `integration/controller/PaymentLinkIntegrationController.java` |
-| Payment persistence (shared) | `service/PaymentService.java`, `repository/PaymentRepository.java`                                                     |
-| Test channel                 | `integration/adapter/TestPaymentChannelAdapter.java`, `integration/webhooks/PaymentChannelWebhookController.java`      |
-| Auth                         | `auth/service/AuthService.java`, `auth/controller/AuthController.java`                                                 |
-| Portal authorization         | `AuthService` (`loadAuthenticatedActiveUser`, `assertAuthenticatedUserOwnsMerchant`, `assertAuthenticatedUserOwnsUserId`), `UserService.userOwnsMerchant` |
+---
 
+## Key class index
 
-This document and the Postman collection should be updated together when adapters, security rules, or API versions change.
+| Concern | Classes |
+|---------|---------|
+| Entry point | `OnDemandServiceApplication` |
+| Security config | `SecurityConfig`, `JwtAuthenticationFilter`, `ApiKeyAuthenticationFilter`, `JwtService`, `JwtPayload` |
+| Auth | `AuthService`, `IntegrationAuthService`, `AuthController` |
+| Errors | `GlobalExceptionHandler` |
+| Persistence base | `AuditableEntity` |
+| Roles | `RoleEntity`, `RoleNameEnum` |
+| Utilities | `InputSanitizer` |
+
+---
+
+## Related documentation
+
+| Document | Description |
+|----------|-------------|
+| [DATABASE.md](./DATABASE.md) | Table and column reference |
+| [README.md](./README.md) | Documentation index |
+| `postman/OnDemand-Service-API.postman_collection.json` | API collection for manual testing |
+| `scripts/seed-roles.sql` | Idempotent role seed data |
