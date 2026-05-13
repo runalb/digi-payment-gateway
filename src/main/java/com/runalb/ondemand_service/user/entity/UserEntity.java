@@ -2,7 +2,6 @@ package com.runalb.ondemand_service.user.entity;
 
 import com.runalb.ondemand_service.business.entity.BusinessEntity;
 import com.runalb.ondemand_service.common.persistence.AuditableEntity;
-import com.runalb.ondemand_service.merchant.entity.MerchantEntity;
 import com.runalb.ondemand_service.role.entity.RoleEntity;
 
 import jakarta.persistence.Column;
@@ -44,7 +43,7 @@ public class UserEntity extends AuditableEntity {
     private String name;
 
     @Column(nullable = false)
-    private Boolean isActive = Boolean.TRUE;
+    private Boolean isDeleted = Boolean.FALSE;
 
     @Column(nullable = false)
     private Boolean isVerified = Boolean.FALSE;
@@ -55,13 +54,6 @@ public class UserEntity extends AuditableEntity {
             joinColumns = @JoinColumn(name = "user_id"),
             inverseJoinColumns = @JoinColumn(name = "role_id"))
     private Set<RoleEntity> roles = new HashSet<>();
-
-    @ManyToMany
-    @JoinTable(
-            name = "user_merchant",
-            joinColumns = @JoinColumn(name = "user_id"),
-            inverseJoinColumns = @JoinColumn(name = "merchant_id"))
-    private List<MerchantEntity> merchants = new ArrayList<>();
 
     @ManyToMany
     @JoinTable(

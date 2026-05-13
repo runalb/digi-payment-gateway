@@ -15,20 +15,20 @@ import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
 import org.springframework.web.filter.OncePerRequestFilter;
 
-import com.runalb.ondemand_service.merchant.entity.MerchantEntity;
-import com.runalb.ondemand_service.merchant.repository.MerchantRepository;
+import com.runalb.ondemand_service.business.entity.BusinessEntity;
+import com.runalb.ondemand_service.business.repository.BusinessRepository;
 
 @Component
 public class ApiKeyAuthenticationFilter extends OncePerRequestFilter {
     private static final String API_KEY_HEADER = "X-API-Key";
     private final String integrationPathPrefix;
 
-    private final MerchantRepository merchantRepository;
+    private final BusinessRepository businessRepository;
 
     public ApiKeyAuthenticationFilter(
-            MerchantRepository merchantRepository,
+            BusinessRepository businessRepository,
             @Value("${security.integration.path-prefix:/api/v1/integration/}") String integrationPathPrefix) {
-        this.merchantRepository = merchantRepository;
+        this.businessRepository = businessRepository;
         this.integrationPathPrefix = integrationPathPrefix;
     }
 
@@ -51,14 +51,14 @@ public class ApiKeyAuthenticationFilter extends OncePerRequestFilter {
             return;
         }
 
-        MerchantEntity merchant = merchantRepository.findByApiKey(apiKey.trim()).orElse(null);
-        if (merchant == null || !Boolean.TRUE.equals(merchant.getIsActive())) {
+        BusinessEntity business = businessRepository.findByApiKey(apiKey.trim()).orElse(null);
+        if (business == null || Boolean.TRUE.equals(business.getIsDeleted())) {
             unauthorized(response, "Invalid API key");
             return;
         }
 
         UsernamePasswordAuthenticationToken auth = new UsernamePasswordAuthenticationToken(
-                merchant,
+                business,
                 null,
                 List.of(new SimpleGrantedAuthority("ROLE_INTEGRATION")));
         SecurityContextHolder.getContext().setAuthentication(auth);

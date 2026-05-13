@@ -1,7 +1,6 @@
 package com.runalb.ondemand_service.user.service;
 
 import com.runalb.ondemand_service.business.entity.BusinessEntity;
-import com.runalb.ondemand_service.merchant.entity.MerchantEntity;
 import com.runalb.ondemand_service.role.entity.RoleEntity;
 import com.runalb.ondemand_service.role.enums.RoleNameEnum;
 import com.runalb.ondemand_service.role.repository.RoleRepository;
@@ -46,7 +45,7 @@ public class UserService {
         UserEntity user = userRepository
                 .findByIdWithRoles(userId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Not authenticated"));
-        if (!Boolean.TRUE.equals(user.getIsActive())) {
+        if (Boolean.TRUE.equals(user.getIsDeleted())) {
             throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "User is deleted");
         }
         return user;
@@ -57,7 +56,7 @@ public class UserService {
         UserEntity user = userRepository
                 .findByIdWithRoles(userId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "User not found"));
-        if (!Boolean.TRUE.equals(user.getIsActive())) {
+        if (Boolean.TRUE.equals(user.getIsDeleted())) {
             throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "User is deleted");
         }
         return user;
@@ -79,7 +78,6 @@ public class UserService {
         entity.setMobileNumber(mobileNumber);
         entity.setPasswordHash(passwordEncoder.encode(request.password()));
         entity.setName(InputSanitizer.normalizeName(request.name()));
-        entity.setIsActive(true);
         entity.setIsVerified(false);
 
         LinkedHashSet<RoleNameEnum> distinctRoleNames = new LinkedHashSet<>(request.roles());
@@ -150,39 +148,24 @@ public class UserService {
         return toResponse(user);
     }
 
-
-    // Merchants
-    @Transactional(readOnly = true)
-    public boolean userOwnsMerchant(Long userId, Long merchantId) {
-        return userRepository.existsByIdAndMerchants_Id(userId, merchantId);
-    }
-
-    @Transactional
-    public void linkMerchantToUser(Long userId, MerchantEntity merchant) {
-        UserEntity user = userRepository
-                .findById(userId)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "User not found"));
-        if (!Boolean.TRUE.equals(user.getIsActive())) {
-            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "User is deleted");
-        }
-        user.getMerchants().add(merchant);
-        userRepository.save(user);
-    }
-
     // Businesses
-    public void linkBusinessToUser(Long userId, BusinessEntity business) {
-        UserEntity user = userRepository
-                .findById(userId)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "User not found"));
-        if (!Boolean.TRUE.equals(user.getIsActive())) {
-            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "User is deleted");
-        }
-        user.getBusinesses().add(business);
-    }
-
+    @Transactional(readOnly = true)
     public boolean userOwnsBusiness(Long userId, Long businessId) {
         return userRepository.existsByIdAndBusinesses_Id(userId, businessId);
     }
+
+    @Transactional
+    public void linkUserToBusiness(Long userId, BusinessEntity business) {
+        UserEntity user = userRepository
+                .findById(userId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "User not found"));
+        if (Boolean.TRUE.equals(user.getIsDeleted())) {
+            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "User is deleted");
+        }
+        user.getBusinesses().add(business);
+        userRepository.save(user);
+    }
+
 
     // Providers
     @Transactional(readOnly = true)
@@ -196,7 +179,7 @@ public class UserService {
         UserEntity user =
                 userRepository.findByEmailWithRoles(email).orElseThrow(() -> new ResponseStatusException(
                         HttpStatus.NOT_FOUND, "User not found for email: " + email));
-        if (!Boolean.TRUE.equals(user.getIsActive())) {
+        if (Boolean.TRUE.equals(user.getIsDeleted())) {
             throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "User is deleted");
         }
         return user;
@@ -207,7 +190,7 @@ public class UserService {
         UserEntity user = userRepository.findByMobileNumberWithRoles(mobileNumber).orElseThrow(
                 () -> new ResponseStatusException(HttpStatus.NOT_FOUND,
                         "User not found for mobile number: " + mobileNumber));
-        if (!Boolean.TRUE.equals(user.getIsActive())) {
+        if (Boolean.TRUE.equals(user.getIsDeleted())) {
             throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "User is deleted");
         }
         return user;
@@ -228,7 +211,7 @@ public class UserService {
         UserEntity user = userRepository
                 .findById(userId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "User not found"));
-        user.setIsActive(false);
+        user.setIsDeleted(Boolean.TRUE);
         userRepository.save(user);
     }
 
@@ -237,7 +220,7 @@ public class UserService {
         UserEntity user = userRepository
                 .findById(userId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "User not found"));
-        user.setIsActive(true);
+        user.setIsDeleted(Boolean.FALSE);
         user = userRepository.save(user);
         user = userRepository.findByIdWithRoles(userId).orElse(user);
         return toResponse(user);
@@ -254,7 +237,6 @@ public class UserService {
                 user.getEmail(),
                 user.getMobileNumber(),
                 user.getName(),
-                user.getIsActive(),
                 user.getIsVerified(),
                 roles);
     }

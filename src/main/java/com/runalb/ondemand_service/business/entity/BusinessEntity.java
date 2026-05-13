@@ -31,16 +31,16 @@ public class BusinessEntity extends AuditableEntity {
     private String name;
 
     @Column(nullable = false, unique = true)
+    private String apiKey;
+
+    @Column(nullable = false, unique = true)
     private String email;
 
-    @Column(columnDefinition = "TEXT")
-    private String address;
-
-    @Column(unique = true, length = 20)
-    private String mobileNumber;
+    @OneToOne(mappedBy = "business", fetch = FetchType.LAZY)
+    private BusinessConfigEntity businessConfig;
 
     @Column(nullable = false)
-    private Boolean isActive = Boolean.TRUE;
+    private Boolean isDeleted = Boolean.FALSE;
 
     @ManyToMany(mappedBy = "businesses")
     private List<UserEntity> users = new ArrayList<>();

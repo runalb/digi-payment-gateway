@@ -88,9 +88,9 @@ public class AuthService {
     }
 
     @Transactional(readOnly = true)
-    public void assertAuthenticatedUserOwnsMerchant(Long merchantId) {
+    public void assertAuthenticatedUserOwnsBusiness(Long businessId) {
         UserEntity user = resolveAuthenticatedActiveUser();
-        if (!userService.userOwnsMerchant(user.getId(), merchantId)) {
+        if (!userService.userOwnsBusiness(user.getId(), businessId)) {
             throw new ResponseStatusException(
                     HttpStatus.FORBIDDEN, "You are not authorized to access this resource");
         }
@@ -280,7 +280,7 @@ public class AuthService {
         }
 
         UserEntity user = existing.getUser();
-        if (!Boolean.TRUE.equals(user.getIsActive())) {
+        if (Boolean.TRUE.equals(user.getIsDeleted())) {
             throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "User is deleted");
         }
 

@@ -1,4 +1,4 @@
-package com.runalb.ondemand_service.merchant.entity;
+package com.runalb.ondemand_service.business.entity;
 
 import com.runalb.ondemand_service.common.persistence.AuditableEntity;
 
@@ -16,16 +16,16 @@ import lombok.Setter;
 @Getter
 @Setter
 @Entity
-@Table(name = "merchant_config")
-public class MerchantConfigEntity extends AuditableEntity {
+@Table(name = "business_config")
+public class BusinessConfigEntity extends AuditableEntity {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
     @OneToOne(optional = false)
-    @JoinColumn(name = "merchant_id", nullable = false, unique = true)
-    private MerchantEntity merchant;
+    @JoinColumn(name = "business_id", nullable = false, unique = true)
+    private BusinessEntity business;
 
     @Column(columnDefinition = "TEXT")
     private String webhookUrl;
@@ -33,4 +33,7 @@ public class MerchantConfigEntity extends AuditableEntity {
     /** ISO 4217 alphabetic code (e.g. USD, EUR). */
     @Column(nullable = false, length = 3)
     private String currency;
+
+    @Column(nullable = false)
+    private Boolean isDeleted = Boolean.FALSE;
 }

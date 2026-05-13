@@ -1,4 +1,4 @@
-package com.runalb.ondemand_service.merchant.entity;
+package com.runalb.ondemand_service.business.entity;
 
 import com.runalb.ondemand_service.common.persistence.AuditableEntity;
 // import com.runalb.ondemand_service.payment.entity.PaymentChannelEntity;
@@ -17,23 +17,23 @@ import lombok.Setter;
 @Getter
 @Setter
 @Entity
-@Table(name = "merchant_payment_channel_config")
-public class MerchantPaymentChannelConfigEntity extends AuditableEntity {
+@Table(name = "business_payment_channel_config")
+public class BusinessPaymentChannelConfigEntity extends AuditableEntity {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
     @ManyToOne(optional = false)
-    @JoinColumn(name = "merchant_id", nullable = false)
-    private MerchantEntity merchant;
+    @JoinColumn(name = "business_id", nullable = false)
+    private BusinessEntity business;
 
     // @ManyToOne(optional = false)
     // @JoinColumn(name = "payment_channel_id", nullable = false)
     // private PaymentChannelEntity paymentChannel;
 
     @Column(nullable = false)
-    private Boolean isActive = Boolean.TRUE;
+    private Boolean isDeleted = Boolean.FALSE;
 
     @Column(columnDefinition = "TEXT")
     private String configJson;

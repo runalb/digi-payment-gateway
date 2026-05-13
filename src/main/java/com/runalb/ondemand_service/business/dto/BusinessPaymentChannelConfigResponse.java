@@ -1,11 +1,11 @@
-package com.runalb.ondemand_service.merchant.dto;
+package com.runalb.ondemand_service.business.dto;
 
 // import com.runalb.ondemand_service.payment.enums.PaymentChannelNameEnum;
 
-public record MerchantPaymentChannelConfigResponse(
+public record BusinessPaymentChannelConfigResponse(
         Long id,
-        Long merchantId,
+        Long businessId,
         // Long paymentChannelId,
         // PaymentChannelNameEnum paymentChannelName,
-        Boolean isActive,
-        String configJson) {}
+        String configJson
+) {}

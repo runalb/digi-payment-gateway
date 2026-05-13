@@ -23,10 +23,9 @@ public interface UserRepository extends JpaRepository<UserEntity, Long> {
 
     boolean existsByMobileNumber(String mobileNumber);
 
-    boolean existsByIdAndMerchants_Id(Long id, Long merchantsId);
+    boolean existsByIdAndBusinesses_Id(Long id, Long businessId);
 
     @Query("SELECT DISTINCT u FROM UserEntity u LEFT JOIN FETCH u.roles WHERE u.id = :id")
     Optional<UserEntity> findByIdWithRoles(@Param("id") Long id);
 
-    boolean existsByIdAndBusinesses_Id(Long id, Long businessesId);
 }

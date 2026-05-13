@@ -1,8 +1,9 @@
-package com.runalb.ondemand_service.merchant.dto;
+package com.runalb.ondemand_service.business.dto;
 
 import jakarta.validation.constraints.NotNull;
 
-public record MerchantPaymentChannelConfigCreateRequest(
+public record BusinessPaymentChannelConfigCreateRequest(
         // @NotNull Long paymentChannelId,
         // PaymentChannelNameEnum paymentChannelName,
-        String configJson) {}
+        String configJson
+) {}

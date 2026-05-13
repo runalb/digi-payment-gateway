@@ -7,6 +7,5 @@ public record UserResponse(
         String email,
         String mobileNumber,
         String name,
-        Boolean isActive,
         Boolean isVerified,
         List<String> roles) {}
