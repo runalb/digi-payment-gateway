@@ -1,6 +1,6 @@
 # OnDemand Service — Architecture
 
-This document describes the **ondemand-service** Spring Boot application in this repository (`com.runalb.ondemand_service`). It is the backend API for user identity, merchant configuration, service catalog, and provider profiles. Payment processing, integration endpoints, and inbound webhooks are partially scaffolded but not yet implemented.
+This document describes the **ondemand-service** Spring Boot application in this repository (`com.runalb.ondemand_service`). It is the backend API for user identity, business configuration, service catalog, and provider profiles. Payment processing, integration endpoints, and inbound webhooks are partially scaffolded but not yet implemented.
 
 For table-level schema detail, see [DATABASE.md](./DATABASE.md).
 
@@ -8,14 +8,14 @@ For table-level schema detail, see [DATABASE.md](./DATABASE.md).
 
 ## Overview
 
-The service exposes a versioned REST API under `/api/v1`. It uses **PostgreSQL** for persistence, **Spring Security** with a dual authentication model (JWT for portal users, API key for merchant integration), and a layered **controller → service → repository** structure per domain package.
+The service exposes a versioned REST API under `/api/v1`. It uses **PostgreSQL** for persistence, **Spring Security** with a dual authentication model (JWT for portal users, API key for business integration), and a layered **controller → service → repository** structure per domain package.
 
 ```mermaid
 flowchart TB
     subgraph clients [Clients]
         Web[Web / mobile portal]
         Admin[Super admin]
-        Merchant[Merchant integration]
+        Merchant[Business integration]
     end
 
     subgraph api [Spring Boot API]
@@ -85,19 +85,18 @@ Source root: `src/main/java/com/runalb/ondemand_service/`
 | Package | Responsibility |
 |---------|----------------|
 | `auth` | Login, OTP flows, password reset, refresh/logout; `AuthRefreshTokenEntity` |
-| `business` | `BusinessEntity` CRUD scaffolding (`BusinessController` mostly returns `501`) |
+| `business` | Business portal CRUD, business config, payment-channel config storage |
 | `catalog` | Admin-managed service catalog (categories and services) |
 | `common.persistence` | `AuditableEntity` base class |
 | `config` | `SecurityConfig`, `RestTemplateConfig` |
 | `exception` | `GlobalExceptionHandler` (`@RestControllerAdvice`) |
-| `merchant` | Merchant portal CRUD, merchant config, payment-channel config storage |
 | `provider` | Provider profile CRUD (1:1 with user) |
 | `role` | `RoleEntity`, `RoleNameEnum` |
 | `security` | `JwtService`, `JwtAuthenticationFilter`, `ApiKeyAuthenticationFilter`, `JwtPayload` |
 | `user` | User registration and self-service profile |
 | `util` | `InputSanitizer` — email, mobile, name, ISO 4217 currency normalization |
 
-**Not yet implemented:** `payment` package (referenced in comments on `MerchantPaymentChannelConfigEntity`); integration controllers under `/api/v1/integration/**`; webhook handlers under `/webhook/**`.
+**Not yet implemented:** `payment` package (referenced in comments on `BusinessPaymentChannelConfigEntity`); integration controllers under `/api/v1/integration/**`; webhook handlers under `/webhook/**`.
 
 ---
 
@@ -109,12 +108,11 @@ All persistent entities extend `AuditableEntity` (`createdDateTime`, `updatedDat
 
 ```
 UserEntity ──M:N──► RoleEntity          (join: user_role)
-UserEntity ──M:N──► MerchantEntity      (join: user_merchant)
 UserEntity ──M:N──► BusinessEntity      (join: user_business)
 UserEntity ◄──1:1── ProviderEntity      (FK: user_id)
 
-MerchantEntity ◄──1:1── MerchantConfigEntity              (FK: merchant_id)
-MerchantEntity ◄──1:N── MerchantPaymentChannelConfigEntity (FK: merchant_id)
+BusinessEntity ◄──1:1── BusinessConfigEntity              (FK: business_id)
+BusinessEntity ◄──1:N── BusinessPaymentChannelConfigEntity (FK: business_id)
 
 CatalogCategoryEntity ◄──1:N── CatalogServiceEntity     (FK: catalog_category_id)
 
@@ -136,14 +134,13 @@ Roles must exist in the database before user registration. Seed with `scripts/se
 
 | Entity | Table | Notes |
 |--------|-------|-------|
-| `UserEntity` | `users` | Email and mobile unique; BCrypt `passwordHash`; `isActive`, `isVerified` |
+| `UserEntity` | `users` | Email and mobile unique; BCrypt `passwordHash`; `isDeleted`, `isVerified` |
 | `RoleEntity` | `roles` | `roleName` maps to `RoleNameEnum` |
 | `AuthRefreshTokenEntity` | `auth_refresh_token` | Opaque refresh token stored as SHA-256 hash; `revokedAt` for rotation |
-| `MerchantEntity` | `merchant` | Auto-generated UUID `apiKey` on create; used for integration auth |
-| `MerchantConfigEntity` | `merchant_config` | `webhookUrl`, ISO 4217 `currency` |
-| `MerchantPaymentChannelConfigEntity` | `merchant_payment_channel_config` | Opaque `configJson`; payment channel FK commented out |
+| `BusinessEntity` | `business` | Auto-generated UUID `apiKey` on create; used for integration auth; M:N with users |
+| `BusinessConfigEntity` | `business_config` | `webhookUrl`, ISO 4217 `currency` |
+| `BusinessPaymentChannelConfigEntity` | `business_payment_channel_config` | Opaque `configJson`; payment channel FK commented out |
 | `ProviderEntity` | `providers` | Bio, ratings, profile completion; 1:1 with user |
-| `BusinessEntity` | `business` | Name, email, address; M:N with users |
 | `CatalogCategoryEntity` | `catalog_category` | Ordered, activatable categories |
 | `CatalogServiceEntity` | `catalog_service` | Services under a category |
 
@@ -177,29 +174,31 @@ All controllers use `@RestController`. JSON request bodies are validated with Ja
 | `DELETE /{userId}` | JWT; owner only (soft deactivate) |
 | `POST /{userId}/reactivate` | JWT; owner only |
 
-### Merchants — `/api/v1/portal/merchants`
+### Businesses (portal) — `/api/v1/portal/businesses`
 
-> Controller is annotated *"Not used in this project"* but fully implemented for merchant CRUD, config, and payment-channel config.
+> Controller is annotated *"Not used in this project"* but fully implemented for business CRUD, config, and payment-channel config.
 
 | Endpoint | Purpose |
 |----------|---------|
-| `POST /` | Create merchant |
-| `GET /`, `GET /{merchantId}` | List / get |
-| `PATCH /{merchantId}`, `DELETE /{merchantId}` | Update / deactivate |
-| `GET|POST|PATCH /{merchantId}/config` | Merchant config |
-| `POST|GET|GET|PATCH|DELETE` under `/{merchantId}/payment-channel-configs` | Payment channel config CRUD |
+| `POST /` | Create business (links creator via `user_business`; returns `apiKey`) |
+| `GET /`, `GET /{businessId}` | List / get |
+| `PATCH /{businessId}`, `DELETE /{businessId}` | Update / soft delete |
+| `GET|POST|PATCH|DELETE /{businessId}/config` | Business config |
+| `POST|GET|GET|PATCH|DELETE` under `/{businessId}/payment-channel-configs` | Payment channel config CRUD |
 
-Ownership is enforced via `AuthService.assertAuthenticatedUserOwnsMerchant`.
+Ownership is enforced via `AuthService.assertAuthenticatedUserOwnsBusiness`.
 
 ### Providers — `/api/v1/providers`
 
-Requires `ROLE_PROVIDER` at the security layer plus service-level ownership checks.
+Requires `ROLE_PROVIDER` at the security layer plus service-level ownership checks on update/delete.
 
 | Endpoint | Purpose |
 |----------|---------|
+| `GET /` | List all active provider profiles |
 | `POST /` | Create provider profile |
-| `PUT /{providerId}` | Update profile |
+| `PUT /{providerId}` | Update profile (owner only) |
 | `GET /{providerId}` | Get profile |
+| `DELETE /{providerId}` | Deactivate profile (owner only) |
 
 ### Catalog — `/api/v1/catalog`
 
@@ -209,18 +208,11 @@ Requires `ROLE_PROVIDER` at the security layer plus service-level ownership chec
 | `GET /categories/{categoryId}/services`, `GET /services`, `GET /services/{serviceId}` | Authenticated |
 | `POST|PATCH|DELETE` on categories and services | `SUPER_ADMIN` only |
 
-### Business — `/api/v1/business`
-
-| Endpoint | Status |
-|----------|--------|
-| `POST /` | Implemented |
-| `GET /`, `GET /{businessId}`, `PATCH /{businessId}`, `DELETE /{businessId}` | `501 NOT_IMPLEMENTED` |
-
 ### Reserved routes (security configured, no controllers)
 
 | Prefix | Auth mechanism | Status |
 |--------|----------------|--------|
-| `/api/v1/integration/**` | `X-API-Key` → `ROLE_INTEGRATION` | No handlers yet; use `IntegrationAuthService.extractMerchant()` when built |
+| `/api/v1/integration/**` | `X-API-Key` → `ROLE_INTEGRATION` | No handlers yet; use `IntegrationAuthService.extractBusiness()` when built |
 | `/webhook/**` | `permitAll` | No handlers yet |
 
 ### Actuator
@@ -243,7 +235,7 @@ sequenceDiagram
 
     Client->>ApiKey: HTTP request
     alt path starts with /api/v1/integration/
-        ApiKey->>ApiKey: X-API-Key → MerchantEntity + ROLE_INTEGRATION
+        ApiKey->>ApiKey: X-API-Key → BusinessEntity + ROLE_INTEGRATION
     end
   alt Bearer JWT required
         Jwt->>Jwt: validate HS256 token → userId + ROLE_* authorities
@@ -263,8 +255,8 @@ sequenceDiagram
 
 - Applies to paths under `security.integration.path-prefix` (default `/api/v1/integration/`)
 - Header: `X-API-Key`
-- Resolves active `MerchantEntity` via `MerchantRepository.findByApiKey`
-- Principal: `MerchantEntity`; authority: `ROLE_INTEGRATION`
+- Resolves active `BusinessEntity` via `BusinessRepository.findByApiKey` (excludes `isDeleted`)
+- Principal: `BusinessEntity`; authority: `ROLE_INTEGRATION`
 
 ### JWT format (`JwtService`)
 
@@ -328,8 +320,8 @@ CSRF is disabled. CORS allows all origins (`*`), common HTTP methods, all header
 | Method | Purpose |
 |--------|---------|
 | `assertAuthenticatedUserOwnsUserId` | User can only access own profile |
-| `assertAuthenticatedUserOwnsMerchant` | User must be linked to merchant |
-| `assertAuthenticatedUserHasProviderRole` | Provider operations |
+| `assertAuthenticatedUserOwnsBusiness` | User must be linked to business |
+| `assertAuthenticatedUserOwnsProvider` | Provider update/delete ownership |
 | `loadAuthenticatedActiveUser` | Resolve JWT principal to active `UserEntity` with roles |
 
 Filter-level auth failures return minimal JSON: `{"error":"..."}` and are **not** handled by `GlobalExceptionHandler`.
@@ -339,7 +331,7 @@ Filter-level auth failures return minimal JSON: `{"error":"..."}` and are **not*
 ## Request lifecycle
 
 1. **CORS** preflight or request enters the servlet container.
-2. **`ApiKeyAuthenticationFilter`** runs first for integration paths; sets merchant principal or returns `401`.
+2. **`ApiKeyAuthenticationFilter`** runs first for integration paths; sets business principal or returns `401`.
 3. **`JwtAuthenticationFilter`** parses Bearer token for applicable `/api/**` routes; sets user principal and roles or continues unauthenticated for public routes.
 4. **`SecurityFilterChain`** applies `authorizeHttpRequests` rules.
 5. **Controller** receives validated DTO; may call `AuthService` ownership helpers.
@@ -352,12 +344,12 @@ Filter-level auth failures return minimal JSON: `{"error":"..."}` and are **not*
 1. `POST /api/v1/users` — `UserService.createUser` hashes password, assigns roles from request (must exist in DB).
 2. `POST /api/v1/auth/login` — `AuthService.issueTokens` returns access JWT + opaque refresh token row.
 
-### Example: authenticated merchant operation
+### Example: authenticated business operation
 
 1. Client sends `Authorization: Bearer <jwt>`.
 2. `JwtAuthenticationFilter` sets `userId` principal.
-3. `MerchantController` calls `authService.assertAuthenticatedUserOwnsMerchant(merchantId)`.
-4. `MerchantService` reads or writes merchant, config, or payment-channel config.
+3. `BusinessController` calls `authService.assertAuthenticatedUserOwnsBusiness(businessId)`.
+4. `BusinessService` reads or writes business, config, or payment-channel config.
 
 ---
 
@@ -386,11 +378,11 @@ JSON error body shape:
 
 ### Input normalization (`InputSanitizer`)
 
-Used across auth, user, merchant, provider, and business services:
+Used across auth, user, business, and provider services:
 
 - `normalizeEmail`, `normalizeMobile`, `normalizeName`
 - `trimToNull`
-- `normalizeISO4217Currency` (merchant config)
+- `normalizeISO4217Currency` (business config)
 
 ### Transactions
 
@@ -405,8 +397,8 @@ Service methods that mutate data are annotated `@Transactional`.
 | **PostgreSQL** | Active — JPA/Hibernate |
 | **Email OTP** | Placeholder (logged only) |
 | **SMS OTP** | Placeholder (logged only) |
-| **Payment providers** | Not implemented; `configJson` on `MerchantPaymentChannelConfigEntity` is opaque storage |
-| **Merchant webhooks** | `webhookUrl` stored on `MerchantConfigEntity`; no outbound sender |
+| **Payment providers** | Not implemented; `configJson` on `BusinessPaymentChannelConfigEntity` is opaque storage |
+| **Business webhooks** | `webhookUrl` stored on `BusinessConfigEntity`; no outbound sender |
 | **Inbound webhooks** | `/webhook/**` permitted; no controller |
 | **Integration API** | `/api/v1/integration/**` secured; no controller |
 | **RestTemplate** | Bean present; no outbound HTTP in current services |
@@ -423,8 +415,7 @@ A static test page exists at `src/main/resources/static/test-payment-link.html` 
 | User self-service | Implemented |
 | Catalog read (authenticated) / write (super admin) | Implemented |
 | Provider profiles | Implemented |
-| Merchant portal API | Implemented but marked unused in controller comment |
-| Business API | Create only; list/update/delete return `501` |
+| Business portal API | Implemented but marked unused in controller comment |
 | Payment processing | Not started |
 | Integration API (`X-API-Key`) | Security only |
 | Webhooks | Security only |

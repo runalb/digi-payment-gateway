@@ -2,7 +2,7 @@
   "info": {
     "_postman_id": "a1b2c3d4-e5f6-7890-abcd-ondemand-service",
     "name": "OnDemand Service API",
-    "description": "REST collection for the Spring Boot OnDemand Service (com.runalb.ondemand_service).\n\n**Quick start:** Run Auth > Login, then use authenticated folders.\n\n**Auth** (/api/v1/auth/**): public.\n**Users**: signup public; other routes Bearer + ownership.\n**Providers**: Bearer + ROLE_PROVIDER.\n**Merchants** (/api/v1/portal/merchants/**): Bearer + ownership.\n**Business**: only POST implemented (others 501).\n**Catalog**: GET authenticated; mutations SUPER_ADMIN.\n**Integration** (/api/v1/integration/**): X-API-Key (no controllers yet).\n\nDefault baseUrl: http://localhost:8080. Seed roles: scripts/seed-roles.sql.",
+    "description": "REST collection for the Spring Boot OnDemand Service (com.runalb.ondemand_service).\n\n**Quick start:** Run Auth > Login, then use authenticated folders.\n\n**Auth** (/api/v1/auth/**): public.\n**Users**: signup public; other routes Bearer + ownership.\n**Providers**: Bearer + ROLE_PROVIDER.\n**Businesses** (/api/v1/portal/businesses/**): Bearer + business ownership.\n**Catalog**: GET authenticated; mutations SUPER_ADMIN.\n**Integration** (/api/v1/integration/**): X-API-Key from business create response (no controllers yet).\n\nDefault baseUrl: http://localhost:8080. Seed roles: scripts/seed-roles.sql.",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "variable": [
@@ -32,10 +32,6 @@
     },
     {
       "key": "userId",
-      "value": "1"
-    },
-    {
-      "key": "merchantId",
       "value": "1"
     },
     {
@@ -490,6 +486,21 @@
           ]
         },
         {
+          "name": "List providers",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "url": "{{baseUrl}}/api/v1/providers",
+            "description": "All active provider profiles — ProviderDetailResponse[]."
+          },
+          "response": []
+        },
+        {
           "name": "Get provider profile",
           "request": {
             "method": "GET",
@@ -526,16 +537,31 @@
             "description": "ProviderUpdateRequest.",
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"bio\": \"Updated bio\",\n  \"address\": \"456 Oak Ave\",\n  \"isActive\": true\n}"
+              "raw": "{\n  \"bio\": \"Updated bio\",\n  \"address\": \"456 Oak Ave\"\n}"
             }
+          },
+          "response": []
+        },
+        {
+          "name": "Delete provider (deactivate)",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "url": "{{baseUrl}}/api/v1/providers/{{providerId}}",
+            "description": "Owner only — 204."
           },
           "response": []
         }
       ]
     },
     {
-      "name": "Business",
-      "description": "business.controller.BusinessController — only POST implemented.",
+      "name": "Businesses (portal)",
+      "description": "business.controller.BusinessController — Bearer + business ownership.",
       "item": [
         {
           "name": "Create business",
@@ -555,127 +581,8 @@
                 "value": "application/json"
               }
             ],
-            "url": "{{baseUrl}}/api/v1/business",
-            "description": "BusinessCreateRequest.",
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"name\": \"Sample Business\",\n  \"email\": \"business@example.com\",\n  \"address\": \"100 Commerce Blvd\",\n  \"mobileNumber\": \"+14155558888\"\n}"
-            }
-          },
-          "response": [],
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "type": "text/javascript",
-                "exec": [
-                  "if (pm.response.code === 201) {",
-                  "  const json = pm.response.json();",
-                  "  if (json.id) pm.collectionVariables.set('businessId', String(json.id));",
-                  "}"
-                ]
-              }
-            }
-          ]
-        },
-        {
-          "name": "List businesses (501)",
-          "request": {
-            "method": "GET",
-            "header": [
-              {
-                "key": "Authorization",
-                "value": "Bearer {{accessToken}}"
-              }
-            ],
-            "url": "{{baseUrl}}/api/v1/business",
-            "description": "501 Not Implemented."
-          },
-          "response": []
-        },
-        {
-          "name": "Get business (501)",
-          "request": {
-            "method": "GET",
-            "header": [
-              {
-                "key": "Authorization",
-                "value": "Bearer {{accessToken}}"
-              }
-            ],
-            "url": "{{baseUrl}}/api/v1/business/{{businessId}}",
-            "description": "501 Not Implemented."
-          },
-          "response": []
-        },
-        {
-          "name": "Patch business (501)",
-          "request": {
-            "method": "PATCH",
-            "header": [
-              {
-                "key": "Authorization",
-                "value": "Bearer {{accessToken}}"
-              },
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              },
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              }
-            ],
-            "url": "{{baseUrl}}/api/v1/business/{{businessId}}",
-            "description": "501 Not Implemented.",
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"name\": \"Updated Business Name\"\n}"
-            }
-          },
-          "response": []
-        },
-        {
-          "name": "Delete business (501)",
-          "request": {
-            "method": "DELETE",
-            "header": [
-              {
-                "key": "Authorization",
-                "value": "Bearer {{accessToken}}"
-              }
-            ],
-            "url": "{{baseUrl}}/api/v1/business/{{businessId}}",
-            "description": "501 Not Implemented."
-          },
-          "response": []
-        }
-      ]
-    },
-    {
-      "name": "Merchants (portal)",
-      "description": "merchant.controller.MerchantController — Bearer + merchant ownership.",
-      "item": [
-        {
-          "name": "Create merchant",
-          "request": {
-            "method": "POST",
-            "header": [
-              {
-                "key": "Authorization",
-                "value": "Bearer {{accessToken}}"
-              },
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              },
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              }
-            ],
-            "url": "{{baseUrl}}/api/v1/portal/merchants",
-            "description": "MerchantCreateRequest.",
+            "url": "{{baseUrl}}/api/v1/portal/businesses",
+            "description": "BusinessCreateRequest — saves businessId and apiKey.",
             "body": {
               "mode": "raw",
               "raw": "{\n  \"name\": \"Acme Corp\",\n  \"email\": \"billing@acme.example\"\n}"
@@ -690,7 +597,7 @@
                 "exec": [
                   "if (pm.response.code === 201) {",
                   "  const json = pm.response.json();",
-                  "  if (json.id) pm.collectionVariables.set('merchantId', String(json.id));",
+                  "  if (json.id) pm.collectionVariables.set('businessId', String(json.id));",
                   "  if (json.apiKey) pm.collectionVariables.set('apiKey', json.apiKey);",
                   "}"
                 ]
@@ -699,7 +606,7 @@
           ]
         },
         {
-          "name": "List merchants",
+          "name": "List businesses",
           "request": {
             "method": "GET",
             "header": [
@@ -708,13 +615,13 @@
                 "value": "Bearer {{accessToken}}"
               }
             ],
-            "url": "{{baseUrl}}/api/v1/portal/merchants",
-            "description": "Merchants for authenticated user."
+            "url": "{{baseUrl}}/api/v1/portal/businesses",
+            "description": "Businesses linked to authenticated user."
           },
           "response": []
         },
         {
-          "name": "Get merchant",
+          "name": "Get business",
           "request": {
             "method": "GET",
             "header": [
@@ -723,13 +630,13 @@
                 "value": "Bearer {{accessToken}}"
               }
             ],
-            "url": "{{baseUrl}}/api/v1/portal/merchants/{{merchantId}}",
-            "description": "MerchantResponse."
+            "url": "{{baseUrl}}/api/v1/portal/businesses/{{businessId}}",
+            "description": "BusinessResponse."
           },
           "response": []
         },
         {
-          "name": "Patch merchant",
+          "name": "Patch business",
           "request": {
             "method": "PATCH",
             "header": [
@@ -746,17 +653,17 @@
                 "value": "application/json"
               }
             ],
-            "url": "{{baseUrl}}/api/v1/portal/merchants/{{merchantId}}",
-            "description": "MerchantUpdateRequest.",
+            "url": "{{baseUrl}}/api/v1/portal/businesses/{{businessId}}",
+            "description": "BusinessUpdateRequest.",
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"name\": \"Acme Ltd\",\n  \"email\": \"newemail@acme.example\",\n  \"isActive\": true\n}"
+              "raw": "{\n  \"name\": \"Acme Ltd\",\n  \"email\": \"newemail@acme.example\"\n}"
             }
           },
           "response": []
         },
         {
-          "name": "Delete merchant (deactivate)",
+          "name": "Delete business (soft delete)",
           "request": {
             "method": "DELETE",
             "header": [
@@ -765,13 +672,13 @@
                 "value": "Bearer {{accessToken}}"
               }
             ],
-            "url": "{{baseUrl}}/api/v1/portal/merchants/{{merchantId}}",
+            "url": "{{baseUrl}}/api/v1/portal/businesses/{{businessId}}",
             "description": "204."
           },
           "response": []
         },
         {
-          "name": "Get merchant config",
+          "name": "Get business config",
           "request": {
             "method": "GET",
             "header": [
@@ -780,13 +687,13 @@
                 "value": "Bearer {{accessToken}}"
               }
             ],
-            "url": "{{baseUrl}}/api/v1/portal/merchants/{{merchantId}}/config",
-            "description": "MerchantConfigResponse."
+            "url": "{{baseUrl}}/api/v1/portal/businesses/{{businessId}}/config",
+            "description": "BusinessConfigResponse."
           },
           "response": []
         },
         {
-          "name": "Create merchant config",
+          "name": "Create business config",
           "request": {
             "method": "POST",
             "header": [
@@ -803,8 +710,8 @@
                 "value": "application/json"
               }
             ],
-            "url": "{{baseUrl}}/api/v1/portal/merchants/{{merchantId}}/config",
-            "description": "MerchantConfigCreateRequest.",
+            "url": "{{baseUrl}}/api/v1/portal/businesses/{{businessId}}/config",
+            "description": "BusinessConfigCreateRequest.",
             "body": {
               "mode": "raw",
               "raw": "{\n  \"currency\": \"USD\",\n  \"webhookUrl\": \"https://merchant.example/hooks\"\n}"
@@ -813,7 +720,7 @@
           "response": []
         },
         {
-          "name": "Patch merchant config",
+          "name": "Patch business config",
           "request": {
             "method": "PATCH",
             "header": [
@@ -830,12 +737,27 @@
                 "value": "application/json"
               }
             ],
-            "url": "{{baseUrl}}/api/v1/portal/merchants/{{merchantId}}/config",
-            "description": "MerchantConfigUpdateRequest.",
+            "url": "{{baseUrl}}/api/v1/portal/businesses/{{businessId}}/config",
+            "description": "BusinessConfigUpdateRequest.",
             "body": {
               "mode": "raw",
               "raw": "{\n  \"currency\": \"EUR\",\n  \"webhookUrl\": \"https://merchant.example/v2/hooks\"\n}"
             }
+          },
+          "response": []
+        },
+        {
+          "name": "Delete business config",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "url": "{{baseUrl}}/api/v1/portal/businesses/{{businessId}}/config",
+            "description": "Soft delete business config — 204."
           },
           "response": []
         },
@@ -857,8 +779,8 @@
                 "value": "application/json"
               }
             ],
-            "url": "{{baseUrl}}/api/v1/portal/merchants/{{merchantId}}/payment-channel-configs",
-            "description": "MerchantPaymentChannelConfigCreateRequest.",
+            "url": "{{baseUrl}}/api/v1/portal/businesses/{{businessId}}/payment-channel-configs",
+            "description": "BusinessPaymentChannelConfigCreateRequest.",
             "body": {
               "mode": "raw",
               "raw": "{\n  \"configJson\": \"{\\\"provider\\\":\\\"stripe\\\",\\\"publishableKey\\\":\\\"pk_test_xxx\\\"}\"\n}"
@@ -890,7 +812,7 @@
                 "value": "Bearer {{accessToken}}"
               }
             ],
-            "url": "{{baseUrl}}/api/v1/portal/merchants/{{merchantId}}/payment-channel-configs",
+            "url": "{{baseUrl}}/api/v1/portal/businesses/{{businessId}}/payment-channel-configs",
             "description": ""
           },
           "response": []
@@ -905,7 +827,7 @@
                 "value": "Bearer {{accessToken}}"
               }
             ],
-            "url": "{{baseUrl}}/api/v1/portal/merchants/{{merchantId}}/payment-channel-configs/{{configId}}",
+            "url": "{{baseUrl}}/api/v1/portal/businesses/{{businessId}}/payment-channel-configs/{{configId}}",
             "description": ""
           },
           "response": []
@@ -928,11 +850,11 @@
                 "value": "application/json"
               }
             ],
-            "url": "{{baseUrl}}/api/v1/portal/merchants/{{merchantId}}/payment-channel-configs/{{configId}}",
-            "description": "MerchantPaymentChannelConfigUpdateRequest.",
+            "url": "{{baseUrl}}/api/v1/portal/businesses/{{businessId}}/payment-channel-configs/{{configId}}",
+            "description": "BusinessPaymentChannelConfigUpdateRequest.",
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"isActive\": true,\n  \"configJson\": \"{\\\"key\\\":\\\"value\\\"}\"\n}"
+              "raw": "{\n  \"configJson\": \"{\\\"key\\\":\\\"value\\\"}\"\n}"
             }
           },
           "response": []
@@ -947,7 +869,7 @@
                 "value": "Bearer {{accessToken}}"
               }
             ],
-            "url": "{{baseUrl}}/api/v1/portal/merchants/{{merchantId}}/payment-channel-configs/{{configId}}",
+            "url": "{{baseUrl}}/api/v1/portal/businesses/{{businessId}}/payment-channel-configs/{{configId}}",
             "description": "204."
           },
           "response": []
@@ -1203,7 +1125,7 @@
     },
     {
       "name": "Integration (reserved)",
-      "description": "/api/v1/integration/** — secured by X-API-Key (ROLE_INTEGRATION). No controllers yet. Set apiKey from Create merchant response.",
+      "description": "/api/v1/integration/** — secured by X-API-Key (ROLE_INTEGRATION). No controllers yet. Set apiKey from Create business response.",
       "item": [
         {
           "name": "Placeholder — no handler",
