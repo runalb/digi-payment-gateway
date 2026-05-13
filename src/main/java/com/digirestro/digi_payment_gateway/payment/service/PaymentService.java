@@ -24,14 +24,14 @@ public class PaymentService {
     }
 
     @Transactional(readOnly = true)
-    public PaymentEntity findByIdAndMerchant_Id(Long id, Long merchantId) {
-        return paymentRepository.findByIdAndMerchant_Id(id, merchantId)
+    public PaymentEntity findByIdAndMerchantId(Long id, Long merchantId) {
+        return paymentRepository.findByIdAndMerchantId(id, merchantId)
                 .orElseThrow(() -> new EntityNotFoundException("Payment not found"));
     }
 
     @Transactional(readOnly = true)
-    public List<PaymentEntity> findAllByMerchant_IdOrderByCreatedDateTimeDesc(Long merchantId) {
-        return paymentRepository.findAllByMerchant_IdOrderByCreatedDateTimeDesc(merchantId);
+    public List<PaymentEntity> findAllByMerchantIdOrderByCreatedDateTimeDesc(Long merchantId) {
+        return paymentRepository.findAllByMerchantIdOrderByCreatedDateTimeDesc(merchantId);
     }
 
     @Transactional

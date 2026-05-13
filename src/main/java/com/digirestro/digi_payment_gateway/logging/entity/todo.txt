@@ -1,0 +1,28 @@
+
+// create new entity and new columns for logging all requests , respose and errors. delete the existing payment_channel_api_log entity.
+// log table can be used for debugging and monitoring without accessing server logs.
+// table name - payment_gateway_log
+
+
+
+// optional data-
+
+   @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
+
+    @ManyToOne
+    @JoinColumn(name = "payment_id")
+    private PaymentEntity payment;
+
+    @ManyToOne
+    @JoinColumn(name = "payment_channel_id")
+    private PaymentChannelEntity paymentChannel;
+
+    @ManyToOne
+    @JoinColumn(name = "merchant_id")
+    private MerchantEntity merchant;
+
+    @ManyToOne
+    @JoinColumn(name = "merchant_payment_channel_config_id")
+    private MerchantPaymentChannelConfigEntity merchantPaymentChannelConfig;

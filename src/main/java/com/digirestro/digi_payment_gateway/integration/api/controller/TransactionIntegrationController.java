@@ -3,7 +3,8 @@ package com.digirestro.digi_payment_gateway.integration.api.controller;
 import com.digirestro.digi_payment_gateway.integration.api.dto.PaymentDetailsResponse;
 import com.digirestro.digi_payment_gateway.auth.service.IntegrationAuthService;
 import com.digirestro.digi_payment_gateway.merchant.entity.MerchantEntity;
-import com.digirestro.digi_payment_gateway.paymentchannel.service.PaymentOrchestrationService;
+import com.digirestro.digi_payment_gateway.payment.service.PaymentOrchestrationService;
+import com.digirestro.digi_payment_gateway.payment.service.PaymentService;
 
 import java.util.List;
 import org.springframework.http.HttpStatus;
@@ -19,12 +20,15 @@ import org.springframework.web.bind.annotation.RestController;
 public class TransactionIntegrationController {
 
     private final PaymentOrchestrationService paymentOrchestrationService;
+    private final PaymentService paymentService;
     private final IntegrationAuthService integrationAuthService;
 
     public TransactionIntegrationController(
             PaymentOrchestrationService paymentOrchestrationService,
+            PaymentService paymentService,
             IntegrationAuthService integrationAuthService) {
         this.paymentOrchestrationService = paymentOrchestrationService;
+        this.paymentService = paymentService;
         this.integrationAuthService = integrationAuthService;
     }
 

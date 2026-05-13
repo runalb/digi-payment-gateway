@@ -33,21 +33,12 @@ public class SecurityConfig {
                 .cors(cors -> {})
                 .csrf(csrf -> csrf.disable())
                 .authorizeHttpRequests(auth -> auth
+                        // public routes
                         .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
                         .requestMatchers("/webhook/**").permitAll()
-                        .requestMatchers(HttpMethod.POST, "/api/v1/users").permitAll()
-                        .requestMatchers(HttpMethod.POST, "/api/v1/auth/login").permitAll()
-                        .requestMatchers(HttpMethod.POST, "/api/v1/auth/login/email/request-otp").permitAll()
-                        .requestMatchers(HttpMethod.POST, "/api/v1/auth/login/email/verify-otp").permitAll()
-                        .requestMatchers(HttpMethod.POST, "/api/v1/auth/forgot-password/email/request-otp").permitAll()
-                        .requestMatchers(HttpMethod.POST, "/api/v1/auth/forgot-password/email/reset-password").permitAll()
-                        .requestMatchers(HttpMethod.POST, "/api/v1/auth/login/mobile/request-otp").permitAll()
-                        .requestMatchers(HttpMethod.POST, "/api/v1/auth/login/mobile/verify-otp").permitAll()
-                        .requestMatchers(HttpMethod.POST, "/api/v1/auth/refresh-token").permitAll()
-                        .requestMatchers(HttpMethod.POST, "/api/v1/auth/logout").permitAll()
-                        .requestMatchers("/api/v1/integration/**").authenticated()
-                        .requestMatchers("/api/**").authenticated()
-                        .anyRequest().permitAll())
+
+                        // everything else requires authentication (JWT or API key)
+                        .anyRequest().authenticated())
                 .addFilterBefore(apiKeyAuthenticationFilter, UsernamePasswordAuthenticationFilter.class)
                 .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class)
                 .build();

@@ -70,34 +70,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         if (path.startsWith("/webhook/")) {
             return false;
         }
-        if (HttpMethod.POST.matches(method) && "/api/v1/users".equals(path)) {
-            return false;
-        }
-        if (HttpMethod.POST.matches(method) && "/api/v1/auth/login".equals(path)) {
-            return false;
-        }
-        if (HttpMethod.POST.matches(method) && "/api/v1/auth/login/email/request-otp".equals(path)) {
-            return false;
-        }
-        if (HttpMethod.POST.matches(method) && "/api/v1/auth/login/email/verify-otp".equals(path)) {
-            return false;
-        }
-        if (HttpMethod.POST.matches(method) && "/api/v1/auth/forgot-password/email/request-otp".equals(path)) {
-            return false;
-        }
-        if (HttpMethod.POST.matches(method) && "/api/v1/auth/forgot-password/email/reset-password".equals(path)) {
-            return false;
-        }
-        if (HttpMethod.POST.matches(method) && "/api/v1/auth/login/mobile/request-otp".equals(path)) {
-            return false;
-        }
-        if (HttpMethod.POST.matches(method) && "/api/v1/auth/login/mobile/verify-otp".equals(path)) {
-            return false;
-        }
-        if (HttpMethod.POST.matches(method) && "/api/v1/auth/refresh-token".equals(path)) {
-            return false;
-        }
-        return !(HttpMethod.POST.matches(method) && "/api/v1/auth/logout".equals(path));
+        return true;
     }
 
     private void unauthorized(HttpServletResponse response, String message) throws IOException {
