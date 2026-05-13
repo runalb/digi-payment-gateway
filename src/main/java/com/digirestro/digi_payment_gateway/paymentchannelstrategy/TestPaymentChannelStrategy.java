@@ -56,7 +56,7 @@ public class TestPaymentChannelStrategy implements PaymentChannelStrategy {
             payment.setStatus(PaymentStatusEnum.PAYMENT_LINK_GENERATED);
         }
 
-        return new PaymentLinkStrategyResponse(payment);
+        return new PaymentLinkStrategyResponse(payment.getPaymentChannelPayLink(), payment.getPaymentChannelTxnId(), payment.getStatus());
     }
 
     @Override

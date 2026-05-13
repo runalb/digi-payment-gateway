@@ -7,6 +7,7 @@ import com.digirestro.digi_payment_gateway.merchant.entity.MerchantEntity;
 import com.digirestro.digi_payment_gateway.merchant.entity.MerchantPaymentChannelConfigEntity;
 import com.digirestro.digi_payment_gateway.merchant.service.MerchantService;
 import com.digirestro.digi_payment_gateway.payment.entity.PaymentEntity;
+import com.digirestro.digi_payment_gateway.payment.enums.PaymentStatusEnum;
 import com.digirestro.digi_payment_gateway.paymentchannelstrategy.PaymentChannelStrategy;
 import com.digirestro.digi_payment_gateway.paymentchannelstrategy.PaymentChannelStrategyResolver;
 import com.digirestro.digi_payment_gateway.paymentchannelstrategy.dto.PaymentLinkStrategyResponse;
@@ -14,7 +15,6 @@ import com.digirestro.digi_payment_gateway.paymentchannelstrategy.dto.PaymentLin
 import java.util.UUID;
 
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
 
 @Service
 public class PaymentOrchestrationService {
@@ -32,7 +32,6 @@ public class PaymentOrchestrationService {
         this.strategyResolver = strategyResolver;
     }
 
-    @Transactional
     public PaymentLinkResponse generatePaymentLink(MerchantEntity merchant, PaymentLinkRequest request) {
         Long merchantId = merchant.getId();
 
@@ -45,8 +44,7 @@ public class PaymentOrchestrationService {
         MerchantConfigEntity merchantConfig = merchantService.findMerchantConfigByMerchantId(merchantId);
 
         PaymentEntity payment = new PaymentEntity();
-        UUID paymentReferenceId = UUID.randomUUID();
-        payment.setPaymentReferenceId(paymentReferenceId);
+        payment.setPaymentReferenceId(UUID.randomUUID());
         payment.setMerchant(merchant);
         payment.setMerchantPaymentChannelConfig(merchantPaymentChannelConfig);
         payment.setPaymentChannel(merchantPaymentChannelConfig.getPaymentChannel());
@@ -54,27 +52,26 @@ public class PaymentOrchestrationService {
         payment.setAmount(request.amount());
         payment.setMerchantReferencePaymentId(request.merchantReferencePaymentId());
         payment.setMerchantMetadataJson(request.merchantMetadataJson());
-        
-        // payment.setDigiPaymentLink(buildDigiPaymentLink(paymentReferenceId));
+        payment.setStatus(PaymentStatusEnum.INITIATED);
         payment = paymentService.save(payment);
 
-        PaymentLinkStrategyResponse strategyResponse = strategy.createPaymentLink(payment);
-        payment.setPaymentChannelPayLink(strategyResponse.payment().getPaymentChannelPayLink());
-        payment.setPaymentChannelTxnId(strategyResponse.payment().getPaymentChannelTxnId());
-        payment.setStatus(strategyResponse.payment().getStatus());
-        payment = paymentService.save(payment);
+        payment = completePaymentLinkGeneration(payment, strategy);
 
         return new PaymentLinkResponse(
                 payment.getId(),
-                // payment.getDigiPaymentLink(),
                 payment.getPaymentChannelPayLink(),
                 payment.getPaymentChannelTxnId(),
                 payment.getStatus()
         );
     }
 
-    // private String buildDigiPaymentLink(UUID paymentReferenceId) {
-    //     return "http://localhost:8080" + "/pay/" + paymentReferenceId.toString();
-    // }
+    private PaymentEntity completePaymentLinkGeneration(PaymentEntity payment, PaymentChannelStrategy strategy) {
+        PaymentLinkStrategyResponse strategyResponse = strategy.createPaymentLink(payment);
 
+        PaymentEntity paymentToUpdate = paymentService.findById(payment.getId());
+        paymentToUpdate.setPaymentChannelPayLink(strategyResponse.paymentChannelPayLink());
+        paymentToUpdate.setPaymentChannelTxnId(strategyResponse.paymentChannelTxnId());
+        paymentToUpdate.setStatus(PaymentStatusEnum.PAYMENT_LINK_GENERATED);
+        return paymentService.save(paymentToUpdate);
+    }
 }
