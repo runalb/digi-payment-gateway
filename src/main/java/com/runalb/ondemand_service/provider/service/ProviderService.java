@@ -41,7 +41,6 @@ public class ProviderService {
         entity.setBio(InputSanitizer.trimToNull(request.bio()));
         entity.setIsVerified(Boolean.FALSE);
         entity.setAverageRating(0.0);
-        entity.setIsActive(Boolean.TRUE);
         entity.setAddress(InputSanitizer.trimToNull(request.address()));
         entity.setProfileCompletionPercentage(computeProfileCompletion(entity));
 
@@ -78,7 +77,7 @@ public class ProviderService {
         UserEntity user = authService.resolveAuthenticatedUser();
 
         ProviderEntity entity = providerRepository
-                .findByIdWithUserAndRoles(providerId)
+                .findWithUserAndRolesByIdAndIsDeletedFalse(providerId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Provider not found"));
 
         if (!entity.getUser().getId().equals(user.getId())) {
@@ -90,7 +89,7 @@ public class ProviderService {
 
     private ProviderEntity requireLoaded(Long id) {
         return providerRepository
-                .findByIdWithUserAndRoles(id)
+                .findWithUserAndRolesByIdAndIsDeletedFalse(id)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Provider not found"));
     }
 
@@ -101,7 +100,7 @@ public class ProviderService {
 
     @Transactional(readOnly = true)
     public List<ProviderDetailResponse> getAllProviders() {
-        return providerRepository.findAllActiveWithUserAndRoles().stream()
+        return providerRepository.findWithUserAndRolesByIsDeletedFalseOrderByIdAsc().stream()
                 .map(ProviderService::toDetailResponse)
                 .toList();
     }
@@ -111,7 +110,7 @@ public class ProviderService {
         ProviderEntity entity = providerRepository
                 .findById(providerId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Provider not found"));
-        entity.setIsActive(false);
+        entity.setIsDeleted(Boolean.TRUE);
         providerRepository.save(entity);
     }
 

@@ -51,8 +51,8 @@ public class ApiKeyAuthenticationFilter extends OncePerRequestFilter {
             return;
         }
 
-        BusinessEntity business = businessRepository.findByApiKey(apiKey.trim()).orElse(null);
-        if (business == null || Boolean.TRUE.equals(business.getIsDeleted())) {
+        BusinessEntity business = businessRepository.findByApiKeyAndIsDeletedFalse(apiKey.trim()).orElse(null);
+        if (business == null) {
             unauthorized(response, "Invalid API key");
             return;
         }

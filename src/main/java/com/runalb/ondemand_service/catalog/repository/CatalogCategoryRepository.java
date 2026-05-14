@@ -8,9 +8,9 @@ import org.springframework.data.jpa.repository.JpaRepository;
 
 public interface CatalogCategoryRepository extends JpaRepository<CatalogCategoryEntity, Long> {
 
-    Optional<CatalogCategoryEntity> findByIdAndActiveTrue(Long id);
+    Optional<CatalogCategoryEntity> findByIdAndIsDeletedFalse(Long id);
 
-    List<CatalogCategoryEntity> findByActiveTrue(Sort sort);
+    List<CatalogCategoryEntity> findByIsDeletedFalse(Sort sort);
 
     boolean existsByNameIgnoreCase(String name);
 

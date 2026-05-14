@@ -6,5 +6,4 @@ public record CatalogServiceUpdateRequest(
         @Size(max = 512) String name,
         @Size(max = 4000) String description,
         Integer displayOrder,
-        Boolean active,
         Long categoryId) {}

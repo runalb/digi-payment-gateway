@@ -37,5 +37,5 @@ public class CatalogServiceEntity extends AuditableEntity {
     private Integer displayOrder = 0;
 
     @Column(nullable = false)
-    private Boolean active = Boolean.TRUE;
+    private Boolean isDeleted = Boolean.FALSE;
 }

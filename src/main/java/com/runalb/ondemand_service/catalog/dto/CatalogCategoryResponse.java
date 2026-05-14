@@ -7,6 +7,5 @@ public record CatalogCategoryResponse(
         String name,
         String description,
         Integer displayOrder,
-        Boolean active,
         LocalDateTime createdDateTime,
         LocalDateTime updatedDateTime) {}

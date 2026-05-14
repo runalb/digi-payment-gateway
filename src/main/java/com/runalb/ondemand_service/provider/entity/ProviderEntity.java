@@ -41,8 +41,8 @@ public class ProviderEntity extends AuditableEntity {
     @Column(name = "profile_completion_percentage", nullable = false)
     private int profileCompletionPercentage;
 
-    @Column(name = "is_active", nullable = false)
-    private Boolean isActive = Boolean.TRUE;
+    @Column(nullable = false)
+    private Boolean isDeleted = Boolean.FALSE;
 
     @Column(columnDefinition = "TEXT")
     private String address;

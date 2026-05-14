@@ -10,13 +10,13 @@ import com.runalb.ondemand_service.catalog.entity.CatalogCategoryEntity;
 import com.runalb.ondemand_service.catalog.entity.CatalogServiceEntity;
 import com.runalb.ondemand_service.catalog.repository.CatalogCategoryRepository;
 import com.runalb.ondemand_service.catalog.repository.CatalogServiceRepository;
+import com.runalb.ondemand_service.util.InputSanitizer;
 import java.util.List;
 import java.util.Objects;
 import org.springframework.data.domain.Sort;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.util.StringUtils;
 import org.springframework.web.server.ResponseStatusException;
 
 @Service
@@ -35,14 +35,14 @@ public class CatalogService {
 
     @Transactional(readOnly = true)
     public List<CatalogCategoryResponse> listCategories() {
-        return categoryRepository.findByActiveTrue(Sort.by("displayOrder", "id")).stream()
+        return categoryRepository.findByIsDeletedFalse(Sort.by("displayOrder", "id")).stream()
                 .map(CatalogService::toCatalogCategoryResponse)
                 .toList();
     }
 
     @Transactional(readOnly = true)
     public CatalogCategoryResponse getCategory(Long id) {
-        return toCatalogCategoryResponse(requireActiveCategory(id));
+        return toCatalogCategoryResponse(requireNonDeletedCategory(id));
     }
 
     @Transactional
@@ -51,9 +51,8 @@ public class CatalogService {
         assertCategoryNameUnique(name, null);
         CatalogCategoryEntity e = new CatalogCategoryEntity();
         e.setName(name);
-        e.setDescription(blankDescriptionToNull(request.description()));
+        e.setDescription(InputSanitizer.trimToNull(request.description()));
         e.setDisplayOrder(displayOrderVal(request.displayOrder()));
-        e.setActive(request.active() == null ? Boolean.TRUE : request.active());
         e = categoryRepository.save(e);
         return toCatalogCategoryResponse(e);
     }
@@ -62,8 +61,7 @@ public class CatalogService {
     public CatalogCategoryResponse updateCategory(Long id, CatalogCategoryUpdateRequest request) {
         if (request.name() == null
                 && request.description() == null
-                && request.displayOrder() == null
-                && request.active() == null) {
+                && request.displayOrder() == null) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Request body must not be empty");
         }
         CatalogCategoryEntity e = requireCategory(id);
@@ -73,13 +71,10 @@ public class CatalogService {
             e.setName(name);
         }
         if (request.description() != null) {
-            e.setDescription(blankDescriptionToNull(request.description()));
+            e.setDescription(InputSanitizer.trimToNull(request.description()));
         }
         if (request.displayOrder() != null) {
             e.setDisplayOrder(request.displayOrder());
-        }
-        if (request.active() != null) {
-            e.setActive(request.active());
         }
         e = categoryRepository.save(e);
         return toCatalogCategoryResponse(e);
@@ -90,18 +85,18 @@ public class CatalogService {
         CatalogCategoryEntity cat = requireCategory(id);
         List<CatalogServiceEntity> services = catalogServiceRepository.findByCatalogCategory_Id(id);
         for (CatalogServiceEntity s : services) {
-            s.setActive(false);
+            s.setIsDeleted(Boolean.TRUE);
         }
         catalogServiceRepository.saveAll(services);
-        cat.setActive(false);
+        cat.setIsDeleted(Boolean.TRUE);
         categoryRepository.save(cat);
     }
 
     @Transactional(readOnly = true)
     public List<CatalogServiceResponse> listServicesInCategory(Long categoryId) {
-        requireActiveCategory(categoryId);
+        requireNonDeletedCategory(categoryId);
         return catalogServiceRepository
-                .findByCatalogCategory_IdAndActiveTrueOrderByDisplayOrderAscIdAsc(categoryId)
+                .findByCatalogCategory_IdAndIsDeletedFalseOrderByDisplayOrderAscIdAsc(categoryId)
                 .stream()
                 .map(CatalogService::toCatalogServiceResponse)
                 .toList();
@@ -109,7 +104,7 @@ public class CatalogService {
 
     @Transactional(readOnly = true)
     public List<CatalogServiceResponse> listAllCatalogServices() {
-        return catalogServiceRepository.findAllByActiveTrue(Sort.by("id")).stream()
+        return catalogServiceRepository.findAllByIsDeletedFalse(Sort.by("id")).stream()
                 .map(CatalogService::toCatalogServiceResponse)
                 .toList();
     }
@@ -117,22 +112,21 @@ public class CatalogService {
     @Transactional(readOnly = true)
     public CatalogServiceResponse getCatalogService(Long id) {
         return catalogServiceRepository
-                .findActiveByIdFetchCatalogCategory(id)
+                .findWithCatalogCategoryByIdAndIsDeletedFalse(id)
                 .map(CatalogService::toCatalogServiceResponse)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Service not found"));
     }
 
     @Transactional
     public CatalogServiceResponse createService(Long categoryId, CatalogServiceCreateRequest request) {
-        CatalogCategoryEntity category = requireActiveCategory(categoryId);
-        String name = request.name().trim();
+        CatalogCategoryEntity category = requireNonDeletedCategory(categoryId);
+        String name = InputSanitizer.normalizeName(request.name());
         assertServiceNameUniqueInCategory(category.getId(), name, null);
         CatalogServiceEntity e = new CatalogServiceEntity();
         e.setCatalogCategory(category);
         e.setName(name);
-        e.setDescription(blankDescriptionToNull(request.description()));
+        e.setDescription(InputSanitizer.trimToNull(request.description()));
         e.setDisplayOrder(displayOrderVal(request.displayOrder()));
-        e.setActive(request.active() == null ? Boolean.TRUE : request.active());
         e = catalogServiceRepository.save(e);
         return toCatalogServiceResponse(e);
     }
@@ -142,14 +136,13 @@ public class CatalogService {
         if (request.name() == null
                 && request.description() == null
                 && request.displayOrder() == null
-                && request.active() == null
                 && request.categoryId() == null) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Request body must not be empty");
         }
         CatalogServiceEntity e = requireCatalogService(id);
         if (request.categoryId() != null
                 && !Objects.equals(request.categoryId(), e.getCatalogCategory().getId())) {
-            CatalogCategoryEntity newCat = requireActiveCategory(request.categoryId());
+            CatalogCategoryEntity newCat = requireNonDeletedCategory(request.categoryId());
             e.setCatalogCategory(newCat);
         }
         Long targetCategoryId = e.getCatalogCategory().getId();
@@ -159,13 +152,10 @@ public class CatalogService {
             e.setName(targetName);
         }
         if (request.description() != null) {
-            e.setDescription(blankDescriptionToNull(request.description()));
+            e.setDescription(InputSanitizer.trimToNull(request.description()));
         }
         if (request.displayOrder() != null) {
             e.setDisplayOrder(request.displayOrder());
-        }
-        if (request.active() != null) {
-            e.setActive(request.active());
         }
         e = catalogServiceRepository.save(e);
         return toCatalogServiceResponse(e);
@@ -174,7 +164,7 @@ public class CatalogService {
     @Transactional
     public void deleteCatalogService(Long id) {
         CatalogServiceEntity e = requireCatalogService(id);
-        e.setActive(false);
+        e.setIsDeleted(Boolean.TRUE);
         catalogServiceRepository.save(e);
     }
 
@@ -184,15 +174,15 @@ public class CatalogService {
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Category not found"));
     }
 
-    private CatalogCategoryEntity requireActiveCategory(Long id) {
+    private CatalogCategoryEntity requireNonDeletedCategory(Long id) {
         return categoryRepository
-                .findByIdAndActiveTrue(id)
+                .findByIdAndIsDeletedFalse(id)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Category not found"));
     }
 
     private CatalogServiceEntity requireCatalogService(Long id) {
         return catalogServiceRepository
-                .findByIdFetchCatalogCategory(id)
+                .findWithCatalogCategoryById(id)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Service not found"));
     }
 
@@ -223,7 +213,6 @@ public class CatalogService {
                 e.getName(),
                 e.getDescription(),
                 e.getDisplayOrder(),
-                e.getActive(),
                 e.getCreatedDateTime(),
                 e.getUpdatedDateTime());
     }
@@ -234,17 +223,9 @@ public class CatalogService {
                 e.getName(),
                 e.getDescription(),
                 e.getDisplayOrder(),
-                e.getActive(),
                 toCatalogCategoryResponse(e.getCatalogCategory()),
                 e.getCreatedDateTime(),
                 e.getUpdatedDateTime());
-    }
-
-    private String blankDescriptionToNull(String s) {
-        if (!StringUtils.hasText(s)) {
-            return null;
-        }
-        return s.trim();
     }
 
     private int displayOrderVal(Integer v) {

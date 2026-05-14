@@ -34,7 +34,7 @@ public class CatalogCategoryEntity extends AuditableEntity {
     private Integer displayOrder = 0;
 
     @Column(nullable = false)
-    private Boolean active = Boolean.TRUE;
+    private Boolean isDeleted = Boolean.FALSE;
 
     @OneToMany(mappedBy = "catalogCategory", fetch = FetchType.LAZY)
     private List<CatalogServiceEntity> services = new ArrayList<>();
