@@ -12,13 +12,16 @@ import org.springframework.transaction.annotation.Transactional;
 public class EntityLinkService {
 
     private final UserRepository userRepository;
-    private final ProviderRepository providerRepository;
     private final BusinessRepository businessRepository;
+    private final ProviderRepository providerRepository;
 
-    public EntityLinkService(UserRepository userRepository, ProviderRepository providerRepository, BusinessRepository businessRepository) {
+    public EntityLinkService(
+            UserRepository userRepository,
+            BusinessRepository businessRepository,
+            ProviderRepository providerRepository) {
         this.userRepository = userRepository;
-        this.providerRepository = providerRepository;
         this.businessRepository = businessRepository;
+        this.providerRepository = providerRepository;
     }
 
     @Transactional
@@ -29,11 +32,11 @@ public class EntityLinkService {
 
     @Transactional(readOnly = true)
     public boolean userHasBusinessAccess(Long userId, Long businessId) {
-        return userRepository.existsByIdAndBusinessesId(userId, businessId);
+        return businessRepository.existsByIdAndUsers_IdAndIsDeletedFalse(businessId, userId);
     }
 
     @Transactional(readOnly = true)
     public boolean userHasProviderAccess(Long userId, Long providerId) {
-        return providerRepository.existsByIdAndUserId(providerId, userId);
+        return providerRepository.existsByIdAndUser_IdAndIsDeletedFalse(providerId, userId);
     }
 }
