@@ -20,10 +20,11 @@ public interface PaymentChannelStrategy {
 
 
 
-    // TODO: Webhook flow not fully implemented yet.
-    /**
-     * Validates and parses a channel webhook payload.
-     * Must not load or save the payment — {@code PaymentChannelWebhookOrchestrationService} owns persistence.
+    /** 
+     * TODO: Webhook flow not fully implemented yet. Remove this method once webhook flow is fully implemented. This method is only for initial testing purposes.
+     *
+     * <p>Validates and parses a channel webhook payload.
+     * <p>Must not load or save the payment — {@code PaymentChannelWebhookOrchestrationService} owns persistence.
      */
-    WebhookStrategyResponse validateAndParseWebhook(Map<String, Object> webhookPayload);
+    // WebhookStrategyResponse validateAndParseWebhook(Map<String, Object> webhookPayload);
 }

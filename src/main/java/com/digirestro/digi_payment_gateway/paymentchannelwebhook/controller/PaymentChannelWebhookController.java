@@ -50,8 +50,9 @@ public class PaymentChannelWebhookController {
         PaymentChannelNameEnum channelName = parseChannelKey(channelKey);
         log.info("Parsed channel name: {}", channelName);
 
-        WebhookStrategyResponse response = webhookOrchestrationService.processWebhook(channelName, webhookPayload);
-        return new ResponseEntity<>(response, HttpStatus.OK);
+        // WebhookStrategyResponse response = webhookOrchestrationService.processWebhook(channelName, webhookPayload);
+        // return new ResponseEntity<>(response, HttpStatus.OK);
+        return new ResponseEntity<>(HttpStatus.OK);
     }
 
     private static PaymentChannelNameEnum parseChannelKey(String channelKey) {

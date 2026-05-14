@@ -24,21 +24,21 @@ public class PaymentChannelWebhookOrchestrationService {
         this.paymentService = paymentService;
     }
 
-    public WebhookStrategyResponse processWebhook(PaymentChannelNameEnum channelName, Map<String, Object> webhookPayload) {
-        PaymentChannelStrategy strategy = strategyResolver.getRequiredStrategy(channelName);
-        WebhookStrategyResponse parsed = strategy.validateAndParseWebhook(webhookPayload);
+    // public WebhookStrategyResponse processWebhook(PaymentChannelNameEnum channelName, Map<String, Object> webhookPayload) {
+    //     PaymentChannelStrategy strategy = strategyResolver.getRequiredStrategy(channelName);
+    //     WebhookStrategyResponse parsed = strategy.validateAndParseWebhook(webhookPayload);
 
-        PaymentEntity paymentToUpdate = paymentService.findById(parsed.paymentId());
-        paymentToUpdate.setStatus(parsed.status());
-        if (parsed.paymentChannelTxnId() != null) {
-            paymentToUpdate.setPaymentChannelTxnId(parsed.paymentChannelTxnId());
-        }
-        PaymentEntity payment = paymentService.save(paymentToUpdate);
+    //     PaymentEntity paymentToUpdate = paymentService.findById(parsed.paymentId());
+    //     paymentToUpdate.setStatus(parsed.status());
+    //     if (parsed.paymentChannelTxnId() != null) {
+    //         paymentToUpdate.setPaymentChannelTxnId(parsed.paymentChannelTxnId());
+    //     }
+    //     PaymentEntity payment = paymentService.save(paymentToUpdate);
 
-        return new WebhookStrategyResponse(
-                payment.getStatus(),
-                payment.getId(),
-                payment.getPaymentChannelTxnId(),
-                payment.getMerchantReferencePaymentId());
-    }
+    //     return new WebhookStrategyResponse(
+    //             payment.getStatus(),
+    //             payment.getId(),
+    //             payment.getPaymentChannelTxnId(),
+    //             payment.getMerchantReferencePaymentId());
+    // }
 }

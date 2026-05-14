@@ -52,18 +52,18 @@ public class TestPaymentChannelStrategy implements PaymentChannelStrategy {
                 PaymentStatusEnum.PAYMENT_LINK_GENERATED);
     }
 
-    @Override
-    public WebhookStrategyResponse validateAndParseWebhook(Map<String, Object> webhookPayload) {
-        log.info("Validating and parsing webhook payload: {}", webhookPayload);
+    // @Override
+    // public WebhookStrategyResponse validateAndParseWebhook(Map<String, Object> webhookPayload) {
+    //     log.info("Validating and parsing webhook payload: {}", webhookPayload);
 
-        PaymentStatusEnum paymentStatus = PaymentStatusEnum.valueOf((String) webhookPayload.get("paymentStatus"));
-        Long paymentId = extractPaymentId(webhookPayload.get("paymentId"));
-        if (paymentId == null) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Payment ID is required in webhook payload");
-        }
+    //     PaymentStatusEnum paymentStatus = PaymentStatusEnum.valueOf((String) webhookPayload.get("paymentStatus"));
+    //     Long paymentId = extractPaymentId(webhookPayload.get("paymentId"));
+    //     if (paymentId == null) {
+    //         throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Payment ID is required in webhook payload");
+    //     }
 
-        return new WebhookStrategyResponse(paymentStatus, paymentId, null, null);
-    }
+    //     return new WebhookStrategyResponse(paymentStatus, paymentId, null, null);
+    // }
 
     private static Long extractPaymentId(Object paymentIdValue) {
         if (paymentIdValue == null) {
