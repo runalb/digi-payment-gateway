@@ -25,8 +25,9 @@ import org.springframework.stereotype.Service;
  *
  * <ol>
  *   <li>Phase 1 — persist {@link PaymentStatusEnum#INITIATED} (committed before any channel HTTP call)</li>
- *   <li>Phase 2 — {@link #completePaymentLinkGeneration(PaymentEntity, PaymentChannelStrategy)}:
- *       channel API, refetch from DB, persist link fields and {@link PaymentStatusEnum#PAYMENT_LINK_GENERATED}</li>
+ *   <li>Phase 2 — {@link #completePaymentLinkGeneration(PaymentEntity)}:
+ *       refetch from DB, resolve channel strategy, channel API, persist link fields and
+ *       {@link PaymentStatusEnum#PAYMENT_LINK_GENERATED}</li>
  * </ol>
  *
  * <p>Rules:
@@ -34,7 +35,7 @@ import org.springframework.stereotype.Service;
  *   <li>Do not add {@code @Transactional} on {@link #generatePaymentLink} — external HTTP must run outside a DB transaction</li>
  *   <li>Do not merge both phases into one transaction</li>
  *   <li>Do not persist payment or set status inside {@link com.digirestro.digi_payment_gateway.paymentchannelstrategy.interfaces.PaymentChannelStrategy#createPaymentLink}</li>
- *   <li>Always refetch before the second save in {@link #completePaymentLinkGeneration}</li>
+ *   <li>Always refetch and resolve strategy from persisted payment channel in {@link #completePaymentLinkGeneration}</li>
  * </ul>
  */
 @PaymentLinkOrchestrationContract
@@ -55,13 +56,12 @@ public class PaymentOrchestrationService {
     }
 
     public PaymentLinkResponse generatePaymentLink(MerchantEntity merchant, PaymentLinkRequest request) {
+        // Phase 1
         Long merchantId = merchant.getId();
 
-        MerchantPaymentChannelConfigEntity merchantPaymentChannelConfig =
-                merchantService.findPaymentChannelConfigByMerchantId(merchantId);
+        MerchantPaymentChannelConfigEntity merchantPaymentChannelConfig = merchantService.findPaymentChannelConfigByMerchantId(merchantId);
 
-        PaymentChannelStrategy strategy = strategyResolver.getRequiredStrategy(
-                merchantPaymentChannelConfig.getPaymentChannel().getName());
+        strategyResolver.getRequiredStrategy(merchantPaymentChannelConfig.getPaymentChannel().getName());
 
         MerchantConfigEntity merchantConfig = merchantService.findMerchantConfigByMerchantId(merchantId);
 
@@ -77,7 +77,8 @@ public class PaymentOrchestrationService {
         payment.setStatus(PaymentStatusEnum.INITIATED);
         payment = paymentService.save(payment);
 
-        payment = completePaymentLinkGeneration(payment, strategy);
+        // Phase 2
+        payment = completePaymentLinkGeneration(payment);
 
         return new PaymentLinkResponse(
                 payment.getId(),
@@ -91,10 +92,13 @@ public class PaymentOrchestrationService {
      * Phase 2 only. Channel HTTP runs here, between two independent commits.
      */
     @PaymentLinkOrchestrationContract
-    private PaymentEntity completePaymentLinkGeneration(PaymentEntity payment, PaymentChannelStrategy strategy) {
-        PaymentLinkStrategyResponse strategyResponse = strategy.createPaymentLink(payment);
-
+    private PaymentEntity completePaymentLinkGeneration(PaymentEntity payment) {
         PaymentEntity paymentToUpdate = paymentService.findById(payment.getId());
+
+        PaymentChannelStrategy strategy = strategyResolver.getRequiredStrategy(paymentToUpdate.getPaymentChannel().getName());
+
+        PaymentLinkStrategyResponse strategyResponse = strategy.createPaymentLink(paymentToUpdate);
+
         paymentToUpdate.setPaymentChannelPayLink(strategyResponse.paymentChannelPayLink());
         paymentToUpdate.setPaymentChannelTxnId(strategyResponse.paymentChannelTxnId());
         paymentToUpdate.setStatus(strategyResponse.status());

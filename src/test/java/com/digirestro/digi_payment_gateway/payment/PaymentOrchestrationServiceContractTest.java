@@ -8,8 +8,6 @@ import com.digirestro.digi_payment_gateway.merchant.entity.MerchantEntity;
 import com.digirestro.digi_payment_gateway.payment.contract.PaymentLinkOrchestrationContract;
 import com.digirestro.digi_payment_gateway.payment.entity.PaymentEntity;
 import com.digirestro.digi_payment_gateway.payment.service.PaymentOrchestrationService;
-import com.digirestro.digi_payment_gateway.paymentchannelstrategy.interfaces.PaymentChannelStrategy;
-
 import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
 
@@ -34,7 +32,7 @@ class PaymentOrchestrationServiceContractTest {
     @Test
     void completePaymentLinkGenerationMustRemainPrivatePhaseTwoHook() throws NoSuchMethodException {
         Method method = PaymentOrchestrationService.class.getDeclaredMethod(
-                "completePaymentLinkGeneration", PaymentEntity.class, PaymentChannelStrategy.class);
+                "completePaymentLinkGeneration", PaymentEntity.class);
 
         assertTrue(Modifier.isPrivate(method.getModifiers()));
         assertTrue(method.isAnnotationPresent(PaymentLinkOrchestrationContract.class));
