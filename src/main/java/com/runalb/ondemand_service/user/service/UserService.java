@@ -1,6 +1,5 @@
 package com.runalb.ondemand_service.user.service;
 
-import com.runalb.ondemand_service.business.entity.BusinessEntity;
 import com.runalb.ondemand_service.role.entity.RoleEntity;
 import com.runalb.ondemand_service.role.enums.RoleNameEnum;
 import com.runalb.ondemand_service.role.repository.RoleRepository;
@@ -8,7 +7,6 @@ import com.runalb.ondemand_service.user.dto.UserCreateRequest;
 import com.runalb.ondemand_service.user.dto.UserResponse;
 import com.runalb.ondemand_service.user.dto.UserUpdateRequest;
 import com.runalb.ondemand_service.user.entity.UserEntity;
-import com.runalb.ondemand_service.provider.repository.ProviderRepository;
 import com.runalb.ondemand_service.user.repository.UserRepository;
 import com.runalb.ondemand_service.util.InputSanitizer;
 import java.util.LinkedHashSet;
@@ -24,17 +22,14 @@ import org.springframework.web.server.ResponseStatusException;
 public class UserService {
 
     private final UserRepository userRepository;
-    private final ProviderRepository providerRepository;
     private final RoleRepository roleRepository;
     private final PasswordEncoder passwordEncoder;
 
     public UserService(
             UserRepository userRepository,
-            ProviderRepository providerRepository,
             RoleRepository roleRepository,
             PasswordEncoder passwordEncoder) {
         this.userRepository = userRepository;
-        this.providerRepository = providerRepository;
         this.roleRepository = roleRepository;
         this.passwordEncoder = passwordEncoder;
     }
@@ -186,27 +181,6 @@ public class UserService {
         return toResponse(user);
     }
 
-    // Businesses
-    @Transactional(readOnly = true)
-    public boolean userOwnsBusiness(Long userId, Long businessId) {
-        return userRepository.existsByIdAndBusinesses_Id(userId, businessId);
-    }
-
-    @Transactional
-    public void linkUserToBusiness(UserEntity user, BusinessEntity business) {
-        user.getBusinesses().add(business);
-        userRepository.save(user);
-    }
-
-
-    // Providers
-    @Transactional(readOnly = true)
-    public boolean userOwnsProvider(Long userId, Long providerId) {
-        return providerRepository.existsByIdAndUser_Id(providerId, userId);
-    }
-
-
-    
 
 
 

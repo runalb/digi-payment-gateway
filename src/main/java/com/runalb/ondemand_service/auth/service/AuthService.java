@@ -17,6 +17,7 @@ import com.runalb.ondemand_service.security.JwtService;
 import com.runalb.ondemand_service.user.entity.UserEntity;
 import java.util.Comparator;
 import java.util.List;
+import com.runalb.ondemand_service.relationship.service.EntityLinkService;
 import com.runalb.ondemand_service.user.service.UserService;
 import com.runalb.ondemand_service.util.InputSanitizer;
 import java.nio.charset.StandardCharsets;
@@ -51,6 +52,7 @@ public class AuthService {
     private final Map<String, OtpSession> forgotPasswordEmailOtpSessions = new ConcurrentHashMap<>();
 
     private final UserService userService;
+    private final EntityLinkService entityLinkService;
     private final AuthRefreshTokenRepository authRefreshTokenRepository;
     private final PasswordEncoder passwordEncoder;
     private final JwtService jwtService;
@@ -59,6 +61,7 @@ public class AuthService {
 
     public AuthService(
             UserService userService,
+            EntityLinkService entityLinkService,
             AuthRefreshTokenRepository authRefreshTokenRepository,
             PasswordEncoder passwordEncoder,
             JwtService jwtService,
@@ -66,6 +69,7 @@ public class AuthService {
             @Value("${security.otp.resend-cooldown-seconds:45}") long otpResendCooldownSeconds
         ) {
         this.userService = userService;
+        this.entityLinkService = entityLinkService;
         this.authRefreshTokenRepository = authRefreshTokenRepository;
         this.passwordEncoder = passwordEncoder;
         this.jwtService = jwtService;
@@ -86,7 +90,7 @@ public class AuthService {
     @Transactional(readOnly = true)
     public void assertAuthenticatedUserOwnsBusiness(Long businessId) {
         UserEntity user = resolveAuthenticatedUser();
-        if (!userService.userOwnsBusiness(user.getId(), businessId)) {
+        if (!entityLinkService.userOwnsBusiness(user.getId(), businessId)) {
             throw new ResponseStatusException(
                     HttpStatus.FORBIDDEN, "You are not authorized to access this resource");
         }
@@ -96,7 +100,7 @@ public class AuthService {
     @Transactional(readOnly = true)
     public void assertAuthenticatedUserOwnsProvider(Long providerId) {
         UserEntity user = resolveAuthenticatedUser();
-        if (!userService.userOwnsProvider(user.getId(), providerId)) {
+        if (!entityLinkService.userOwnsProvider(user.getId(), providerId)) {
             throw new ResponseStatusException(
                     HttpStatus.FORBIDDEN, "You are not authorized to access this resource. You are not the owner of this provider");
         }

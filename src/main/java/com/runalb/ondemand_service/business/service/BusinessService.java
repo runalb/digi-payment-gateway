@@ -19,7 +19,7 @@ import com.runalb.ondemand_service.user.entity.UserEntity;
 import com.runalb.ondemand_service.auth.service.AuthService;
 // import com.runalb.ondemand_service.payment.entity.PaymentChannelEntity;
 // import com.runalb.ondemand_service.payment.service.PaymentChannelService;
-import com.runalb.ondemand_service.user.service.UserService;
+import com.runalb.ondemand_service.relationship.service.EntityLinkService;
 import com.runalb.ondemand_service.util.InputSanitizer;
 import jakarta.persistence.EntityNotFoundException;
 import java.util.List;
@@ -37,7 +37,7 @@ public class BusinessService {
     private final BusinessConfigRepository businessConfigRepository;
     // private final PaymentChannelService paymentChannelService;
     private final BusinessPaymentChannelConfigRepository businessPaymentChannelConfigRepository;
-    private final UserService userService;
+    private final EntityLinkService entityLinkService;
     private final AuthService authService;
 
     public BusinessService(
@@ -45,13 +45,13 @@ public class BusinessService {
             BusinessConfigRepository businessConfigRepository,
             // PaymentChannelService paymentChannelService,
             BusinessPaymentChannelConfigRepository businessPaymentChannelConfigRepository,
-            UserService userService,
+            EntityLinkService entityLinkService,
             AuthService authService) {
         this.businessRepository = businessRepository;
         this.businessConfigRepository = businessConfigRepository;
         // this.paymentChannelService = paymentChannelService;
         this.businessPaymentChannelConfigRepository = businessPaymentChannelConfigRepository;
-        this.userService = userService;
+        this.entityLinkService = entityLinkService;
         this.authService = authService;
     }
 
@@ -61,6 +61,7 @@ public class BusinessService {
                 .findByBusiness_IdAndIsDeletedFalse(businessId)
                 .orElseThrow(() -> new EntityNotFoundException("Business configuration not found"));
     }
+
 
     @Transactional(readOnly = true)
     public BusinessPaymentChannelConfigEntity findActivePaymentChannelConfigByBusinessId(Long businessId) {
@@ -80,7 +81,7 @@ public class BusinessService {
         business.setEmail(InputSanitizer.normalizeEmail(request.email()));
         business = businessRepository.save(business);
 
-        userService.linkUserToBusiness(user, business);
+        entityLinkService.linkUserToBusiness(user, business);
 
         return new BusinessResponse(
                 business.getId(), business.getName(), business.getEmail(), business.getApiKey(), business.getIsDeleted());
