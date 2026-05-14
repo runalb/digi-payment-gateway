@@ -25,12 +25,12 @@ public class EntityLinkService {
     }
 
     @Transactional(readOnly = true)
-    public boolean userOwnsBusiness(Long userId, Long businessId) {
+    public boolean userHasBusinessAccess(Long userId, Long businessId) {
         return userRepository.existsByIdAndBusinesses_Id(userId, businessId);
     }
 
     @Transactional(readOnly = true)
-    public boolean userOwnsProvider(Long userId, Long providerId) {
+    public boolean userHasProviderAccess(Long userId, Long providerId) {
         return providerRepository.existsByIdAndUser_Id(providerId, userId);
     }
 }

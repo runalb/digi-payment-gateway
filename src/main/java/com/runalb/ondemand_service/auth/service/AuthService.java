@@ -90,7 +90,7 @@ public class AuthService {
     @Transactional(readOnly = true)
     public void assertAuthenticatedUserOwnsBusiness(Long businessId) {
         UserEntity user = resolveAuthenticatedUser();
-        if (!entityLinkService.userOwnsBusiness(user.getId(), businessId)) {
+        if (!entityLinkService.userHasBusinessAccess(user.getId(), businessId)) {
             throw new ResponseStatusException(
                     HttpStatus.FORBIDDEN, "You are not authorized to access this resource");
         }
@@ -100,7 +100,7 @@ public class AuthService {
     @Transactional(readOnly = true)
     public void assertAuthenticatedUserOwnsProvider(Long providerId) {
         UserEntity user = resolveAuthenticatedUser();
-        if (!entityLinkService.userOwnsProvider(user.getId(), providerId)) {
+        if (!entityLinkService.userHasProviderAccess(user.getId(), providerId)) {
             throw new ResponseStatusException(
                     HttpStatus.FORBIDDEN, "You are not authorized to access this resource. You are not the owner of this provider");
         }
