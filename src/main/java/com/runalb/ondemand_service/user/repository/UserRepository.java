@@ -26,5 +26,5 @@ public interface UserRepository extends JpaRepository<UserEntity, Long> {
 
     boolean existsByMobileNumber(String mobileNumber);
 
-    boolean existsByIdAndBusinesses_Id(Long id, Long businessId);
+    boolean existsByIdAndBusinessesId(Long id, Long businessId);
 }

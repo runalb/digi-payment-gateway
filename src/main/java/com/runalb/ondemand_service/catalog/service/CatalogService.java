@@ -83,7 +83,7 @@ public class CatalogService {
     @Transactional
     public void deleteCategory(Long id) {
         CatalogCategoryEntity cat = requireCategory(id);
-        List<CatalogServiceEntity> services = catalogServiceRepository.findByCatalogCategory_Id(id);
+        List<CatalogServiceEntity> services = catalogServiceRepository.findByCatalogCategoryId(id);
         for (CatalogServiceEntity s : services) {
             s.setIsDeleted(Boolean.TRUE);
         }
@@ -96,7 +96,7 @@ public class CatalogService {
     public List<CatalogServiceResponse> listServicesInCategory(Long categoryId) {
         requireNonDeletedCategory(categoryId);
         return catalogServiceRepository
-                .findByCatalogCategory_IdAndIsDeletedFalseOrderByDisplayOrderAscIdAsc(categoryId)
+                .findByCatalogCategoryIdAndIsDeletedFalseOrderByDisplayOrderAscIdAsc(categoryId)
                 .stream()
                 .map(CatalogService::toCatalogServiceResponse)
                 .toList();
@@ -199,8 +199,8 @@ public class CatalogService {
     private void assertServiceNameUniqueInCategory(Long categoryId, String name, Long excludeServiceId) {
         boolean duplicate =
                 excludeServiceId == null
-                        ? catalogServiceRepository.existsByCatalogCategory_IdAndNameIgnoreCase(categoryId, name)
-                        : catalogServiceRepository.existsByCatalogCategory_IdAndNameIgnoreCaseAndIdNot(
+                        ? catalogServiceRepository.existsByCatalogCategoryIdAndNameIgnoreCase(categoryId, name)
+                        : catalogServiceRepository.existsByCatalogCategoryIdAndNameIgnoreCaseAndIdNot(
                                 categoryId, name, excludeServiceId);
         if (duplicate) {
             throw new ResponseStatusException(HttpStatus.CONFLICT, ALREADY_EXISTS_MESSAGE);

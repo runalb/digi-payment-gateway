@@ -8,13 +8,13 @@ import org.springframework.data.jpa.repository.JpaRepository;
 public interface BusinessPaymentChannelConfigRepository
         extends JpaRepository<BusinessPaymentChannelConfigEntity, Long> {
 
-    Optional<BusinessPaymentChannelConfigEntity> findFirstByBusiness_IdAndIsDeletedFalseOrderByIdAsc(Long businessId);
+    Optional<BusinessPaymentChannelConfigEntity> findFirstByBusinessIdAndIsDeletedFalseOrderByIdAsc(Long businessId);
 
-    boolean existsByBusiness_IdAndIsDeletedFalse(Long businessId);
+    boolean existsByBusinessIdAndIsDeletedFalse(Long businessId);
 
-    Optional<BusinessPaymentChannelConfigEntity> findByIdAndBusiness_Id(Long id, Long businessId);
+    Optional<BusinessPaymentChannelConfigEntity> findByIdAndBusinessId(Long id, Long businessId);
 
-    Optional<BusinessPaymentChannelConfigEntity> findByIdAndBusiness_IdAndIsDeletedFalse(Long id, Long businessId);
+    Optional<BusinessPaymentChannelConfigEntity> findByIdAndBusinessIdAndIsDeletedFalse(Long id, Long businessId);
 
-    List<BusinessPaymentChannelConfigEntity> findByBusiness_IdAndIsDeletedFalseOrderByIdAsc(Long businessId);
+    List<BusinessPaymentChannelConfigEntity> findByBusinessIdAndIsDeletedFalseOrderByIdAsc(Long businessId);
 }

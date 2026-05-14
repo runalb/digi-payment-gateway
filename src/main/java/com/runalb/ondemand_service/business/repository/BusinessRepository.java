@@ -13,5 +13,5 @@ public interface BusinessRepository extends JpaRepository<BusinessEntity, Long> 
 
     Optional<BusinessEntity> findByEmail(String email);
 
-    List<BusinessEntity> findByUsers_IdAndIsDeletedFalseOrderByIdAsc(Long userId);
+    List<BusinessEntity> findByUsersIdAndIsDeletedFalseOrderByIdAsc(Long userId);
 }

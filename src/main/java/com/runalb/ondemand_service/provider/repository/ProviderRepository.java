@@ -8,9 +8,9 @@ import org.springframework.data.jpa.repository.JpaRepository;
 
 public interface ProviderRepository extends JpaRepository<ProviderEntity, Long> {
 
-    boolean existsByUser_Id(Long userId);
+    boolean existsByUserId(Long userId);
 
-    boolean existsByIdAndUser_Id(Long providerId, Long userId);
+    boolean existsByIdAndUserId(Long providerId, Long userId);
 
     @EntityGraph(attributePaths = {"user", "user.roles"})
     Optional<ProviderEntity> findWithUserAndRolesById(Long id);
@@ -19,7 +19,7 @@ public interface ProviderRepository extends JpaRepository<ProviderEntity, Long> 
     Optional<ProviderEntity> findWithUserAndRolesByIdAndIsDeletedFalse(Long id);
 
     @EntityGraph(attributePaths = {"user", "user.roles"})
-    Optional<ProviderEntity> findWithUserAndRolesByUser_Id(Long userId);
+    Optional<ProviderEntity> findWithUserAndRolesByUserId(Long userId);
 
     @EntityGraph(attributePaths = {"user", "user.roles"})
     List<ProviderEntity> findWithUserAndRolesByIsDeletedFalseOrderByIdAsc();

@@ -9,17 +9,17 @@ import org.springframework.data.jpa.repository.JpaRepository;
 
 public interface CatalogServiceRepository extends JpaRepository<CatalogServiceEntity, Long> {
 
-    boolean existsByCatalogCategory_IdAndNameIgnoreCase(Long catalogCategoryId, String name);
+    boolean existsByCatalogCategoryIdAndNameIgnoreCase(Long catalogCategoryId, String name);
 
-    boolean existsByCatalogCategory_IdAndNameIgnoreCaseAndIdNot(Long catalogCategoryId, String name, Long id);
+    boolean existsByCatalogCategoryIdAndNameIgnoreCaseAndIdNot(Long catalogCategoryId, String name, Long id);
 
-    List<CatalogServiceEntity> findByCatalogCategory_Id(Long catalogCategoryId);
+    List<CatalogServiceEntity> findByCatalogCategoryId(Long catalogCategoryId);
 
     @EntityGraph(attributePaths = "catalogCategory")
     List<CatalogServiceEntity> findAllByIsDeletedFalse(Sort sort);
 
     @EntityGraph(attributePaths = "catalogCategory")
-    List<CatalogServiceEntity> findByCatalogCategory_IdAndIsDeletedFalseOrderByDisplayOrderAscIdAsc(Long categoryId);
+    List<CatalogServiceEntity> findByCatalogCategoryIdAndIsDeletedFalseOrderByDisplayOrderAscIdAsc(Long categoryId);
 
     @EntityGraph(attributePaths = "catalogCategory")
     Optional<CatalogServiceEntity> findWithCatalogCategoryById(Long id);

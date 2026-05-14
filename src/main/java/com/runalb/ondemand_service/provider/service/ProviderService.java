@@ -32,7 +32,7 @@ public class ProviderService {
     public ProviderDetailResponse createProvider(ProviderCreateRequest request) {
         UserEntity user = authService.resolveAuthenticatedUser();
         
-        if (providerRepository.existsByUser_Id(user.getId())) {
+        if (providerRepository.existsByUserId(user.getId())) {
             throw new ResponseStatusException(HttpStatus.CONFLICT, "Provider already exists for this user");
         }
 
@@ -95,7 +95,7 @@ public class ProviderService {
 
     @Transactional(readOnly = true)
     public boolean providerBelongsToUser(Long userId, Long providerId) {
-        return providerRepository.existsByIdAndUser_Id(providerId, userId);
+        return providerRepository.existsByIdAndUserId(providerId, userId);
     }
 
     @Transactional(readOnly = true)
