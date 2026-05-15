@@ -51,6 +51,9 @@ public class SecurityConfig {
                         // Integration
                         .requestMatchers("/api/v1/integration/**").authenticated()
 
+                        // Business
+                        .requestMatchers("/api/v1/businesses/**").hasRole("PROVIDER")
+
                         // Provider
                         .requestMatchers("/api/v1/providers/**").hasRole("PROVIDER")
 

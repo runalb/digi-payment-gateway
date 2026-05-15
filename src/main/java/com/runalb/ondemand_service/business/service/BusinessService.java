@@ -75,16 +75,38 @@ public class BusinessService {
     public BusinessResponse createBusiness(BusinessCreateRequest request) {
         UserEntity user = authService.resolveAuthenticatedUser();
 
+        String email = InputSanitizer.normalizeEmail(request.email());
+        businessRepository
+                .findByEmail(email)
+                .ifPresent(other -> {
+                    throw new ResponseStatusException(HttpStatus.CONFLICT, "Email already in use");
+                });
+
+        String mobileNumber = InputSanitizer.trimToNull(request.mobileNumber());
+        if (mobileNumber != null) {
+            mobileNumber = InputSanitizer.normalizeMobile(mobileNumber);
+            businessRepository
+                    .findByMobileNumber(mobileNumber)
+                    .ifPresent(other -> {
+                        throw new ResponseStatusException(HttpStatus.CONFLICT, "Mobile number already in use");
+                    });
+        }
+
         BusinessEntity business = new BusinessEntity();
         business.setName(InputSanitizer.normalizeName(request.name()));
         business.setApiKey(UUID.randomUUID().toString());
-        business.setEmail(InputSanitizer.normalizeEmail(request.email()));
+        business.setEmail(email);
+        business.setBusinessType(InputSanitizer.normalizeName(request.businessType()));
+        business.setDescription(InputSanitizer.trimToNull(request.description()));
+        business.setAddress(InputSanitizer.trimToNull(request.address()));
+        business.setMobileNumber(mobileNumber);
+        business.setIsVerified(Boolean.FALSE);
+        business.setAverageRating(0.0);
         business = businessRepository.save(business);
 
         entityLinkService.linkUserToBusiness(user, business);
 
-        return new BusinessResponse(
-                business.getId(), business.getName(), business.getEmail(), business.getApiKey(), business.getIsDeleted());
+        return toBusinessResponse(business);
     }
 
     @Transactional(readOnly = true)
@@ -107,7 +129,12 @@ public class BusinessService {
     @Transactional
     public BusinessResponse updateBusiness(Long businessId, BusinessUpdateRequest request) {
         if (request == null
-                || (request.name() == null && request.email() == null)) {
+                || (request.name() == null
+                        && request.email() == null
+                        && request.businessType() == null
+                        && request.description() == null
+                        && request.address() == null
+                        && request.mobileNumber() == null)) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Request body must not be empty");
         }
         BusinessEntity business = businessRepository
@@ -127,6 +154,28 @@ public class BusinessService {
                     });
             business.setEmail(email);
         }
+        if (request.businessType() != null) {
+            business.setBusinessType(InputSanitizer.normalizeName(request.businessType()));
+        }
+        if (request.description() != null) {
+            business.setDescription(InputSanitizer.trimToNull(request.description()));
+        }
+        if (request.address() != null) {
+            business.setAddress(InputSanitizer.trimToNull(request.address()));
+        }
+        if (request.mobileNumber() != null) {
+            String mobile = InputSanitizer.trimToNull(request.mobileNumber());
+            if (mobile != null) {
+                mobile = InputSanitizer.normalizeMobile(mobile);
+                businessRepository
+                        .findByMobileNumber(mobile)
+                        .filter(other -> !other.getId().equals(businessId))
+                        .ifPresent(other -> {
+                            throw new ResponseStatusException(HttpStatus.CONFLICT, "Mobile number already in use");
+                        });
+            }
+            business.setMobileNumber(mobile);
+        }
 
         business = businessRepository.save(business);
         return toBusinessResponse(business);
@@ -134,7 +183,17 @@ public class BusinessService {
 
     private static BusinessResponse toBusinessResponse(BusinessEntity business) {
         return new BusinessResponse(
-                business.getId(), business.getName(), business.getEmail(), business.getApiKey(), business.getIsDeleted());
+                business.getId(),
+                business.getName(),
+                business.getEmail(),
+                business.getApiKey(),
+                business.getIsDeleted(),
+                business.getBusinessType(),
+                business.getDescription(),
+                Boolean.TRUE.equals(business.getIsVerified()),
+                business.getAverageRating() != null ? business.getAverageRating() : 0.0,
+                business.getAddress(),
+                business.getMobileNumber());
     }
 
     @Transactional(readOnly = true)

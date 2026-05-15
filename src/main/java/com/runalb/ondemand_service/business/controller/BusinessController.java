@@ -27,7 +27,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 // Note - Not used in this project
 @RestController
-@RequestMapping("/api/v1/portal/businesses")
+@RequestMapping("/api/v1/businesses")
 public class BusinessController {
 
     private final BusinessService businessService;

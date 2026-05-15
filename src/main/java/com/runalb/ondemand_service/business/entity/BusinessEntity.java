@@ -44,4 +44,22 @@ public class BusinessEntity extends AuditableEntity {
 
     @ManyToMany(mappedBy = "businesses")
     private List<UserEntity> users = new ArrayList<>();
+
+    @Column(columnDefinition = "TEXT")
+    private String description;
+
+    @Column(name = "is_verified", nullable = false)
+    private Boolean isVerified = Boolean.FALSE;
+
+    @Column(name = "average_rating", nullable = false)
+    private Double averageRating = 0.0;
+
+    @Column(columnDefinition = "TEXT")
+    private String address; // use addrees table in future
+
+    @Column(unique = true, length = 20)
+    private String mobileNumber;
+
+    @Column(nullable = false)
+    private String businessType;
 }
