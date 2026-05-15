@@ -58,7 +58,7 @@ public class BusinessService {
     @Transactional(readOnly = true)
     public BusinessConfigEntity findBusinessConfigByBusinessId(Long businessId) {
         return businessConfigRepository
-                .findByBusinessIdAndIsDeletedFalse(businessId)
+                .findByBusiness_IdAndIsDeletedFalse(businessId)
                 .orElseThrow(() -> new EntityNotFoundException("Business configuration not found"));
     }
 
@@ -66,7 +66,7 @@ public class BusinessService {
     @Transactional(readOnly = true)
     public BusinessPaymentChannelConfigEntity findPaymentChannelConfigByBusinessId(Long businessId) {
         return businessPaymentChannelConfigRepository
-                .findFirstByBusinessIdAndIsDeletedFalseOrderByIdAsc(businessId)
+                .findFirstByBusiness_IdAndIsDeletedFalseOrderByIdAsc(businessId)
                 .orElseThrow(() -> new EntityNotFoundException(
                         "business payment channel configuration not found"));
     }
@@ -91,7 +91,7 @@ public class BusinessService {
     public List<BusinessResponse> listBusinessesForUser() {
         UserEntity user = authService.resolveAuthenticatedUser();
 
-        return businessRepository.findByUsersIdAndIsDeletedFalseOrderByIdAsc(user.getId()).stream()
+        return businessRepository.findByUsers_IdAndIsDeletedFalseOrderByIdAsc(user.getId()).stream()
                 .map(BusinessService::toBusinessResponse)
                 .toList();
     }
@@ -140,7 +140,7 @@ public class BusinessService {
     @Transactional(readOnly = true)
     public BusinessConfigResponse getBusinessConfig(Long businessId) {
         BusinessConfigEntity config = businessConfigRepository
-                .findByBusinessIdAndIsDeletedFalse(businessId)
+                .findByBusiness_IdAndIsDeletedFalse(businessId)
                 .orElseThrow(() -> new ResponseStatusException(
                         HttpStatus.NOT_FOUND, "Business configuration not found"));
         return new BusinessConfigResponse(businessId, config.getCurrency(), config.getWebhookUrl());
@@ -152,7 +152,7 @@ public class BusinessService {
                 .findByIdAndIsDeletedFalse(businessId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Business not found"));
 
-        if (businessConfigRepository.existsByBusinessIdAndIsDeletedFalse(businessId)) {
+        if (businessConfigRepository.existsByBusiness_IdAndIsDeletedFalse(businessId)) {
             throw new ResponseStatusException(HttpStatus.CONFLICT, "Business configuration already exists");
         }
 
@@ -160,7 +160,7 @@ public class BusinessService {
         String webhookUrl = StringUtils.hasText(request.webhookUrl()) ? request.webhookUrl().trim() : null;
 
         BusinessConfigEntity entity = businessConfigRepository
-                .findByBusinessId(businessId)
+                .findByBusiness_Id(businessId)
                 .orElseGet(BusinessConfigEntity::new);
         entity.setBusiness(business);
         entity.setCurrency(currency);
@@ -174,7 +174,7 @@ public class BusinessService {
     @Transactional
     public BusinessConfigResponse updateBusinessConfig(Long businessId, BusinessConfigUpdateRequest request) {
         BusinessConfigEntity entity = businessConfigRepository
-                .findByBusinessIdAndIsDeletedFalse(businessId)
+                .findByBusiness_IdAndIsDeletedFalse(businessId)
                 .orElseThrow(() -> new ResponseStatusException(
                         HttpStatus.NOT_FOUND, "Business configuration not found"));
 
@@ -197,7 +197,7 @@ public class BusinessService {
 
         // PaymentChannelEntity paymentChannel = paymentChannelService.findById(request.paymentChannelId());
 
-        if (businessPaymentChannelConfigRepository.existsByBusinessIdAndIsDeletedFalse(businessId)) {
+        if (businessPaymentChannelConfigRepository.existsByBusiness_IdAndIsDeletedFalse(businessId)) {
             throw new ResponseStatusException(
                     HttpStatus.CONFLICT, "Business already has an payment channel configuration");
         }
@@ -219,7 +219,7 @@ public class BusinessService {
             throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Business not found");
         }
         return businessPaymentChannelConfigRepository
-                .findByBusinessIdAndIsDeletedFalseOrderByIdAsc(businessId).stream()
+                .findByBusiness_IdAndIsDeletedFalseOrderByIdAsc(businessId).stream()
                 .map(BusinessService::toBusinessPaymentChannelConfigResponse)
                 .toList();
     }
@@ -227,7 +227,7 @@ public class BusinessService {
     @Transactional(readOnly = true)
     public BusinessPaymentChannelConfigResponse getBusinessPaymentChannelConfig(Long businessId, Long configId) {
         BusinessPaymentChannelConfigEntity entity = businessPaymentChannelConfigRepository
-                .findByIdAndBusinessIdAndIsDeletedFalse(configId, businessId)
+                .findByIdAndBusiness_IdAndIsDeletedFalse(configId, businessId)
                 .orElseThrow(() -> new ResponseStatusException(
                         HttpStatus.NOT_FOUND, "Business payment channel config not found"));
         return toBusinessPaymentChannelConfigResponse(entity);
@@ -240,7 +240,7 @@ public class BusinessService {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Request body must not be empty");
         }
         BusinessPaymentChannelConfigEntity entity = businessPaymentChannelConfigRepository
-                .findByIdAndBusinessId(configId, businessId)
+                .findByIdAndBusiness_Id(configId, businessId)
                 .orElseThrow(() -> new ResponseStatusException(
                         HttpStatus.NOT_FOUND, "Business payment channel config not found"));
 
@@ -268,7 +268,7 @@ public class BusinessService {
     @Transactional
     public void deactivateBusinessConfig(Long businessId) {
         BusinessConfigEntity config = businessConfigRepository
-                .findByBusinessIdAndIsDeletedFalse(businessId)
+                .findByBusiness_IdAndIsDeletedFalse(businessId)
                 .orElseThrow(() -> new ResponseStatusException(
                         HttpStatus.NOT_FOUND, "Business configuration not found"));
         config.setIsDeleted(true);
@@ -287,7 +287,7 @@ public class BusinessService {
     @Transactional
     public void deactivateBusinessPaymentChannelConfig(Long businessId, Long configId) {
         BusinessPaymentChannelConfigEntity config = businessPaymentChannelConfigRepository
-                .findByIdAndBusinessIdAndIsDeletedFalse(configId, businessId)
+                .findByIdAndBusiness_IdAndIsDeletedFalse(configId, businessId)
                 .orElseThrow(() -> new ResponseStatusException(
                         HttpStatus.NOT_FOUND, "Business payment channel config not found"));
         config.setIsDeleted(true);
