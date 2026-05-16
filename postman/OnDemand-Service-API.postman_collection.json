@@ -2,7 +2,7 @@
   "info": {
     "_postman_id": "a1b2c3d4-e5f6-7890-abcd-ondemand-service",
     "name": "OnDemand Service API",
-    "description": "REST collection for the Spring Boot OnDemand Service (com.runalb.ondemand_service).\n\n**Quick start:** Run Auth > Login, then use authenticated folders.\n\n**Auth** (/api/v1/auth/**): public.\n**Users**: signup public; other routes Bearer + ownership.\n**Providers**: Bearer + ROLE_PROVIDER.\n**Businesses** (/api/v1/portal/businesses/**): Bearer + business ownership.\n**Catalog**: GET authenticated; mutations SUPER_ADMIN.\n**Integration** (/api/v1/integration/**): X-API-Key from business create response (no controllers yet).\n\nDefault baseUrl: http://localhost:8080. Seed roles: scripts/seed-roles.sql.",
+    "description": "REST collection for the Spring Boot OnDemand Service (com.runalb.ondemand_service).\n\n**Quick start:** Run Auth > Login, then use authenticated folders.\n\n**Auth** (/api/v1/auth/**): public.\n**Users**: signup public; other routes Bearer + ownership.\n**Businesses** (/api/v1/businesses/**): Bearer + ROLE_PROVIDER + business ownership.\n**Catalog**: GET authenticated; mutations SUPER_ADMIN.\n\nDefault baseUrl: http://localhost:8080. Seed roles: scripts/seed-roles.sql.",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "variable": [
@@ -33,10 +33,6 @@
     {
       "key": "userId",
       "value": "1"
-    },
-    {
-      "key": "apiKey",
-      "value": ""
     },
     {
       "key": "providerId",
@@ -582,7 +578,7 @@
               }
             ],
             "url": "{{baseUrl}}/api/v1/portal/businesses",
-            "description": "BusinessCreateRequest — saves businessId and apiKey.",
+            "description": "BusinessCreateRequest — saves businessId.",
             "body": {
               "mode": "raw",
               "raw": "{\n  \"name\": \"Acme Corp\",\n  \"email\": \"billing@acme.example\"\n}"
@@ -598,7 +594,6 @@
                   "if (pm.response.code === 201) {",
                   "  const json = pm.response.json();",
                   "  if (json.id) pm.collectionVariables.set('businessId', String(json.id));",
-                  "  if (json.apiKey) pm.collectionVariables.set('apiKey', json.apiKey);",
                   "}"
                 ]
               }
@@ -1118,27 +1113,6 @@
             ],
             "url": "{{baseUrl}}/api/v1/catalog/services/{{serviceId}}",
             "description": "SUPER_ADMIN — 204."
-          },
-          "response": []
-        }
-      ]
-    },
-    {
-      "name": "Integration (reserved)",
-      "description": "/api/v1/integration/** — secured by X-API-Key (ROLE_INTEGRATION). No controllers yet. Set apiKey from Create business response.",
-      "item": [
-        {
-          "name": "Placeholder — no handler",
-          "request": {
-            "method": "GET",
-            "header": [
-              {
-                "key": "X-API-Key",
-                "value": "{{apiKey}}"
-              }
-            ],
-            "url": "{{baseUrl}}/api/v1/integration/",
-            "description": "Expected 404 until integration controllers exist. Validates API key auth filter."
           },
           "response": []
         }
