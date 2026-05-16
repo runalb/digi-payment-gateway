@@ -96,17 +96,6 @@ public class AuthService {
         }
     }
 
-
-    @Transactional(readOnly = true)
-    public void assertAuthenticatedUserOwnsProvider(Long providerId) {
-        UserEntity user = resolveAuthenticatedUser();
-        if (!entityLinkService.userHasProviderAccess(user.getId(), providerId)) {
-            throw new ResponseStatusException(
-                    HttpStatus.FORBIDDEN, "You are not authorized to access this resource. You are not the owner of this provider");
-        }
-    }
-
-
     public UserEntity resolveAuthenticatedUser() {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         if (authentication == null || !authentication.isAuthenticated()) {
