@@ -1,6 +1,6 @@
 package com.runalb.ondemand_service.business.controller;
 
-import com.runalb.ondemand_service.auth.service.AuthService;
+import com.runalb.ondemand_service.security.AuthorizationService;
 import com.runalb.ondemand_service.business.dto.BusinessConfigCreateRequest;
 import com.runalb.ondemand_service.business.dto.BusinessConfigResponse;
 import com.runalb.ondemand_service.business.dto.BusinessConfigUpdateRequest;
@@ -31,11 +31,11 @@ import org.springframework.web.bind.annotation.RestController;
 public class BusinessController {
 
     private final BusinessService businessService;
-    private final AuthService authService;
+    private final AuthorizationService authorizationService;
 
-    public BusinessController(BusinessService businessService, AuthService authService) {
+    public BusinessController(BusinessService businessService, AuthorizationService authorizationService) {
         this.businessService = businessService;
-        this.authService = authService;
+        this.authorizationService = authorizationService;
     }
 
     // Businesses
@@ -54,7 +54,7 @@ public class BusinessController {
 
     @GetMapping("/{businessId}")
     public ResponseEntity<BusinessResponse> getBusiness(@PathVariable("businessId") Long businessId) {
-        authService.assertAuthenticatedUserOwnsBusiness(businessId);
+        authorizationService.assertAuthenticatedUserOwnsBusiness(businessId);
         BusinessResponse response = businessService.getBusiness(businessId);
         return new ResponseEntity<>(response, HttpStatus.OK);
     }
@@ -63,14 +63,14 @@ public class BusinessController {
     public ResponseEntity<BusinessResponse> updateBusiness(
             @PathVariable("businessId") Long businessId,
             @Valid @RequestBody BusinessUpdateRequest request) {
-        authService.assertAuthenticatedUserOwnsBusiness(businessId);
+        authorizationService.assertAuthenticatedUserOwnsBusiness(businessId);
         BusinessResponse response = businessService.updateBusiness(businessId, request);
         return new ResponseEntity<>(response, HttpStatus.OK);
     }
 
     @DeleteMapping("/{businessId}")
     public ResponseEntity<Void> deleteBusiness(@PathVariable("businessId") Long businessId) {
-        authService.assertAuthenticatedUserOwnsBusiness(businessId);
+        authorizationService.assertAuthenticatedUserOwnsBusiness(businessId);
         businessService.deactivateBusiness(businessId);
         return ResponseEntity.noContent().build();
     }
@@ -78,7 +78,7 @@ public class BusinessController {
     // Business configuration
     @GetMapping("/{businessId}/config")
     public ResponseEntity<BusinessConfigResponse> getBusinessConfig(@PathVariable("businessId") Long businessId) {
-        authService.assertAuthenticatedUserOwnsBusiness(businessId);
+        authorizationService.assertAuthenticatedUserOwnsBusiness(businessId);
         BusinessConfigResponse response = businessService.getBusinessConfig(businessId);
         return new ResponseEntity<>(response, HttpStatus.OK);
     }
@@ -87,7 +87,7 @@ public class BusinessController {
     public ResponseEntity<BusinessConfigResponse> createBusinessConfig(
             @PathVariable("businessId") Long businessId,
             @Valid @RequestBody BusinessConfigCreateRequest request) {
-        authService.assertAuthenticatedUserOwnsBusiness(businessId);
+        authorizationService.assertAuthenticatedUserOwnsBusiness(businessId);
         BusinessConfigResponse response = businessService.createBusinessConfig(businessId, request);
         return new ResponseEntity<>(response, HttpStatus.OK);
     }
@@ -96,14 +96,14 @@ public class BusinessController {
     public ResponseEntity<BusinessConfigResponse> updateBusinessConfig(
             @PathVariable("businessId") Long businessId,
             @Valid @RequestBody BusinessConfigUpdateRequest request) {
-        authService.assertAuthenticatedUserOwnsBusiness(businessId);
+        authorizationService.assertAuthenticatedUserOwnsBusiness(businessId);
         BusinessConfigResponse response = businessService.updateBusinessConfig(businessId, request);
         return new ResponseEntity<>(response, HttpStatus.OK);
     }
 
     @DeleteMapping("/{businessId}/config")
     public ResponseEntity<Void> deleteBusinessConfig(@PathVariable("businessId") Long businessId) {
-        authService.assertAuthenticatedUserOwnsBusiness(businessId);
+        authorizationService.assertAuthenticatedUserOwnsBusiness(businessId);
         businessService.deactivateBusinessConfig(businessId);
         return ResponseEntity.noContent().build();
     }
@@ -113,7 +113,7 @@ public class BusinessController {
     public ResponseEntity<BusinessPaymentChannelConfigResponse> createBusinessPaymentChannelConfig(
             @PathVariable("businessId") Long businessId,
             @Valid @RequestBody BusinessPaymentChannelConfigCreateRequest request) {
-        authService.assertAuthenticatedUserOwnsBusiness(businessId);
+        authorizationService.assertAuthenticatedUserOwnsBusiness(businessId);
         BusinessPaymentChannelConfigResponse response = businessService.createBusinessPaymentChannelConfig(businessId,
                 request);
         return new ResponseEntity<>(response, HttpStatus.CREATED);
@@ -122,7 +122,7 @@ public class BusinessController {
     @GetMapping("/{businessId}/payment-channel-configs")
     public ResponseEntity<List<BusinessPaymentChannelConfigResponse>> listBusinessPaymentChannelConfigs(
             @PathVariable("businessId") Long businessId) {
-        authService.assertAuthenticatedUserOwnsBusiness(businessId);
+        authorizationService.assertAuthenticatedUserOwnsBusiness(businessId);
         List<BusinessPaymentChannelConfigResponse> response =
                 businessService.listBusinessPaymentChannelConfigs(businessId);
         return new ResponseEntity<>(response, HttpStatus.OK);
@@ -132,7 +132,7 @@ public class BusinessController {
     public ResponseEntity<BusinessPaymentChannelConfigResponse> getBusinessPaymentChannelConfig(
             @PathVariable("businessId") Long businessId,
             @PathVariable("configId") Long configId) {
-        authService.assertAuthenticatedUserOwnsBusiness(businessId);
+        authorizationService.assertAuthenticatedUserOwnsBusiness(businessId);
         BusinessPaymentChannelConfigResponse response =
                 businessService.getBusinessPaymentChannelConfig(businessId, configId);
         return new ResponseEntity<>(response, HttpStatus.OK);
@@ -143,7 +143,7 @@ public class BusinessController {
             @PathVariable("businessId") Long businessId,
             @PathVariable("configId") Long configId,
             @Valid @RequestBody BusinessPaymentChannelConfigUpdateRequest request) {
-        authService.assertAuthenticatedUserOwnsBusiness(businessId);
+        authorizationService.assertAuthenticatedUserOwnsBusiness(businessId);
         BusinessPaymentChannelConfigResponse response =
                 businessService.updateBusinessPaymentChannelConfig(businessId, configId, request);
         return new ResponseEntity<>(response, HttpStatus.OK);
@@ -153,7 +153,7 @@ public class BusinessController {
     public ResponseEntity<Void> deleteBusinessPaymentChannelConfig(
             @PathVariable("businessId") Long businessId,
             @PathVariable("configId") Long configId) {
-        authService.assertAuthenticatedUserOwnsBusiness(businessId);
+        authorizationService.assertAuthenticatedUserOwnsBusiness(businessId);
         businessService.deactivateBusinessPaymentChannelConfig(businessId, configId);
         return ResponseEntity.noContent().build();
     }

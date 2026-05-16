@@ -1,6 +1,6 @@
 package com.runalb.ondemand_service.user.controller;
 
-import com.runalb.ondemand_service.auth.service.AuthService;
+import com.runalb.ondemand_service.security.AuthorizationService;
 import com.runalb.ondemand_service.user.dto.UserCreateRequest;
 import com.runalb.ondemand_service.user.dto.UserResponse;
 import com.runalb.ondemand_service.user.dto.UserUpdateRequest;
@@ -23,11 +23,11 @@ import org.springframework.web.bind.annotation.RestController;
 public class UserController {
 
     private final UserService userService;
-    private final AuthService authService;
+    private final AuthorizationService authorizationService;
 
-    public UserController(UserService userService, AuthService authService) {
+    public UserController(UserService userService, AuthorizationService authorizationService) {
         this.userService = userService;
-        this.authService = authService;
+        this.authorizationService = authorizationService;
     }
 
     @PostMapping
@@ -45,7 +45,7 @@ public class UserController {
 
     @GetMapping("/{userId}")
     public ResponseEntity<UserResponse> getUser(@PathVariable("userId") Long userId) {
-        authService.assertAuthenticatedUserOwnsUserId(userId);
+        authorizationService.assertAuthenticatedUserOwnsUserId(userId);
         UserResponse response = userService.getUser(userId);
         return ResponseEntity.ok(response);
     }
@@ -53,21 +53,21 @@ public class UserController {
     @PatchMapping("/{userId}")
     public ResponseEntity<UserResponse> updateUser(
             @PathVariable("userId") Long userId, @Valid @RequestBody UserUpdateRequest request) {
-        authService.assertAuthenticatedUserOwnsUserId(userId);
+        authorizationService.assertAuthenticatedUserOwnsUserId(userId);
         UserResponse response = userService.updateUser(userId, request);
         return ResponseEntity.ok(response);
     }
 
     @DeleteMapping("/{userId}")
     public ResponseEntity<Void> deleteUser(@PathVariable("userId") Long userId) {
-        authService.assertAuthenticatedUserOwnsUserId(userId);
+        authorizationService.assertAuthenticatedUserOwnsUserId(userId);
         userService.deactivateUser(userId);
         return ResponseEntity.noContent().build();
     }
 
     @PostMapping("/{userId}/reactivate")
     public ResponseEntity<UserResponse> reactivateUser(@PathVariable("userId") Long userId) {
-        authService.assertAuthenticatedUserOwnsUserId(userId);
+        authorizationService.assertAuthenticatedUserOwnsUserId(userId);
         UserResponse response = userService.reactivateUser(userId);
         return ResponseEntity.ok(response);
     }

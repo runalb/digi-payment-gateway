@@ -16,7 +16,7 @@ import com.runalb.ondemand_service.business.repository.BusinessConfigRepository;
 import com.runalb.ondemand_service.business.repository.BusinessPaymentChannelConfigRepository;
 import com.runalb.ondemand_service.business.repository.BusinessRepository;
 import com.runalb.ondemand_service.user.entity.UserEntity;
-import com.runalb.ondemand_service.auth.service.AuthService;
+import com.runalb.ondemand_service.security.CurrentUserService;
 // import com.runalb.ondemand_service.payment.entity.PaymentChannelEntity;
 // import com.runalb.ondemand_service.payment.service.PaymentChannelService;
 import com.runalb.ondemand_service.relationship.service.EntityLinkService;
@@ -38,7 +38,7 @@ public class BusinessService {
     // private final PaymentChannelService paymentChannelService;
     private final BusinessPaymentChannelConfigRepository businessPaymentChannelConfigRepository;
     private final EntityLinkService entityLinkService;
-    private final AuthService authService;
+    private final CurrentUserService currentUserService;
 
     public BusinessService(
             BusinessRepository businessRepository,
@@ -46,13 +46,13 @@ public class BusinessService {
             // PaymentChannelService paymentChannelService,
             BusinessPaymentChannelConfigRepository businessPaymentChannelConfigRepository,
             EntityLinkService entityLinkService,
-            AuthService authService) {
+            CurrentUserService currentUserService) {
         this.businessRepository = businessRepository;
         this.businessConfigRepository = businessConfigRepository;
         // this.paymentChannelService = paymentChannelService;
         this.businessPaymentChannelConfigRepository = businessPaymentChannelConfigRepository;
         this.entityLinkService = entityLinkService;
-        this.authService = authService;
+        this.currentUserService = currentUserService;
     }
 
     @Transactional(readOnly = true)
@@ -73,7 +73,7 @@ public class BusinessService {
 
     @Transactional
     public BusinessResponse createBusiness(BusinessCreateRequest request) {
-        UserEntity user = authService.resolveAuthenticatedUser();
+        UserEntity user = currentUserService.resolveAuthenticatedUser();
 
         String email = InputSanitizer.normalizeEmail(request.email());
         businessRepository
@@ -111,7 +111,7 @@ public class BusinessService {
 
     @Transactional(readOnly = true)
     public List<BusinessResponse> listBusinessesForUser() {
-        UserEntity user = authService.resolveAuthenticatedUser();
+        UserEntity user = currentUserService.resolveAuthenticatedUser();
 
         return businessRepository.findByUsers_IdAndIsDeletedFalseOrderByIdAsc(user.getId()).stream()
                 .map(BusinessService::toBusinessResponse)

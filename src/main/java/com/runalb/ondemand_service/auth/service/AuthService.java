@@ -17,7 +17,6 @@ import com.runalb.ondemand_service.security.JwtService;
 import com.runalb.ondemand_service.user.entity.UserEntity;
 import java.util.Comparator;
 import java.util.List;
-import com.runalb.ondemand_service.relationship.service.EntityLinkService;
 import com.runalb.ondemand_service.user.service.UserService;
 import com.runalb.ondemand_service.util.InputSanitizer;
 import java.nio.charset.StandardCharsets;
@@ -32,8 +31,6 @@ import java.util.concurrent.ConcurrentHashMap;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.scheduling.annotation.Scheduled;
-import org.springframework.security.core.Authentication;
-import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -52,7 +49,6 @@ public class AuthService {
     private final Map<String, OtpSession> forgotPasswordEmailOtpSessions = new ConcurrentHashMap<>();
 
     private final UserService userService;
-    private final EntityLinkService entityLinkService;
     private final AuthRefreshTokenRepository authRefreshTokenRepository;
     private final PasswordEncoder passwordEncoder;
     private final JwtService jwtService;
@@ -61,7 +57,6 @@ public class AuthService {
 
     public AuthService(
             UserService userService,
-            EntityLinkService entityLinkService,
             AuthRefreshTokenRepository authRefreshTokenRepository,
             PasswordEncoder passwordEncoder,
             JwtService jwtService,
@@ -69,43 +64,11 @@ public class AuthService {
             @Value("${security.otp.resend-cooldown-seconds:45}") long otpResendCooldownSeconds
         ) {
         this.userService = userService;
-        this.entityLinkService = entityLinkService;
         this.authRefreshTokenRepository = authRefreshTokenRepository;
         this.passwordEncoder = passwordEncoder;
         this.jwtService = jwtService;
         this.refreshExpirationSeconds = refreshExpirationSeconds;
         this.otpResendCooldownSeconds = otpResendCooldownSeconds;
-    }
-
-
-    @Transactional(readOnly = true)
-    public void assertAuthenticatedUserOwnsUserId(Long userId) {
-        UserEntity authenticatedUser = resolveAuthenticatedUser();
-        if (!authenticatedUser.getId().equals(userId)) {
-            throw new ResponseStatusException(
-                    HttpStatus.FORBIDDEN, "You are not authorized to access this resource");
-        }
-    }
-
-    @Transactional(readOnly = true)
-    public void assertAuthenticatedUserOwnsBusiness(Long businessId) {
-        UserEntity user = resolveAuthenticatedUser();
-        if (!entityLinkService.userHasBusinessAccess(user.getId(), businessId)) {
-            throw new ResponseStatusException(
-                    HttpStatus.FORBIDDEN, "You are not authorized to access this resource");
-        }
-    }
-
-    public UserEntity resolveAuthenticatedUser() {
-        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-        if (authentication == null || !authentication.isAuthenticated()) {
-            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Not authenticated");
-        }
-        Object principal = authentication.getPrincipal();
-        if (!(principal instanceof Long userId)) {
-            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Not authenticated");
-        }
-        return userService.findUserById(userId);
     }
 
     @Transactional

@@ -1,6 +1,6 @@
 package com.runalb.ondemand_service.offering.controller;
 
-import com.runalb.ondemand_service.auth.service.AuthService;
+import com.runalb.ondemand_service.security.AuthorizationService;
 import com.runalb.ondemand_service.offering.dto.BusinessOfferingLinkRequest;
 import com.runalb.ondemand_service.offering.dto.BusinessOfferingResponse;
 import com.runalb.ondemand_service.offering.dto.BusinessOfferingUpdateRequest;
@@ -23,24 +23,25 @@ import org.springframework.web.bind.annotation.RestController;
 public class BusinessOfferingController {
 
     private final BusinessOfferingService businessOfferingService;
-    private final AuthService authService;
+    private final AuthorizationService authorizationService;
 
-    public BusinessOfferingController(BusinessOfferingService businessOfferingService, AuthService authService) {
+    public BusinessOfferingController(
+            BusinessOfferingService businessOfferingService, AuthorizationService authorizationService) {
         this.businessOfferingService = businessOfferingService;
-        this.authService = authService;
+        this.authorizationService = authorizationService;
     }
 
     @PostMapping
     public ResponseEntity<List<BusinessOfferingResponse>> linkOfferings(
             @PathVariable Long businessId, @Valid @RequestBody BusinessOfferingLinkRequest request) {
-        authService.assertAuthenticatedUserOwnsBusiness(businessId);
+        authorizationService.assertAuthenticatedUserOwnsBusiness(businessId);
         List<BusinessOfferingResponse> response = businessOfferingService.linkOfferings(businessId, request);
         return new ResponseEntity<>(response, HttpStatus.CREATED);
     }
 
     @GetMapping
     public ResponseEntity<List<BusinessOfferingResponse>> listOfferings(@PathVariable Long businessId) {
-        authService.assertAuthenticatedUserOwnsBusiness(businessId);
+        authorizationService.assertAuthenticatedUserOwnsBusiness(businessId);
         return ResponseEntity.ok(businessOfferingService.listOfferingsForBusiness(businessId));
     }
 
@@ -49,7 +50,7 @@ public class BusinessOfferingController {
             @PathVariable Long businessId,
             @PathVariable Long offeringId,
             @Valid @RequestBody BusinessOfferingUpdateRequest request) {
-        authService.assertAuthenticatedUserOwnsBusiness(businessId);
+        authorizationService.assertAuthenticatedUserOwnsBusiness(businessId);
         BusinessOfferingResponse response =
                 businessOfferingService.updateOfferingActiveStatus(businessId, offeringId, request);
         return ResponseEntity.ok(response);
@@ -57,7 +58,7 @@ public class BusinessOfferingController {
 
     @DeleteMapping("/{offeringId}")
     public ResponseEntity<Void> unlinkOffering(@PathVariable Long businessId, @PathVariable Long offeringId) {
-        authService.assertAuthenticatedUserOwnsBusiness(businessId);
+        authorizationService.assertAuthenticatedUserOwnsBusiness(businessId);
         businessOfferingService.unlinkOffering(businessId, offeringId);
         return ResponseEntity.noContent().build();
     }
