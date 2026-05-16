@@ -30,11 +30,12 @@ erDiagram
     roles ||--o{ user_role : assigned
     users ||--o{ user_business : linked
     business ||--o{ user_business : linked
-    users ||--o| providers : owns
     users ||--o{ auth_refresh_token : has
     business ||--o| business_config : has
     business ||--o{ business_payment_channel_config : has
+    business ||--o{ business_offering : offers
     catalog_category ||--o{ catalog_service : contains
+    catalog_service ||--o{ business_offering : linked
 
     users {
         bigint id PK
@@ -55,20 +56,20 @@ erDiagram
     business {
         bigint id PK
         varchar name
-        varchar api_key UK
         varchar email UK
+        varchar business_type
+        varchar mobile_number UK
         boolean is_deleted
-    }
-
-    providers {
-        bigint id PK
-        bigint user_id UK,FK
-        text bio
         boolean is_verified
         double average_rating
-        int profile_completion_percentage
+    }
+
+    business_offering {
+        bigint id PK
+        bigint business_id FK
+        bigint catalog_service_id FK
         boolean is_active
-        text address
+        boolean is_deleted
     }
 
     catalog_category {
@@ -76,7 +77,7 @@ erDiagram
         varchar name
         varchar description
         int display_order
-        boolean active
+        boolean is_deleted
     }
 
     catalog_service {
@@ -85,7 +86,7 @@ erDiagram
         varchar name
         varchar description
         int display_order
-        boolean active
+        boolean is_deleted
     }
 ```
 
@@ -208,14 +209,19 @@ Opaque refresh tokens for session renewal. Only a **SHA-256 hash** of the token 
 
 ### `business`
 
-Business tenant records. Each row gets a unique `api_key` (UUID) on create for integration authentication.
+Business tenant records for provider-operated tenants.
 
 | Column | Type | Constraints | Entity field |
 |--------|------|-------------|--------------|
 | `id` | `bigint` | `PK`, identity | `id` |
 | `name` | `varchar` | `NOT NULL` | `name` |
-| `api_key` | `varchar` | `NOT NULL`, `UNIQUE` | `apiKey` |
 | `email` | `varchar` | `NOT NULL`, `UNIQUE` | `email` |
+| `business_type` | `varchar` | `NOT NULL` | `businessType` |
+| `description` | `text` | | `description` |
+| `address` | `text` | | `address` |
+| `mobile_number` | `varchar(20)` | `UNIQUE` | `mobileNumber` |
+| `is_verified` | `boolean` | `NOT NULL`, default `false` | `isVerified` |
+| `average_rating` | `double precision` | `NOT NULL`, default `0.0` | `averageRating` |
 | `is_deleted` | `boolean` | `NOT NULL`, default `false` | `isDeleted` |
 | `createdDateTime` | `timestamp` | `NOT NULL` | audit |
 | `updatedDateTime` | `timestamp` | `NOT NULL` | audit |
@@ -226,9 +232,10 @@ Business tenant records. Each row gets a unique `api_key` (UUID) on create for i
 
 - 1:1 → `business_config`
 - 1:N → `business_payment_channel_config`
+- 1:N → `business_offering`
 - M:N ← `users` via `user_business`
 
-**Common queries:** `findByApiKey`, `findByEmail`, `findByUsers_IdOrderByIdAsc`
+**Common queries:** `findByIdAndIsDeletedFalse`, `findByEmail`, `findByMobileNumber`, `findByUsers_IdAndIsDeletedFalseOrderByIdAsc`, `existsByIdAndUsers_IdAndIsDeletedFalse`
 
 ---
 
@@ -275,26 +282,25 @@ Per-business payment channel credentials/settings stored as opaque JSON. No `pay
 
 ---
 
-### `providers`
+### `business_offering`
 
-Service provider profile extension; exactly one row per user with the `PROVIDER` role.
+Links a business to a catalog service (what the business offers). Unlinking sets `is_deleted`; re-linking reuses the same row when previously soft-deleted.
 
 | Column | Type | Constraints | Entity field |
 |--------|------|-------------|--------------|
 | `id` | `bigint` | `PK`, identity | `id` |
-| `user_id` | `bigint` | `NOT NULL`, `UNIQUE`, `FK` → `users.id` | `user` |
-| `bio` | `text` | | `bio` |
-| `is_verified` | `boolean` | `NOT NULL`, default `false` | `isVerified` |
-| `average_rating` | `double precision` | `NOT NULL`, default `0.0` | `averageRating` |
-| `profile_completion_percentage` | `integer` | `NOT NULL` | `profileCompletionPercentage` |
+| `business_id` | `bigint` | `NOT NULL`, `FK` → `business.id` | `business` |
+| `catalog_service_id` | `bigint` | `NOT NULL`, `FK` → `catalog_service.id` | `catalogService` |
 | `is_active` | `boolean` | `NOT NULL`, default `true` | `isActive` |
-| `address` | `text` | | `address` |
+| `is_deleted` | `boolean` | `NOT NULL`, default `false` | `isDeleted` |
 | `createdDateTime` | `timestamp` | `NOT NULL` | audit |
 | `updatedDateTime` | `timestamp` | `NOT NULL` | audit |
 
-**Entity:** `ProviderEntity`
+**Entity:** `BusinessOfferingEntity`
 
-**Common queries:** `existsByUser_Id`, `findByIdWithUserAndRoles`, `findByUserIdWithUserAndRoles`
+**Common queries:** `findByBusiness_IdAndIsDeletedFalseOrderByIdAsc`, `findByIdAndBusiness_IdAndIsDeletedFalse`, `findByBusiness_IdAndCatalogService_Id`, `existsByBusiness_IdAndCatalogService_IdAndIsDeletedFalse`, `findByCatalogService_IdAndIsDeletedFalseAndIsActiveTrueOrderByIdAsc`
+
+> Uniqueness of an active link per `(business_id, catalog_service_id)` is enforced in `BusinessOfferingService`, not via a database unique constraint.
 
 ---
 
@@ -308,13 +314,13 @@ Top-level catalog grouping for on-demand services.
 | `name` | `varchar(255)` | `NOT NULL` | `name` |
 | `description` | `varchar(2000)` | | `description` |
 | `display_order` | `integer` | `NOT NULL`, default `0` | `displayOrder` |
-| `active` | `boolean` | `NOT NULL`, default `true` | `active` |
+| `is_deleted` | `boolean` | `NOT NULL`, default `false` | `isDeleted` |
 | `createdDateTime` | `timestamp` | `NOT NULL` | audit |
 | `updatedDateTime` | `timestamp` | `NOT NULL` | audit |
 
 **Entity:** `CatalogCategoryEntity`
 
-**Common queries:** `findByActiveTrue`, `existsByNameIgnoreCase`
+**Common queries:** `findByIdAndIsDeletedFalse`, `findByIsDeletedFalse`, `existsByNameIgnoreCase`, `existsByNameIgnoreCaseAndIdNot`
 
 ---
 
@@ -329,13 +335,18 @@ Individual catalog entries under a category.
 | `name` | `varchar(512)` | `NOT NULL` | `name` |
 | `description` | `varchar(4000)` | | `description` |
 | `display_order` | `integer` | `NOT NULL`, default `0` | `displayOrder` |
-| `active` | `boolean` | `NOT NULL`, default `true` | `active` |
+| `is_deleted` | `boolean` | `NOT NULL`, default `false` | `isDeleted` |
 | `createdDateTime` | `timestamp` | `NOT NULL` | audit |
 | `updatedDateTime` | `timestamp` | `NOT NULL` | audit |
 
 **Entity:** `CatalogServiceEntity`
 
-**Common queries:** `findByCatalogCategory_IdAndActiveTrueOrderByDisplayOrderAscIdAsc`, `existsByCatalogCategory_IdAndNameIgnoreCase`
+**Relationships:**
+
+- N:1 → `catalog_category`
+- 1:N ← `business_offering`
+
+**Common queries:** `findWithCatalogCategoryByIdAndIsDeletedFalse`, `findByCatalogCategory_IdAndIsDeletedFalseOrderByDisplayOrderAscIdAsc`, `existsByCatalogCategory_IdAndNameIgnoreCase`
 
 ---
 
@@ -395,7 +406,7 @@ With `spring.jpa.show-sql=true` (dev), Hibernate logs DDL and DML to the applica
 | `business` | `BusinessEntity` | `business.entity` |
 | `business_config` | `BusinessConfigEntity` | `business.entity` |
 | `business_payment_channel_config` | `BusinessPaymentChannelConfigEntity` | `business.entity` |
-| `providers` | `ProviderEntity` | `provider.entity` |
+| `business_offering` | `BusinessOfferingEntity` | `offering.entity` |
 | `catalog_category` | `CatalogCategoryEntity` | `catalog.entity` |
 | `catalog_service` | `CatalogServiceEntity` | `catalog.entity` |
 

@@ -1,6 +1,6 @@
 # OnDemand Service — Architecture
 
-This document describes the **ondemand-service** Spring Boot application in this repository (`com.runalb.ondemand_service`). It is the backend API for user identity, business configuration, service catalog, and provider profiles. Payment processing, integration endpoints, and inbound webhooks are partially scaffolded but not yet implemented.
+This document describes the **ondemand-service** Spring Boot application in this repository (`com.runalb.ondemand_service`). It is the backend API for user identity, business (provider) tenants, service catalog, and business-to-catalog offerings. Payment processing and inbound webhooks are partially scaffolded but not yet implemented.
 
 For table-level schema detail, see [DATABASE.md](./DATABASE.md).
 
@@ -8,14 +8,14 @@ For table-level schema detail, see [DATABASE.md](./DATABASE.md).
 
 ## Overview
 
-The service exposes a versioned REST API under `/api/v1`. It uses **PostgreSQL** for persistence, **Spring Security** with a dual authentication model (JWT for portal users, API key for business integration), and a layered **controller → service → repository** structure per domain package.
+The service exposes a versioned REST API under `/api/v1`. It uses **PostgreSQL** for persistence, **Spring Security** with JWT bearer authentication, and a layered **controller → service → repository** structure per domain package.
 
 ```mermaid
 flowchart TB
     subgraph clients [Clients]
         Web[Web / mobile portal]
         Admin[Super admin]
-        Merchant[Business integration]
+        Provider[Provider portal]
     end
 
     subgraph api [Spring Boot API]
@@ -29,29 +29,33 @@ flowchart TB
 
     Web --> Filters
     Admin --> Filters
-    Merchant --> Filters
+    Provider --> Filters
     Filters --> Controllers
     Controllers --> Services
     Services --> JPA
     JPA --> DB
 ```
 
+
+
 ---
 
 ## Technology stack
 
-| Area | Choice |
-|------|--------|
-| Runtime | Java **21** |
-| Framework | Spring Boot **4.0.3** |
-| Artifact | `com.runalb:ondemand-service-api:0.0.1-SNAPSHOT` |
-| Web | `spring-boot-starter-webmvc`, validation, JSON |
-| Persistence | `spring-boot-starter-data-jpa`, PostgreSQL driver |
-| Security | `spring-boot-starter-security`, BCrypt passwords |
-| Observability | `spring-boot-starter-actuator` |
-| Boilerplate | Lombok |
-| JWT | Custom HS256 implementation in `JwtService` (no third-party JWT library) |
-| HTTP client | `RestTemplate` bean (`RestTemplateConfig`) — defined but unused by services today |
+
+| Area          | Choice                                                                            |
+| ------------- | --------------------------------------------------------------------------------- |
+| Runtime       | Java **21**                                                                       |
+| Framework     | Spring Boot **4.0.3**                                                             |
+| Artifact      | `com.runalb:ondemand-service-api:0.0.1-SNAPSHOT`                                  |
+| Web           | `spring-boot-starter-webmvc`, validation, JSON                                    |
+| Persistence   | `spring-boot-starter-data-jpa`, PostgreSQL driver                                 |
+| Security      | `spring-boot-starter-security`, BCrypt passwords                                  |
+| Observability | `spring-boot-starter-actuator`                                                    |
+| Boilerplate   | Lombok                                                                            |
+| JWT           | Custom HS256 implementation in `JwtService` (no third-party JWT library)          |
+| HTTP client   | `RestTemplate` bean (`RestTemplateConfig`) — defined but unused by services today |
+
 
 ### Application bootstrap
 
@@ -63,18 +67,20 @@ flowchart TB
 
 ### Configuration profiles
 
-| Property | Default / dev | Production |
-|----------|---------------|------------|
-| `spring.application.name` | `ondemand-service` | same |
-| Active profile | `dev` | set via deployment |
-| Server port | `8080` | `8080` |
-| JWT access TTL | `3600` s | `3600` s |
-| JWT refresh TTL | `1209600` s (14 days) | same |
-| OTP resend cooldown | `45` s | same |
-| OTP cleanup interval | `60000` ms | same |
-| Hibernate `ddl-auto` | `update` (dev) | `validate` (prod) |
-| JWT secret | dev placeholder in `application-dev.properties` | `JWT_SECRET` env var |
-| Database | local `db_ondemand_service` | `DB_URL`, `DB_USERNAME`, `DB_PASSWORD` |
+
+| Property                  | Default / dev                                   | Production                             |
+| ------------------------- | ----------------------------------------------- | -------------------------------------- |
+| `spring.application.name` | `ondemand-service`                              | same                                   |
+| Active profile            | `dev`                                           | set via deployment                     |
+| Server port               | `8080`                                          | `8080`                                 |
+| JWT access TTL            | `3600` s                                        | `3600` s                               |
+| JWT refresh TTL           | `1209600` s (14 days)                           | same                                   |
+| OTP resend cooldown       | `45` s                                          | same                                   |
+| OTP cleanup interval      | `60000` ms                                      | same                                   |
+| Hibernate `ddl-auto`      | `update` (dev)                                  | `validate` (prod)                      |
+| JWT secret                | dev placeholder in `application-dev.properties` | `JWT_SECRET` env var                   |
+| Database                  | local `db_ondemand_service`                     | `DB_URL`, `DB_USERNAME`, `DB_PASSWORD` |
+
 
 ---
 
@@ -82,21 +88,24 @@ flowchart TB
 
 Source root: `src/main/java/com/runalb/ondemand_service/`
 
-| Package | Responsibility |
-|---------|----------------|
-| `auth` | Login, OTP flows, password reset, refresh/logout; `AuthRefreshTokenEntity` |
-| `business` | Business portal CRUD, business config, payment-channel config storage |
-| `catalog` | Admin-managed service catalog (categories and services) |
-| `common.persistence` | `AuditableEntity` base class |
-| `config` | `SecurityConfig`, `RestTemplateConfig` |
-| `exception` | `GlobalExceptionHandler` (`@RestControllerAdvice`) |
-| `provider` | Provider profile CRUD (1:1 with user) |
-| `role` | `RoleEntity`, `RoleNameEnum` |
-| `security` | `JwtService`, `JwtAuthenticationFilter`, `ApiKeyAuthenticationFilter`, `JwtPayload` |
-| `user` | User registration and self-service profile |
-| `util` | `InputSanitizer` — email, mobile, name, ISO 4217 currency normalization |
 
-**Not yet implemented:** `payment` package (referenced in comments on `BusinessPaymentChannelConfigEntity`); integration controllers under `/api/v1/integration/**`; webhook handlers under `/webhook/**`.
+| Package              | Responsibility                                                                  |
+| -------------------- | ------------------------------------------------------------------------------- |
+| `auth`               | Login, OTP flows, password reset, refresh/logout; `AuthRefreshTokenEntity`      |
+| `business`           | Business CRUD, config, payment-channel config storage                           |
+| `catalog`            | Admin-managed service catalog (categories and services)                         |
+| `common.persistence` | `AuditableEntity` base class                                                    |
+| `config`             | `SecurityConfig`, `RestTemplateConfig`                                          |
+| `exception`          | `GlobalExceptionHandler` (`@RestControllerAdvice`)                              |
+| `offering`           | Links catalog services to businesses (`business_offering`)                      |
+| `relationship`       | `EntityLinkService` — user↔business join management and access checks           |
+| `role`               | `RoleEntity`, `RoleNameEnum`                                                    |
+| `security`           | `JwtAuthenticationFilter`, `JwtService`, `AuthorizationService`, `CurrentUserService` |
+| `user`               | User registration and self-service profile                                      |
+| `util`               | `InputSanitizer` — email, mobile, name, ISO 4217 currency normalization         |
+
+
+**Not yet implemented:** `payment` package (referenced in comments on `BusinessPaymentChannelConfigEntity`); webhook handlers under `/webhook/**`.
 
 ---
 
@@ -109,40 +118,45 @@ All persistent entities extend `AuditableEntity` (`createdDateTime`, `updatedDat
 ```
 UserEntity ──M:N──► RoleEntity          (join: user_role)
 UserEntity ──M:N──► BusinessEntity      (join: user_business)
-UserEntity ◄──1:1── ProviderEntity      (FK: user_id)
 
 BusinessEntity ◄──1:1── BusinessConfigEntity              (FK: business_id)
 BusinessEntity ◄──1:N── BusinessPaymentChannelConfigEntity (FK: business_id)
+BusinessEntity ◄──1:N── BusinessOfferingEntity            (FK: business_id)
 
 CatalogCategoryEntity ◄──1:N── CatalogServiceEntity     (FK: catalog_category_id)
+CatalogServiceEntity ◄──1:N── BusinessOfferingEntity     (FK: catalog_service_id)
 
 UserEntity ◄──N:1── AuthRefreshTokenEntity                (FK: user_id)
 ```
 
 ### Roles (`RoleNameEnum`)
 
-| Value | Typical use |
-|-------|-------------|
-| `CUSTOMER` | Marketplace buyer |
-| `PROVIDER` | Service provider (required for `/api/v1/providers/**`) |
-| `ADMIN` | Tenant / operations admin |
+
+| Value         | Typical use                                                         |
+| ------------- | ------------------------------------------------------------------- |
+| `CUSTOMER`    | Marketplace buyer                                                   |
+| `PROVIDER`    | Business operator (required for `/api/v1/businesses/**`)            |
+| `ADMIN`       | Tenant / operations admin                                           |
 | `SUPER_ADMIN` | Catalog mutations (`POST`/`PATCH`/`DELETE` on `/api/v1/catalog/**`) |
+
 
 Roles must exist in the database before user registration. Seed with `scripts/seed-roles.sql`.
 
 ### Key entities
 
-| Entity | Table | Notes |
-|--------|-------|-------|
-| `UserEntity` | `users` | Email and mobile unique; BCrypt `passwordHash`; `isDeleted`, `isVerified` |
-| `RoleEntity` | `roles` | `roleName` maps to `RoleNameEnum` |
-| `AuthRefreshTokenEntity` | `auth_refresh_token` | Opaque refresh token stored as SHA-256 hash; `revokedAt` for rotation |
-| `BusinessEntity` | `business` | Auto-generated UUID `apiKey` on create; used for integration auth; M:N with users |
-| `BusinessConfigEntity` | `business_config` | `webhookUrl`, ISO 4217 `currency` |
-| `BusinessPaymentChannelConfigEntity` | `business_payment_channel_config` | Opaque `configJson`; payment channel FK commented out |
-| `ProviderEntity` | `providers` | Bio, ratings, profile completion; 1:1 with user |
-| `CatalogCategoryEntity` | `catalog_category` | Ordered, activatable categories |
-| `CatalogServiceEntity` | `catalog_service` | Services under a category |
+
+| Entity                               | Table                             | Notes                                                                      |
+| ------------------------------------ | --------------------------------- | -------------------------------------------------------------------------- |
+| `UserEntity`                         | `users`                           | Email and mobile unique; BCrypt `passwordHash`; `isDeleted`, `isVerified`  |
+| `RoleEntity`                         | `roles`                           | `roleName` maps to `RoleNameEnum`                                          |
+| `AuthRefreshTokenEntity`             | `auth_refresh_token`              | Opaque refresh token stored as SHA-256 hash; `revokedAt` for rotation      |
+| `BusinessEntity`                     | `business`                        | Profile fields, M:N with users; soft-delete via `isDeleted`              |
+| `BusinessConfigEntity`               | `business_config`                 | `webhookUrl`, ISO 4217 `currency`                                          |
+| `BusinessPaymentChannelConfigEntity` | `business_payment_channel_config` | Opaque `configJson`; payment channel FK commented out                      |
+| `BusinessOfferingEntity`             | `business_offering`               | Links a business to a catalog service; `isActive`, soft-delete             |
+| `CatalogCategoryEntity`              | `catalog_category`                | Ordered categories; soft-delete via `isDeleted`                            |
+| `CatalogServiceEntity`               | `catalog_service`                 | Services under a category; soft-delete via `isDeleted`                     |
+
 
 ---
 
@@ -152,68 +166,95 @@ All controllers use `@RestController`. JSON request bodies are validated with Ja
 
 ### Authentication — `/api/v1/auth` (public `POST`)
 
-| Endpoint | Purpose |
-|----------|---------|
-| `POST /login` | Email + password → access JWT + refresh token |
-| `POST /login/email/request-otp` | Request email OTP |
-| `POST /login/email/verify-otp` | Verify email OTP → tokens |
-| `POST /forgot-password/email/request-otp` | Forgot-password OTP |
-| `POST /forgot-password/email/reset-password` | Reset password with OTP |
-| `POST /login/mobile/request-otp` | Request mobile OTP |
-| `POST /login/mobile/verify-otp` | Verify mobile OTP → tokens |
-| `POST /refresh-token` | Rotate refresh token; issue new access JWT |
-| `POST /logout` | Revoke refresh token |
+
+| Endpoint                                     | Purpose                                       |
+| -------------------------------------------- | --------------------------------------------- |
+| `POST /login`                                | Email + password → access JWT + refresh token |
+| `POST /login/email/request-otp`              | Request email OTP                             |
+| `POST /login/email/verify-otp`               | Verify email OTP → tokens                     |
+| `POST /forgot-password/email/request-otp`    | Forgot-password OTP                           |
+| `POST /forgot-password/email/reset-password` | Reset password with OTP                       |
+| `POST /login/mobile/request-otp`             | Request mobile OTP                            |
+| `POST /login/mobile/verify-otp`              | Verify mobile OTP → tokens                    |
+| `POST /refresh-token`                        | Rotate refresh token; issue new access JWT    |
+| `POST /logout`                               | Revoke refresh token                          |
+
 
 ### Users — `/api/v1/users`
 
-| Endpoint | Auth |
-|----------|------|
-| `POST /` | Public (registration) |
-| `GET /{userId}` | JWT; owner only |
-| `PATCH /{userId}` | JWT; owner only |
-| `DELETE /{userId}` | JWT; owner only (soft deactivate) |
-| `POST /{userId}/reactivate` | JWT; owner only |
 
-### Businesses (portal) — `/api/v1/portal/businesses`
+| Endpoint                    | Auth                              |
+| --------------------------- | --------------------------------- |
+| `POST /`                    | Public (registration)             |
+| `GET /{userId}`             | JWT; owner only                   |
+| `PATCH /{userId}`           | JWT; owner only                   |
+| `DELETE /{userId}`          | JWT; owner only (soft deactivate) |
+| `POST /{userId}/reactivate` | JWT; owner only                   |
 
-> Controller is annotated *"Not used in this project"* but fully implemented for business CRUD, config, and payment-channel config.
 
-| Endpoint | Purpose |
-|----------|---------|
-| `POST /` | Create business (links creator via `user_business`; returns `apiKey`) |
-| `GET /`, `GET /{businessId}` | List / get |
-| `PATCH /{businessId}`, `DELETE /{businessId}` | Update / soft delete |
-| `GET|POST|PATCH|DELETE /{businessId}/config` | Business config |
-| `POST|GET|GET|PATCH|DELETE` under `/{businessId}/payment-channel-configs` | Payment channel config CRUD |
+### Businesses — `/api/v1/businesses`
 
-Ownership is enforced via `AuthService.assertAuthenticatedUserOwnsBusiness`.
+Requires `ROLE_PROVIDER` at the security filter layer. Business-scoped routes additionally call `AuthorizationService.assertAuthenticatedUserOwnsBusiness`.
 
-### Providers — `/api/v1/providers`
+> `BusinessController` carries a *"Not used in this project"* comment but is fully implemented.
 
-Requires `ROLE_PROVIDER` at the security layer plus service-level ownership checks on update/delete.
 
-| Endpoint | Purpose |
-|----------|---------|
-| `GET /` | List all active provider profiles |
-| `POST /` | Create provider profile |
-| `PUT /{providerId}` | Update profile (owner only) |
-| `GET /{providerId}` | Get profile |
-| `DELETE /{providerId}` | Deactivate profile (owner only) |
+| Endpoint                                                  | Purpose                                                               |
+| --------------------------------------------------------- | --------------------------------------------------------------------- |
+| `POST /`                                                  | Create business (links creator via `user_business`)                   |
+| `GET /`                                                   | List businesses for the authenticated user                            |
+| `GET /{businessId}`                                       | Get business                                                          |
+| `PATCH /{businessId}`                                     | Update business                                                       |
+| `DELETE /{businessId}`                                    | Soft-delete business                                                  |
+| `GET /{businessId}/config`                                | Get business config                                                   |
+| `POST /{businessId}/config`                               | Create business config                                                |
+| `PATCH /{businessId}/config`                              | Update business config                                                |
+| `DELETE /{businessId}/config`                             | Soft-delete business config                                           |
+| `POST /{businessId}/payment-channel-configs`              | Create payment-channel config                                         |
+| `GET /{businessId}/payment-channel-configs`               | List payment-channel configs                                          |
+| `GET /{businessId}/payment-channel-configs/{configId}`    | Get one config                                                        |
+| `PATCH /{businessId}/payment-channel-configs/{configId}`  | Update config                                                         |
+| `DELETE /{businessId}/payment-channel-configs/{configId}` | Soft-delete config                                                    |
+
+
+### Business offerings — `/api/v1/businesses/{businessId}/offerings`
+
+Links catalog services to a business. Same `ROLE_PROVIDER` + business-ownership checks as above.
+
+
+| Endpoint               | Purpose                                                       |
+| ---------------------- | ------------------------------------------------------------- |
+| `POST /`               | Link one or more catalog services (body: `catalogServiceIds`) |
+| `GET /`                | List active offerings for the business                        |
+| `PATCH /{offeringId}`  | Toggle `isActive` on an offering                              |
+| `DELETE /{offeringId}` | Unlink (soft-delete) an offering                              |
+
 
 ### Catalog — `/api/v1/catalog`
 
-| Endpoint | Auth |
-|----------|------|
-| `GET /categories`, `GET /categories/{categoryId}` | Authenticated |
+
+| Endpoint                                                                              | Auth          |
+| ------------------------------------------------------------------------------------- | ------------- |
+| `GET /categories`, `GET /categories/{categoryId}`                                     | Authenticated |
 | `GET /categories/{categoryId}/services`, `GET /services`, `GET /services/{serviceId}` | Authenticated |
-| `POST|PATCH|DELETE` on categories and services | `SUPER_ADMIN` only |
+| `POST`, `PATCH`, `DELETE` on categories and services                                  | `SUPER_ADMIN` |
+
+
+### Catalog service offerings — `/api/v1/catalog/services/{serviceId}/offerings`
+
+
+| Endpoint                     | Auth          | Status                              |
+| ---------------------------- | ------------- | ----------------------------------- |
+| `GET /{serviceId}/offerings` | Authenticated | **Not implemented** — returns `501` |
+
 
 ### Reserved routes (security configured, no controllers)
 
-| Prefix | Auth mechanism | Status |
-|--------|----------------|--------|
-| `/api/v1/integration/**` | `X-API-Key` → `ROLE_INTEGRATION` | No handlers yet; use `IntegrationAuthService.extractBusiness()` when built |
-| `/webhook/**` | `permitAll` | No handlers yet |
+
+| Prefix        | Auth mechanism | Status                |
+| ------------- | -------------- | --------------------- |
+| `/webhook/**` | `permitAll`    | No handlers yet       |
+
 
 ### Actuator
 
@@ -223,51 +264,40 @@ In the `dev` profile, all actuator web endpoints are exposed (`management.endpoi
 
 ## Security architecture
 
-### Dual authentication
+### JWT authentication
 
 ```mermaid
 sequenceDiagram
     participant Client
-    participant ApiKey as ApiKeyAuthenticationFilter
     participant Jwt as JwtAuthenticationFilter
     participant Chain as SecurityFilterChain
     participant Ctrl as Controller
 
-    Client->>ApiKey: HTTP request
-    alt path starts with /api/v1/integration/
-        ApiKey->>ApiKey: X-API-Key → BusinessEntity + ROLE_INTEGRATION
-    end
-  alt Bearer JWT required
-        Jwt->>Jwt: validate HS256 token → userId + ROLE_* authorities
-    end
-    ApiKey->>Chain: authorizeHttpRequests
+    Client->>Jwt: HTTP request + Authorization Bearer
+    Jwt->>Jwt: validate HS256 token → userId + ROLE_* authorities
+    Jwt->>Chain: authorizeHttpRequests
     Chain->>Ctrl: dispatch if authorized
 ```
 
-#### 1. JWT (portal / admin APIs) — `JwtAuthenticationFilter`
+#### `JwtAuthenticationFilter`
 
 - Header: `Authorization: Bearer <token>`
 - Principal in `SecurityContext`: `Long` userId
 - Authorities: `ROLE_<RoleNameEnum>` from JWT `roles` claim
-- Skipped for: `OPTIONS`, non-`/api/**`, `/api/v1/integration/**`, `/webhook/**`, public registration, all public `POST /api/v1/auth/**` paths
-
-#### 2. API key (integration APIs) — `ApiKeyAuthenticationFilter`
-
-- Applies to paths under `security.integration.path-prefix` (default `/api/v1/integration/`)
-- Header: `X-API-Key`
-- Resolves active `BusinessEntity` via `BusinessRepository.findByApiKey` (excludes `isDeleted`)
-- Principal: `BusinessEntity`; authority: `ROLE_INTEGRATION`
+- Skipped for: `OPTIONS`, non-`/api/**`, `/webhook/**`, public registration, all public `POST /api/v1/auth/**` paths
 
 ### JWT format (`JwtService`)
 
 Custom HS256 JWT with claims:
 
-| Claim | Content |
-|-------|---------|
-| `sub` | User id (`Long`) |
+
+| Claim   | Content                       |
+| ------- | ----------------------------- |
+| `sub`   | User id (`Long`)              |
 | `roles` | Array of `RoleNameEnum` names |
-| `iat` | Issued-at (epoch seconds) |
-| `exp` | Expiry (epoch seconds) |
+| `iat`   | Issued-at (epoch seconds)     |
+| `exp`   | Expiry (epoch seconds)        |
+
 
 Secret: `security.jwt.secret`. Access TTL: `security.jwt.expiration-seconds`.
 
@@ -282,13 +312,15 @@ Secret: `security.jwt.secret`. Access TTL: `security.jwt.expiration-seconds`.
 
 `AuthService` maintains three `ConcurrentHashMap` session stores: email login, forgot-password email, and mobile login.
 
-| Property | Value |
-|----------|-------|
-| OTP length | 6 digits |
-| Expiry | 300 seconds |
-| Resend cooldown | `security.otp.resend-cooldown-seconds` (default 45) |
-| Delivery | **Placeholder** — OTP logged via `log.info`; email/SMS providers not wired |
-| Cleanup | `@Scheduled` `removeExpiredOtpSessions()` every `security.otp.cleanup-interval-ms` |
+
+| Property        | Value                                                                              |
+| --------------- | ---------------------------------------------------------------------------------- |
+| OTP length      | 6 digits                                                                           |
+| Expiry          | 300 seconds                                                                        |
+| Resend cooldown | `security.otp.resend-cooldown-seconds` (default 45)                                |
+| Delivery        | **Placeholder** — OTP logged via `log.info`; email/SMS providers not wired         |
+| Cleanup         | `@Scheduled` `removeExpiredOtpSessions()` every `security.otp.cleanup-interval-ms` |
+
 
 OTP sessions are **not cluster-safe** and are lost on process restart.
 
@@ -300,29 +332,36 @@ BCrypt via `PasswordEncoder` bean in `SecurityConfig`.
 
 Rules are evaluated in declaration order:
 
-| Pattern | Rule |
-|---------|------|
-| `OPTIONS /**` | `permitAll` |
-| `/webhook/**` | `permitAll` |
-| `POST /api/v1/users` | `permitAll` |
-| `POST /api/v1/auth/**` | `permitAll` |
-| `GET /api/v1/catalog/**` | `authenticated` |
-| Non-GET `/api/v1/catalog/**` | `hasRole("SUPER_ADMIN")` |
-| `/api/v1/integration/**` | `authenticated` (API key filter sets context) |
-| `/api/v1/providers/**` | `hasRole("PROVIDER")` |
-| `/api/**` | `authenticated` |
-| Other | `permitAll` |
+
+| Pattern                                    | Rule                                          |
+| ------------------------------------------ | --------------------------------------------- |
+| `OPTIONS /`**                              | `permitAll`                                   |
+| `/webhook/`**                              | `permitAll`                                   |
+| `POST /api/v1/users`                       | `permitAll`                                   |
+| `POST /api/v1/auth/**`                     | `permitAll`                                   |
+| `GET /api/v1/catalog/services/*/offerings` | `authenticated`                               |
+| `GET /api/v1/catalog/**`                   | `authenticated`                               |
+| Non-GET `/api/v1/catalog/**`               | `hasRole("SUPER_ADMIN")`                      |
+| `/api/v1/businesses/**`                    | `hasRole("PROVIDER")`                         |
+| `/api/**`                                  | `authenticated`                               |
+| Other                                      | `permitAll`                                   |
+
 
 CSRF is disabled. CORS allows all origins (`*`), common HTTP methods, all headers; `allowCredentials=false`.
 
-### Service-layer authorization (`AuthService`)
+### Service-layer authorization
 
-| Method | Purpose |
-|--------|---------|
-| `assertAuthenticatedUserOwnsUserId` | User can only access own profile |
-| `assertAuthenticatedUserOwnsBusiness` | User must be linked to business |
-| `assertAuthenticatedUserOwnsProvider` | Provider update/delete ownership |
-| `loadAuthenticatedActiveUser` | Resolve JWT principal to active `UserEntity` with roles |
+Authorization is split across dedicated security services (no longer on `AuthService`):
+
+
+| Class                  | Responsibility                                                                              |
+| ---------------------- | ------------------------------------------------------------------------------------------- |
+| `CurrentUserService`   | Resolves JWT principal (`Long` userId) to `UserEntity` via `UserService`                    |
+| `AuthorizationService` | `assertAuthenticatedUserOwnsUserId`, `assertAuthenticatedUserOwnsBusiness`                  |
+| `EntityLinkService`    | `linkUserToBusiness`, `userHasBusinessAccess` (used by authorization and `BusinessService`) |
+
+
+`BusinessService` uses `CurrentUserService` for create/list scoped to the authenticated user.
 
 Filter-level auth failures return minimal JSON: `{"error":"..."}` and are **not** handled by `GlobalExceptionHandler`.
 
@@ -331,13 +370,12 @@ Filter-level auth failures return minimal JSON: `{"error":"..."}` and are **not*
 ## Request lifecycle
 
 1. **CORS** preflight or request enters the servlet container.
-2. **`ApiKeyAuthenticationFilter`** runs first for integration paths; sets business principal or returns `401`.
-3. **`JwtAuthenticationFilter`** parses Bearer token for applicable `/api/**` routes; sets user principal and roles or continues unauthenticated for public routes.
-4. **`SecurityFilterChain`** applies `authorizeHttpRequests` rules.
-5. **Controller** receives validated DTO; may call `AuthService` ownership helpers.
-6. **Service** applies business logic, `InputSanitizer` normalization, and `@Transactional` persistence via repositories.
-7. **Response** returned as `ResponseEntity` with response DTOs.
-8. **Uncaught exceptions** routed to `GlobalExceptionHandler`.
+2. `**JwtAuthenticationFilter**` parses Bearer token for applicable `/api/**` routes; sets user principal and roles or continues unauthenticated for public routes.
+3. `**SecurityFilterChain**` applies `authorizeHttpRequests` rules.
+4. **Controller** receives validated DTO; may call `AuthorizationService` ownership helpers.
+5. **Service** applies business logic, `InputSanitizer` normalization, and `@Transactional` persistence via repositories.
+6. **Response** returned as `ResponseEntity` with response DTOs.
+7. **Uncaught exceptions** routed to `GlobalExceptionHandler`.
 
 ### Example: registration and login
 
@@ -348,7 +386,7 @@ Filter-level auth failures return minimal JSON: `{"error":"..."}` and are **not*
 
 1. Client sends `Authorization: Bearer <jwt>`.
 2. `JwtAuthenticationFilter` sets `userId` principal.
-3. `BusinessController` calls `authService.assertAuthenticatedUserOwnsBusiness(businessId)`.
+3. `BusinessController` calls `authorizationService.assertAuthenticatedUserOwnsBusiness(businessId)`.
 4. `BusinessService` reads or writes business, config, or payment-channel config.
 
 ---
@@ -369,16 +407,18 @@ JSON error body shape:
 }
 ```
 
-| Exception | HTTP status |
-|-----------|-------------|
-| `IllegalArgumentException` | 400 |
-| `EntityNotFoundException` | 404 |
-| `ResponseStatusException` | Status from exception |
-| `Exception` (catch-all) | 500 |
+
+| Exception                  | HTTP status           |
+| -------------------------- | --------------------- |
+| `IllegalArgumentException` | 400                   |
+| `EntityNotFoundException`  | 404                   |
+| `ResponseStatusException`  | Status from exception |
+| `Exception` (catch-all)    | 500                   |
+
 
 ### Input normalization (`InputSanitizer`)
 
-Used across auth, user, business, and provider services:
+Used across auth, user, business, and catalog services:
 
 - `normalizeEmail`, `normalizeMobile`, `normalizeName`
 - `trimToNull`
@@ -392,16 +432,17 @@ Service methods that mutate data are annotated `@Transactional`.
 
 ## External integrations
 
-| Integration | Status |
-|-------------|--------|
-| **PostgreSQL** | Active — JPA/Hibernate |
-| **Email OTP** | Placeholder (logged only) |
-| **SMS OTP** | Placeholder (logged only) |
+
+| Integration           | Status                                                                                  |
+| --------------------- | --------------------------------------------------------------------------------------- |
+| **PostgreSQL**        | Active — JPA/Hibernate                                                                  |
+| **Email OTP**         | Placeholder (logged only)                                                               |
+| **SMS OTP**           | Placeholder (logged only)                                                               |
 | **Payment providers** | Not implemented; `configJson` on `BusinessPaymentChannelConfigEntity` is opaque storage |
-| **Business webhooks** | `webhookUrl` stored on `BusinessConfigEntity`; no outbound sender |
-| **Inbound webhooks** | `/webhook/**` permitted; no controller |
-| **Integration API** | `/api/v1/integration/**` secured; no controller |
-| **RestTemplate** | Bean present; no outbound HTTP in current services |
+| **Business webhooks** | `webhookUrl` stored on `BusinessConfigEntity`; no outbound sender                       |
+| **Inbound webhooks**  | `/webhook/**` permitted; no controller                                                  |
+| **RestTemplate**      | Bean present; no outbound HTTP in current services                                      |
+
 
 A static test page exists at `src/main/resources/static/test-payment-link.html` for future payment-link testing.
 
@@ -409,39 +450,49 @@ A static test page exists at `src/main/resources/static/test-payment-link.html` 
 
 ## Implementation maturity
 
-| Area | State |
-|------|-------|
-| Auth (login, OTP, refresh, logout) | Implemented |
-| User self-service | Implemented |
-| Catalog read (authenticated) / write (super admin) | Implemented |
-| Provider profiles | Implemented |
-| Business portal API | Implemented but marked unused in controller comment |
-| Payment processing | Not started |
-| Integration API (`X-API-Key`) | Security only |
-| Webhooks | Security only |
-| Role seeding | Manual via `scripts/seed-roles.sql` |
+
+| Area                                               | State                                                      |
+| -------------------------------------------------- | ---------------------------------------------------------- |
+| Auth (login, OTP, refresh, logout)                 | Implemented                                                |
+| User self-service                                  | Implemented                                                |
+| Catalog read (authenticated) / write (super admin) | Implemented (soft-delete via `isDeleted`)                  |
+| Business API (`/api/v1/businesses`)                | Implemented; requires `PROVIDER`; controller marked unused |
+| Business offerings (link catalog services)         | Implemented                                                |
+| Catalog service offerings listing                  | Stub (`501 Not Implemented`)                               |
+| Payment processing                                 | Not started                                                |
+| Webhooks                                           | Security only                                              |
+| Role seeding                                       | Manual via `scripts/seed-roles.sql`                        |
+
 
 ---
 
 ## Key class index
 
-| Concern | Classes |
-|---------|---------|
-| Entry point | `OnDemandServiceApplication` |
-| Security config | `SecurityConfig`, `JwtAuthenticationFilter`, `ApiKeyAuthenticationFilter`, `JwtService`, `JwtPayload` |
-| Auth | `AuthService`, `IntegrationAuthService`, `AuthController` |
-| Errors | `GlobalExceptionHandler` |
-| Persistence base | `AuditableEntity` |
-| Roles | `RoleEntity`, `RoleNameEnum` |
-| Utilities | `InputSanitizer` |
+
+| Concern          | Classes                                                                                               |
+| ---------------- | ----------------------------------------------------------------------------------------------------- |
+| Entry point      | `OnDemandServiceApplication`                                                                          |
+| Security config  | `SecurityConfig`, `JwtAuthenticationFilter`, `JwtService`, `JwtPayload`                             |
+| Authorization    | `AuthorizationService`, `CurrentUserService`, `EntityLinkService`                                     |
+| Auth             | `AuthService`, `AuthController`                                                                       |
+| Business         | `BusinessController`, `BusinessService`                                                               |
+| Offerings        | `BusinessOfferingController`, `BusinessOfferingService`, `CatalogServiceOfferingController`           |
+| Errors           | `GlobalExceptionHandler`                                                                              |
+| Persistence base | `AuditableEntity`                                                                                     |
+| Roles            | `RoleEntity`, `RoleNameEnum`                                                                          |
+| Utilities        | `InputSanitizer`                                                                                      |
+
 
 ---
 
 ## Related documentation
 
-| Document | Description |
-|----------|-------------|
-| [DATABASE.md](./DATABASE.md) | Table and column reference |
-| [README.md](./README.md) | Documentation index |
+
+| Document                                               | Description                       |
+| ------------------------------------------------------ | --------------------------------- |
+| [DATABASE.md](./DATABASE.md)                           | Table and column reference        |
+| [README.md](./README.md)                               | Documentation index               |
 | `postman/OnDemand-Service-API.postman_collection.json` | API collection for manual testing |
-| `scripts/seed-roles.sql` | Idempotent role seed data |
+| `scripts/seed-roles.sql`                               | Idempotent role seed data         |
+
+
