@@ -85,9 +85,6 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         if (!path.startsWith("/api/")) {
             return false;
         }
-        if (path.startsWith("/api/v1/integration/")) {
-            return false;
-        }
         if (path.startsWith("/webhook/")) {
             return false;
         }

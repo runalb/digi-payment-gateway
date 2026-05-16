@@ -9,8 +9,6 @@ public interface BusinessRepository extends JpaRepository<BusinessEntity, Long> 
 
     Optional<BusinessEntity> findByIdAndIsDeletedFalse(Long id);
 
-    Optional<BusinessEntity> findByApiKeyAndIsDeletedFalse(String apiKey);
-
     Optional<BusinessEntity> findByEmail(String email);
 
     Optional<BusinessEntity> findByMobileNumber(String mobileNumber);

@@ -1,6 +1,5 @@
 package com.runalb.ondemand_service.config;
 
-import com.runalb.ondemand_service.security.ApiKeyAuthenticationFilter;
 import com.runalb.ondemand_service.security.JwtAuthenticationFilter;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -25,10 +24,7 @@ public class SecurityConfig {
     }
 
     @Bean
-    SecurityFilterChain securityFilterChain(
-            HttpSecurity http,
-            ApiKeyAuthenticationFilter apiKeyAuthenticationFilter,
-            JwtAuthenticationFilter jwtAuthenticationFilter) {
+    SecurityFilterChain securityFilterChain(HttpSecurity http, JwtAuthenticationFilter jwtAuthenticationFilter) {
         return http
                 .cors(cors -> {})
                 .csrf(csrf -> csrf.disable())
@@ -49,16 +45,12 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.GET, "/api/v1/catalog/**").authenticated()
                         .requestMatchers("/api/v1/catalog/**").hasRole("SUPER_ADMIN") // only super admin can access catalog routes to create, update, delete categories and services
 
-                        // Integration
-                        .requestMatchers("/api/v1/integration/**").authenticated()
-
                         // Business
                         .requestMatchers("/api/v1/businesses/**").hasRole("PROVIDER")
 
                         // All other routes
                         .requestMatchers("/api/**").authenticated()
                         .anyRequest().permitAll())
-                .addFilterBefore(apiKeyAuthenticationFilter, UsernamePasswordAuthenticationFilter.class)
                 .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class)
                 .build();
     }

@@ -23,7 +23,6 @@ import com.runalb.ondemand_service.relationship.service.EntityLinkService;
 import com.runalb.ondemand_service.util.InputSanitizer;
 import jakarta.persistence.EntityNotFoundException;
 import java.util.List;
-import java.util.UUID;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -94,7 +93,6 @@ public class BusinessService {
 
         BusinessEntity business = new BusinessEntity();
         business.setName(InputSanitizer.normalizeName(request.name()));
-        business.setApiKey(UUID.randomUUID().toString());
         business.setEmail(email);
         business.setBusinessType(InputSanitizer.normalizeName(request.businessType()));
         business.setDescription(InputSanitizer.trimToNull(request.description()));
@@ -186,7 +184,6 @@ public class BusinessService {
                 business.getId(),
                 business.getName(),
                 business.getEmail(),
-                business.getApiKey(),
                 business.getIsDeleted(),
                 business.getBusinessType(),
                 business.getDescription(),

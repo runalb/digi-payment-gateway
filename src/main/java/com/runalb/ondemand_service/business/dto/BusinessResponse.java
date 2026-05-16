@@ -4,7 +4,6 @@ public record BusinessResponse(
         Long id,
         String name,
         String email,
-        String apiKey,
         Boolean isDeleted,
         String businessType,
         String description,

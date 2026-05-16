@@ -31,9 +31,6 @@ public class BusinessEntity extends AuditableEntity {
     private String name;
 
     @Column(nullable = false, unique = true)
-    private String apiKey;
-
-    @Column(nullable = false, unique = true)
     private String email;
 
     @OneToOne(mappedBy = "business", fetch = FetchType.LAZY)
