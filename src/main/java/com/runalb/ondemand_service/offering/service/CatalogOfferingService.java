@@ -5,11 +5,11 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.server.ResponseStatusException;
 
 @Service
-public class CatalogServiceOfferingService {
+public class CatalogOfferingService {
 
     // TODO: Implement this method
     // get active and verified offerings for a catalog service
-    public void listActiveAndVerifiedOfferingsForService(Long catalogServiceId) {
+    public void listActiveAndVerifiedOfferingsForService(Long serviceId) {
         throw new ResponseStatusException(HttpStatus.NOT_IMPLEMENTED, "Not implemented");
     }
 }

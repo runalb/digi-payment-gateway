@@ -46,6 +46,7 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.PATCH, "/api/v1/catalog/**").hasRole("SUPER_ADMIN")
                         .requestMatchers(HttpMethod.PUT, "/api/v1/catalog/**").hasRole("SUPER_ADMIN")
                         .requestMatchers(HttpMethod.DELETE, "/api/v1/catalog/**").hasRole("SUPER_ADMIN")
+                        .requestMatchers(HttpMethod.GET, "/api/v1/catalog/services/*/offerings").hasRole("CUSTOMER")
 
                         // Business
                         .requestMatchers("/api/v1/businesses/**").hasRole("PROVIDER")
@@ -54,7 +55,7 @@ public class SecurityConfig {
                         .requestMatchers("/api/v1/businesses/*/offerings/**").hasRole("PROVIDER")
                         .requestMatchers(HttpMethod.PATCH, "/api/v1/businesses/*/offerings/*/verify").hasRole("SUPER_ADMIN")
 
-                        
+
                         // All other routes
                         .requestMatchers("/api/**").authenticated()
                         .anyRequest().permitAll())

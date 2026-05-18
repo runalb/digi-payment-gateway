@@ -30,6 +30,7 @@ public class CatalogController {
         this.catalogService = catalogService;
     }
 
+    // Catalog categories
     @GetMapping("/categories")
     public ResponseEntity<List<CatalogCategoryResponse>> listCategories() {
         return ResponseEntity.ok(catalogService.listCategories());
@@ -71,6 +72,7 @@ public class CatalogController {
         return new ResponseEntity<>(body, HttpStatus.CREATED);
     }
 
+    // Catalog services
     @GetMapping("/services")
     public ResponseEntity<List<CatalogServiceResponse>> listAllServices() {
         return ResponseEntity.ok(catalogService.listAllCatalogServices());
