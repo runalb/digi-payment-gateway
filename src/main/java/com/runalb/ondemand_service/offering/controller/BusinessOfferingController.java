@@ -19,7 +19,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 @RestController
-@RequestMapping("/api/v1/businesses/{businessId}/offerings")
+@RequestMapping("/api/v1/businesses")
 public class BusinessOfferingController {
 
     private final BusinessOfferingService businessOfferingService;
@@ -31,7 +31,7 @@ public class BusinessOfferingController {
         this.authorizationService = authorizationService;
     }
 
-    @PostMapping
+    @PostMapping("/{businessId}/offerings")
     public ResponseEntity<List<BusinessOfferingResponse>> linkOfferings(
             @PathVariable Long businessId, @Valid @RequestBody BusinessOfferingLinkRequest request) {
         authorizationService.assertAuthenticatedUserOwnsBusiness(businessId);
@@ -39,13 +39,13 @@ public class BusinessOfferingController {
         return new ResponseEntity<>(response, HttpStatus.CREATED);
     }
 
-    @GetMapping
+    @GetMapping("/{businessId}/offerings")
     public ResponseEntity<List<BusinessOfferingResponse>> listOfferings(@PathVariable Long businessId) {
         authorizationService.assertAuthenticatedUserOwnsBusiness(businessId);
         return ResponseEntity.ok(businessOfferingService.listOfferingsForBusiness(businessId));
     }
 
-    @PatchMapping("/{offeringId}")
+    @PatchMapping("/{businessId}/offerings/{offeringId}")
     public ResponseEntity<BusinessOfferingResponse> updateOfferingActiveStatus(
             @PathVariable Long businessId,
             @PathVariable Long offeringId,
@@ -56,14 +56,14 @@ public class BusinessOfferingController {
         return ResponseEntity.ok(response);
     }
 
-    @DeleteMapping("/{offeringId}")
+    @DeleteMapping("/{businessId}/offerings/{offeringId}")
     public ResponseEntity<Void> unlinkOffering(@PathVariable Long businessId, @PathVariable Long offeringId) {
         authorizationService.assertAuthenticatedUserOwnsBusiness(businessId);
         businessOfferingService.unlinkOffering(businessId, offeringId);
         return ResponseEntity.noContent().build();
     }
 
-    @PatchMapping("/{offeringId}/verify")
+    @PatchMapping("/{businessId}/offerings/{offeringId}/verify")
     public ResponseEntity<BusinessOfferingResponse> verifyOffering(
             @PathVariable Long businessId, @PathVariable Long offeringId) {
         return ResponseEntity.ok(businessOfferingService.verifyOffering(businessId, offeringId));
