@@ -1,6 +1,7 @@
 package com.runalb.ondemand_service.offering.repository;
 
 import com.runalb.ondemand_service.offering.entity.BusinessOfferingEntity;
+import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 import org.springframework.data.jpa.repository.EntityGraph;
@@ -23,4 +24,10 @@ public interface BusinessOfferingRepository extends JpaRepository<BusinessOfferi
     @EntityGraph(attributePaths = {"business", "catalogService", "catalogService.catalogCategory"})
     List<BusinessOfferingEntity> findByCatalogService_IdAndIsDeletedFalseAndIsActiveTrueOrderByIdAsc(
             Long catalogServiceId);
+
+    @EntityGraph(attributePaths = {"business", "catalogService", "catalogService.catalogCategory"})
+    Optional<BusinessOfferingEntity> findByIdAndIsDeletedFalse(Long id);
+
+    @EntityGraph(attributePaths = {"business", "catalogService", "catalogService.catalogCategory"})
+    List<BusinessOfferingEntity> findByIdInAndIsDeletedFalse(Collection<Long> ids);
 }

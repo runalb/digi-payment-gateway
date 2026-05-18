@@ -40,10 +40,16 @@ public class SecurityConfig {
                         // Auth
                         .requestMatchers(HttpMethod.POST, "/api/v1/auth/**").permitAll()
                         
-                        // Catalog
-                        .requestMatchers(HttpMethod.GET, "/api/v1/catalog/services/*/offerings").authenticated()
+                        // Catalog — GET: any authenticated role; mutations: SUPER_ADMIN only
                         .requestMatchers(HttpMethod.GET, "/api/v1/catalog/**").authenticated()
-                        .requestMatchers("/api/v1/catalog/**").hasRole("SUPER_ADMIN") // only super admin can access catalog routes to create, update, delete categories and services
+                        .requestMatchers(HttpMethod.POST, "/api/v1/catalog/**").hasRole("SUPER_ADMIN")
+                        .requestMatchers(HttpMethod.PATCH, "/api/v1/catalog/**").hasRole("SUPER_ADMIN")
+                        .requestMatchers(HttpMethod.PUT, "/api/v1/catalog/**").hasRole("SUPER_ADMIN")
+                        .requestMatchers(HttpMethod.DELETE, "/api/v1/catalog/**").hasRole("SUPER_ADMIN")
+
+                        // Business offerings
+                        .requestMatchers(HttpMethod.PATCH, "/api/v1/businesses/*/offerings/*/verify")
+                                .hasRole("SUPER_ADMIN")
 
                         // Business
                         .requestMatchers("/api/v1/businesses/**").hasRole("PROVIDER")

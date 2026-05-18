@@ -93,6 +93,20 @@ public class BusinessOfferingService {
     }
 
     @Transactional
+    public BusinessOfferingResponse verifyOffering(Long businessId, Long offeringId) {
+        requireActiveBusiness(businessId);
+        BusinessOfferingEntity offering = businessOfferingRepository
+                .findByIdAndBusiness_IdAndIsDeletedFalse(offeringId, businessId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Offering not found"));
+        if (Boolean.TRUE.equals(offering.getIsVerified())) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "Offering already verified");
+        }
+        offering.setIsVerified(Boolean.TRUE);
+        offering = businessOfferingRepository.save(offering);
+        return toBusinessOfferingResponse(offering);
+    }
+
+    @Transactional
     public void unlinkOffering(Long businessId, Long offeringId) {
         requireActiveBusiness(businessId);
         BusinessOfferingEntity offering = businessOfferingRepository

@@ -62,4 +62,11 @@ public class BusinessOfferingController {
         businessOfferingService.unlinkOffering(businessId, offeringId);
         return ResponseEntity.noContent().build();
     }
+
+    @PatchMapping("/{offeringId}/verify")
+    public ResponseEntity<BusinessOfferingResponse> verifyOffering(
+            @PathVariable Long businessId, @PathVariable Long offeringId) {
+        return ResponseEntity.ok(businessOfferingService.verifyOffering(businessId, offeringId));
+    }
+
 }
