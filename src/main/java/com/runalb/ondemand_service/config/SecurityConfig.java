@@ -31,6 +31,13 @@ public class SecurityConfig {
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
 
+                        // OpenAPI / Swagger UI
+                        .requestMatchers(
+                                "/v3/api-docs/**",
+                                "/swagger-ui/**",
+                                "/swagger-ui.html")
+                        .permitAll()
+
                         // Webhook
                         .requestMatchers("/webhook/**").permitAll()
 
