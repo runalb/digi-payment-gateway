@@ -40,20 +40,21 @@ public class SecurityConfig {
                         // Auth
                         .requestMatchers(HttpMethod.POST, "/api/v1/auth/**").permitAll()
                         
-                        // Catalog — GET: any authenticated role; mutations: SUPER_ADMIN only
+                        // Catalog
                         .requestMatchers(HttpMethod.GET, "/api/v1/catalog/**").authenticated()
                         .requestMatchers(HttpMethod.POST, "/api/v1/catalog/**").hasRole("SUPER_ADMIN")
                         .requestMatchers(HttpMethod.PATCH, "/api/v1/catalog/**").hasRole("SUPER_ADMIN")
                         .requestMatchers(HttpMethod.PUT, "/api/v1/catalog/**").hasRole("SUPER_ADMIN")
                         .requestMatchers(HttpMethod.DELETE, "/api/v1/catalog/**").hasRole("SUPER_ADMIN")
 
-                        // Business offerings
-                        .requestMatchers(HttpMethod.PATCH, "/api/v1/businesses/*/offerings/*/verify")
-                                .hasRole("SUPER_ADMIN")
-
                         // Business
                         .requestMatchers("/api/v1/businesses/**").hasRole("PROVIDER")
 
+                        // Business services offerings
+                        .requestMatchers("/api/v1/businesses/*/offerings/**").hasRole("PROVIDER")
+                        .requestMatchers(HttpMethod.PATCH, "/api/v1/businesses/*/offerings/*/verify").hasRole("SUPER_ADMIN")
+
+                        
                         // All other routes
                         .requestMatchers("/api/**").authenticated()
                         .anyRequest().permitAll())
