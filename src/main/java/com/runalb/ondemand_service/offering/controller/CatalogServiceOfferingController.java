@@ -18,8 +18,8 @@ public class CatalogServiceOfferingController {
     }
 
     @GetMapping("/{serviceId}/offerings")
-    public ResponseEntity<Void> listActiveOfferingsForService(@PathVariable Long serviceId) {
-        catalogServiceOfferingService.listActiveOfferingsForService(serviceId);
+    public ResponseEntity<Void> listActiveAndVerifiedOfferingsForService(@PathVariable Long serviceId) {
+        catalogServiceOfferingService.listActiveAndVerifiedOfferingsForService(serviceId);
         return ResponseEntity.ok().build();
     }
 }

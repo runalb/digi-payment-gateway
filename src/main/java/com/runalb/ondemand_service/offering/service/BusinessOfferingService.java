@@ -64,6 +64,7 @@ public class BusinessOfferingService {
             offering.setCatalogService(catalogService);
             offering.setIsDeleted(Boolean.FALSE);
             offering.setIsActive(Boolean.TRUE);
+            offering.setIsVerified(Boolean.FALSE);
             offering = businessOfferingRepository.save(offering);
             linked.add(toBusinessOfferingResponse(offering));
         }
@@ -112,6 +113,7 @@ public class BusinessOfferingService {
                 offering.getId(),
                 offering.getBusiness().getId(),
                 Boolean.TRUE.equals(offering.getIsActive()),
+                Boolean.TRUE.equals(offering.getIsVerified()),
                 toCatalogServiceResponse(offering.getCatalogService()));
     }
 

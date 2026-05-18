@@ -38,4 +38,7 @@ public class BusinessOfferingEntity extends AuditableEntity {
 
     @Column(name = "is_active", nullable = false)
     private Boolean isActive = Boolean.TRUE;
+
+    @Column(nullable = false)
+    private Boolean isVerified = Boolean.FALSE;
 }

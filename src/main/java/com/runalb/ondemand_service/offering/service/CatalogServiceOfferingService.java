@@ -8,7 +8,8 @@ import org.springframework.web.server.ResponseStatusException;
 public class CatalogServiceOfferingService {
 
     // TODO: Implement this method
-    public void listActiveOfferingsForService(Long catalogServiceId) {
+    // get active and verified offerings for a catalog service
+    public void listActiveAndVerifiedOfferingsForService(Long catalogServiceId) {
         throw new ResponseStatusException(HttpStatus.NOT_IMPLEMENTED, "Not implemented");
     }
 }
