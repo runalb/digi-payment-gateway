@@ -47,23 +47,30 @@ public class SecurityConfig {
                         // Auth
                         .requestMatchers(HttpMethod.POST, "/api/v1/auth/**").permitAll()
                         
-                        // Catalog
-                        .requestMatchers(HttpMethod.GET, "/api/v1/catalog/services/*/business-offerings")
-                        .hasRole("CUSTOMER")
-                        .requestMatchers(HttpMethod.GET, "/api/v1/catalog/**").authenticated()
-                        .requestMatchers(HttpMethod.POST, "/api/v1/catalog/**").hasRole("SUPER_ADMIN")
-                        .requestMatchers(HttpMethod.PATCH, "/api/v1/catalog/**").hasRole("SUPER_ADMIN")
-                        .requestMatchers(HttpMethod.PUT, "/api/v1/catalog/**").hasRole("SUPER_ADMIN")
-                        .requestMatchers(HttpMethod.DELETE, "/api/v1/catalog/**").hasRole("SUPER_ADMIN")
+                        // Catalog categories
+                        .requestMatchers(HttpMethod.POST, "/api/v1/catalog/categories/**").hasRole("SUPER_ADMIN")
+                        .requestMatchers(HttpMethod.PATCH, "/api/v1/catalog/categories/**").hasRole("SUPER_ADMIN")
+                        .requestMatchers(HttpMethod.DELETE, "/api/v1/catalog/categories/**").hasRole("SUPER_ADMIN")
+                        .requestMatchers(HttpMethod.POST, "/api/v1/catalog/categories/*/services/**").hasAnyRole("SUPER_ADMIN")
 
-                        // Business offerings (admin verify before general business routes)
-                        .requestMatchers(HttpMethod.PATCH, "/api/v1/businesses/*/offerings/*/verify")
-                        .hasRole("SUPER_ADMIN")
-                        .requestMatchers("/api/v1/businesses/*/offerings/**").hasRole("PROVIDER")
+                        // Catalog services
+                        .requestMatchers(HttpMethod.POST, "/api/v1/catalog/services/**").hasRole("SUPER_ADMIN")
+                        .requestMatchers(HttpMethod.PATCH, "/api/v1/catalog/services/**").hasRole("SUPER_ADMIN")
+                        .requestMatchers(HttpMethod.DELETE, "/api/v1/catalog/services/**").hasRole("SUPER_ADMIN")
 
-                        // Business
-                        .requestMatchers("/api/v1/businesses/**").hasRole("PROVIDER")
+                        // Catalog service offerings
+                        .requestMatchers(HttpMethod.GET, "/api/v1/catalog/services/*/business-offerings").authenticated()
 
+                        // Business 
+                        .requestMatchers(HttpMethod.POST, "/api/v1/businesses/**").hasRole("PROVIDER")
+                        .requestMatchers(HttpMethod.PATCH, "/api/v1/businesses/**").hasRole("PROVIDER")
+                        .requestMatchers(HttpMethod.DELETE, "/api/v1/businesses/**").hasRole("PROVIDER")
+                        
+                        // Business offerings
+                        .requestMatchers(HttpMethod.POST, "/api/v1/businesses/*/offerings/**").hasRole("PROVIDER")
+                        .requestMatchers(HttpMethod.PATCH, "/api/v1/businesses/*/offerings/**").hasRole("PROVIDER")
+                        .requestMatchers(HttpMethod.DELETE, "/api/v1/businesses/*/offerings/**").hasRole("PROVIDER")
+                        .requestMatchers(HttpMethod.PATCH, "/api/v1/businesses/*/offerings/*/verify").hasRole("SUPER_ADMIN")
 
                         // All other routes
                         .requestMatchers("/api/**").authenticated()
