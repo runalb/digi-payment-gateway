@@ -1,11 +1,10 @@
 package com.runalb.ondemand_service.catalog.controller;
 
-import com.runalb.ondemand_service.catalog.dto.CatalogServiceCreateRequest;
-import com.runalb.ondemand_service.catalog.dto.CatalogServiceResponse;
-import com.runalb.ondemand_service.catalog.dto.CatalogServiceUpdateRequest;
 import com.runalb.ondemand_service.catalog.dto.CatalogCategoryCreateRequest;
 import com.runalb.ondemand_service.catalog.dto.CatalogCategoryResponse;
 import com.runalb.ondemand_service.catalog.dto.CatalogCategoryUpdateRequest;
+import com.runalb.ondemand_service.catalog.dto.CatalogServiceCreateRequest;
+import com.runalb.ondemand_service.catalog.dto.CatalogServiceResponse;
 import com.runalb.ondemand_service.catalog.service.CatalogService;
 import jakarta.validation.Valid;
 import java.util.List;
@@ -21,77 +20,58 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 @RestController
-@RequestMapping("/api/v1/catalog")
-public class CatalogController {
+@RequestMapping("/api/v1/catalog/categories")
+public class CatalogCategoryController {
 
     private final CatalogService catalogService;
 
-    public CatalogController(CatalogService catalogService) {
+    public CatalogCategoryController(CatalogService catalogService) {
         this.catalogService = catalogService;
     }
 
-    // Catalog categories
-    @GetMapping("/categories")
+    @GetMapping
     public ResponseEntity<List<CatalogCategoryResponse>> listCategories() {
         return ResponseEntity.ok(catalogService.listCategories());
     }
 
-    @GetMapping("/categories/{categoryId}")
+    @GetMapping("/{categoryId}")
     public ResponseEntity<CatalogCategoryResponse> getCategory(@PathVariable Long categoryId) {
         return ResponseEntity.ok(catalogService.getCategory(categoryId));
     }
 
-    @PostMapping("/categories")
+    @PostMapping
     public ResponseEntity<CatalogCategoryResponse> createCategory(
             @Valid @RequestBody CatalogCategoryCreateRequest request) {
         CatalogCategoryResponse body = catalogService.createCategory(request);
         return new ResponseEntity<>(body, HttpStatus.CREATED);
     }
 
-    @PatchMapping("/categories/{categoryId}")
+    @PatchMapping("/{categoryId}")
     public ResponseEntity<CatalogCategoryResponse> updateCategory(
             @PathVariable Long categoryId, @Valid @RequestBody CatalogCategoryUpdateRequest request) {
         return ResponseEntity.ok(catalogService.updateCategory(categoryId, request));
     }
 
-    @DeleteMapping("/categories/{categoryId}")
+    @DeleteMapping("/{categoryId}")
     public ResponseEntity<Void> deleteCategory(@PathVariable Long categoryId) {
         catalogService.deleteCategory(categoryId);
         return ResponseEntity.noContent().build();
     }
 
-    @GetMapping("/categories/{categoryId}/services")
+    @GetMapping("/{categoryId}/services")
     public ResponseEntity<List<CatalogServiceResponse>> listServices(@PathVariable Long categoryId) {
         return ResponseEntity.ok(catalogService.listServicesInCategory(categoryId));
     }
 
-    @PostMapping("/categories/{categoryId}/services")
+    @PostMapping("/{categoryId}/services")
     public ResponseEntity<CatalogServiceResponse> createService(
             @PathVariable Long categoryId, @Valid @RequestBody CatalogServiceCreateRequest request) {
         CatalogServiceResponse body = catalogService.createService(categoryId, request);
         return new ResponseEntity<>(body, HttpStatus.CREATED);
     }
 
-    // Catalog services
-    @GetMapping("/services")
-    public ResponseEntity<List<CatalogServiceResponse>> listAllServices() {
-        return ResponseEntity.ok(catalogService.listAllCatalogServices());
-    }
-
-    @GetMapping("/services/{serviceId}")
-    public ResponseEntity<CatalogServiceResponse> getService(@PathVariable Long serviceId) {
-        return ResponseEntity.ok(catalogService.getCatalogService(serviceId));
-    }
-
-    @PatchMapping("/services/{serviceId}")
-    public ResponseEntity<CatalogServiceResponse> updateService(
-            @PathVariable Long serviceId, @Valid @RequestBody CatalogServiceUpdateRequest request) {
-        return ResponseEntity.ok(catalogService.updateCatalogService(serviceId, request));
-    }
-
-    @DeleteMapping("/services/{serviceId}")
-    public ResponseEntity<Void> deleteService(@PathVariable Long serviceId) {
-        catalogService.deleteCatalogService(serviceId);
-        return ResponseEntity.noContent().build();
+    @GetMapping("/{categoryId}/services/{serviceId}")
+    public ResponseEntity<CatalogServiceResponse> getServiceInCategory(@PathVariable Long categoryId, @PathVariable Long serviceId) {
+        return ResponseEntity.ok(catalogService.getServiceInCategory(categoryId, serviceId));
     }
 }

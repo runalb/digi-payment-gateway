@@ -58,5 +58,9 @@ public interface CatalogServiceRepository extends JpaRepository<CatalogServiceEn
 
     Optional<CatalogServiceEntity> findWithCatalogCategoryByIdAndIsDeletedFalse(Long id);
 
+    @EntityGraph(attributePaths = "catalogCategory")
+    Optional<CatalogServiceEntity> findWithCatalogCategoryByIdAndCatalogCategory_IdAndIsDeletedFalse(
+            Long id, Long catalogCategoryId);
+
 }
 

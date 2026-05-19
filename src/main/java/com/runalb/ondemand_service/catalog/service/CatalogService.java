@@ -117,6 +117,15 @@ public class CatalogService {
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Service not found"));
     }
 
+    @Transactional(readOnly = true)
+    public CatalogServiceResponse getServiceInCategory(Long categoryId, Long serviceId) {
+        requireNonDeletedCategory(categoryId);
+        return catalogServiceRepository
+                .findWithCatalogCategoryByIdAndCatalogCategory_IdAndIsDeletedFalse(serviceId, categoryId)
+                .map(CatalogService::toCatalogServiceResponse)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Service not found"));
+    }
+
     @Transactional
     public CatalogServiceResponse createService(Long categoryId, CatalogServiceCreateRequest request) {
         CatalogCategoryEntity category = requireNonDeletedCategory(categoryId);
