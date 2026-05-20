@@ -72,6 +72,10 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.DELETE, "/api/v1/businesses/*/offerings/**").hasRole("PROVIDER")
                         .requestMatchers(HttpMethod.PATCH, "/api/v1/businesses/*/offerings/*/verify").hasRole("SUPER_ADMIN")
 
+                        // Bookings
+                        .requestMatchers(HttpMethod.POST, "/api/v1/bookings").hasRole("CUSTOMER")
+                        .requestMatchers(HttpMethod.GET, "/api/v1/bookings/business/**").hasRole("PROVIDER")
+
                         // All other routes
                         .requestMatchers("/api/**").authenticated()
                         .anyRequest().permitAll())
