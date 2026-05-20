@@ -217,13 +217,7 @@ public class CatalogService {
     }
 
     private static CatalogCategoryResponse toCatalogCategoryResponse(CatalogCategoryEntity e) {
-        return new CatalogCategoryResponse(
-                e.getId(),
-                e.getName(),
-                e.getDescription(),
-                e.getDisplayOrder(),
-                e.getCreatedDateTime(),
-                e.getUpdatedDateTime());
+        return new CatalogCategoryResponse(e.getId(), e.getName(), e.getDescription(), e.getDisplayOrder());
     }
 
     private static CatalogServiceResponse toCatalogServiceResponse(CatalogServiceEntity e) {
@@ -232,9 +226,7 @@ public class CatalogService {
                 e.getName(),
                 e.getDescription(),
                 e.getDisplayOrder(),
-                toCatalogCategoryResponse(e.getCatalogCategory()),
-                e.getCreatedDateTime(),
-                e.getUpdatedDateTime());
+                toCatalogCategoryResponse(e.getCatalogCategory()));
     }
 
     private int displayOrderVal(Integer v) {

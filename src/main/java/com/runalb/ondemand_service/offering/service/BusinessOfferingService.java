@@ -137,18 +137,11 @@ public class BusinessOfferingService {
                 service.getName(),
                 service.getDescription(),
                 service.getDisplayOrder(),
-                toCatalogCategoryResponse(service.getCatalogCategory()),
-                service.getCreatedDateTime(),
-                service.getUpdatedDateTime());
+                toCatalogCategoryResponse(service.getCatalogCategory()));
     }
 
     private static CatalogCategoryResponse toCatalogCategoryResponse(CatalogCategoryEntity category) {
         return new CatalogCategoryResponse(
-                category.getId(),
-                category.getName(),
-                category.getDescription(),
-                category.getDisplayOrder(),
-                category.getCreatedDateTime(),
-                category.getUpdatedDateTime());
+                category.getId(), category.getName(), category.getDescription(), category.getDisplayOrder());
     }
 }
