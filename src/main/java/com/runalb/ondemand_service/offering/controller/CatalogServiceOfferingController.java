@@ -1,6 +1,8 @@
 package com.runalb.ondemand_service.offering.controller;
 
+import com.runalb.ondemand_service.offering.dto.CatalogBusinessOfferingResponse;
 import com.runalb.ondemand_service.offering.service.CatalogServiceOfferingService;
+import java.util.List;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -17,9 +19,10 @@ public class CatalogServiceOfferingController {
         this.catalogServiceOfferingService = catalogServiceOfferingService;
     }
 
-    @GetMapping("{serviceId}/business-offerings")
-    public ResponseEntity<Void> listActiveAndVerifiedBusinessOfferingsForService(@PathVariable Long serviceId) {
-        catalogServiceOfferingService.listActiveAndVerifiedBusinessOfferingsForService(serviceId);
-        return ResponseEntity.ok().build();
+    @GetMapping("/{serviceId}/business-offerings")
+    public ResponseEntity<List<CatalogBusinessOfferingResponse>> listActiveAndVerifiedBusinessOfferingsForService(
+            @PathVariable Long serviceId) {
+        return ResponseEntity.ok(
+                catalogServiceOfferingService.listActiveAndVerifiedBusinessOfferingsForService(serviceId));
     }
 }

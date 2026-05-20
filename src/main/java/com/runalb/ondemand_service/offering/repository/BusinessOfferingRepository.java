@@ -26,6 +26,11 @@ public interface BusinessOfferingRepository extends JpaRepository<BusinessOfferi
             Long catalogServiceId);
 
     @EntityGraph(attributePaths = {"business", "catalogService", "catalogService.catalogCategory"})
+    List<BusinessOfferingEntity>
+            findByCatalogService_IdAndIsDeletedFalseAndIsActiveTrueAndIsVerifiedTrueOrderByIdAsc(
+                    Long catalogServiceId);
+
+    @EntityGraph(attributePaths = {"business", "catalogService", "catalogService.catalogCategory"})
     Optional<BusinessOfferingEntity> findByIdAndIsDeletedFalse(Long id);
 
     @EntityGraph(attributePaths = {"business", "catalogService", "catalogService.catalogCategory"})
