@@ -1,0 +1,952 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>CLIENT_INTEGRATION.md</title>
+<meta http-equiv="Content-type" content="text/html;charset=UTF-8">
+
+<style>
+/* https://github.com/microsoft/vscode/blob/master/extensions/markdown-language-features/media/markdown.css */
+/*---------------------------------------------------------------------------------------------
+ *  Copyright (c) Microsoft Corporation. All rights reserved.
+ *  Licensed under the MIT License. See License.txt in the project root for license information.
+ *--------------------------------------------------------------------------------------------*/
+
+body {
+	font-family: var(--vscode-markdown-font-family, -apple-system, BlinkMacSystemFont, "Segoe WPC", "Segoe UI", "Ubuntu", "Droid Sans", sans-serif);
+	font-size: var(--vscode-markdown-font-size, 14px);
+	padding: 0 26px;
+	line-height: var(--vscode-markdown-line-height, 22px);
+	word-wrap: break-word;
+}
+
+#code-csp-warning {
+	position: fixed;
+	top: 0;
+	right: 0;
+	color: white;
+	margin: 16px;
+	text-align: center;
+	font-size: 12px;
+	font-family: sans-serif;
+	background-color:#444444;
+	cursor: pointer;
+	padding: 6px;
+	box-shadow: 1px 1px 1px rgba(0,0,0,.25);
+}
+
+#code-csp-warning:hover {
+	text-decoration: none;
+	background-color:#007acc;
+	box-shadow: 2px 2px 2px rgba(0,0,0,.25);
+}
+
+body.scrollBeyondLastLine {
+	margin-bottom: calc(100vh - 22px);
+}
+
+body.showEditorSelection .code-line {
+	position: relative;
+}
+
+body.showEditorSelection .code-active-line:before,
+body.showEditorSelection .code-line:hover:before {
+	content: "";
+	display: block;
+	position: absolute;
+	top: 0;
+	left: -12px;
+	height: 100%;
+}
+
+body.showEditorSelection li.code-active-line:before,
+body.showEditorSelection li.code-line:hover:before {
+	left: -30px;
+}
+
+.vscode-light.showEditorSelection .code-active-line:before {
+	border-left: 3px solid rgba(0, 0, 0, 0.15);
+}
+
+.vscode-light.showEditorSelection .code-line:hover:before {
+	border-left: 3px solid rgba(0, 0, 0, 0.40);
+}
+
+.vscode-light.showEditorSelection .code-line .code-line:hover:before {
+	border-left: none;
+}
+
+.vscode-dark.showEditorSelection .code-active-line:before {
+	border-left: 3px solid rgba(255, 255, 255, 0.4);
+}
+
+.vscode-dark.showEditorSelection .code-line:hover:before {
+	border-left: 3px solid rgba(255, 255, 255, 0.60);
+}
+
+.vscode-dark.showEditorSelection .code-line .code-line:hover:before {
+	border-left: none;
+}
+
+.vscode-high-contrast.showEditorSelection .code-active-line:before {
+	border-left: 3px solid rgba(255, 160, 0, 0.7);
+}
+
+.vscode-high-contrast.showEditorSelection .code-line:hover:before {
+	border-left: 3px solid rgba(255, 160, 0, 1);
+}
+
+.vscode-high-contrast.showEditorSelection .code-line .code-line:hover:before {
+	border-left: none;
+}
+
+img {
+	max-width: 100%;
+	max-height: 100%;
+}
+
+a {
+	text-decoration: none;
+}
+
+a:hover {
+	text-decoration: underline;
+}
+
+a:focus,
+input:focus,
+select:focus,
+textarea:focus {
+	outline: 1px solid -webkit-focus-ring-color;
+	outline-offset: -1px;
+}
+
+hr {
+	border: 0;
+	height: 2px;
+	border-bottom: 2px solid;
+}
+
+h1 {
+	padding-bottom: 0.3em;
+	line-height: 1.2;
+	border-bottom-width: 1px;
+	border-bottom-style: solid;
+}
+
+h1, h2, h3 {
+	font-weight: normal;
+}
+
+table {
+	border-collapse: collapse;
+}
+
+table > thead > tr > th {
+	text-align: left;
+	border-bottom: 1px solid;
+}
+
+table > thead > tr > th,
+table > thead > tr > td,
+table > tbody > tr > th,
+table > tbody > tr > td {
+	padding: 5px 10px;
+}
+
+table > tbody > tr + tr > td {
+	border-top: 1px solid;
+}
+
+blockquote {
+	margin: 0 7px 0 5px;
+	padding: 0 16px 0 10px;
+	border-left-width: 5px;
+	border-left-style: solid;
+}
+
+code {
+	font-family: Menlo, Monaco, Consolas, "Droid Sans Mono", "Courier New", monospace, "Droid Sans Fallback";
+	font-size: 1em;
+	line-height: 1.357em;
+}
+
+body.wordWrap pre {
+	white-space: pre-wrap;
+}
+
+pre:not(.hljs),
+pre.hljs code > div {
+	padding: 16px;
+	border-radius: 3px;
+	overflow: auto;
+}
+
+pre code {
+	color: var(--vscode-editor-foreground);
+	tab-size: 4;
+}
+
+/** Theming */
+
+.vscode-light pre {
+	background-color: rgba(220, 220, 220, 0.4);
+}
+
+.vscode-dark pre {
+	background-color: rgba(10, 10, 10, 0.4);
+}
+
+.vscode-high-contrast pre {
+	background-color: rgb(0, 0, 0);
+}
+
+.vscode-high-contrast h1 {
+	border-color: rgb(0, 0, 0);
+}
+
+.vscode-light table > thead > tr > th {
+	border-color: rgba(0, 0, 0, 0.69);
+}
+
+.vscode-dark table > thead > tr > th {
+	border-color: rgba(255, 255, 255, 0.69);
+}
+
+.vscode-light h1,
+.vscode-light hr,
+.vscode-light table > tbody > tr + tr > td {
+	border-color: rgba(0, 0, 0, 0.18);
+}
+
+.vscode-dark h1,
+.vscode-dark hr,
+.vscode-dark table > tbody > tr + tr > td {
+	border-color: rgba(255, 255, 255, 0.18);
+}
+
+</style>
+
+<style>
+/* Tomorrow Theme */
+/* http://jmblog.github.com/color-themes-for-google-code-highlightjs */
+/* Original theme - https://github.com/chriskempson/tomorrow-theme */
+
+/* Tomorrow Comment */
+.hljs-comment,
+.hljs-quote {
+	color: #8e908c;
+}
+
+/* Tomorrow Red */
+.hljs-variable,
+.hljs-template-variable,
+.hljs-tag,
+.hljs-name,
+.hljs-selector-id,
+.hljs-selector-class,
+.hljs-regexp,
+.hljs-deletion {
+	color: #c82829;
+}
+
+/* Tomorrow Orange */
+.hljs-number,
+.hljs-built_in,
+.hljs-builtin-name,
+.hljs-literal,
+.hljs-type,
+.hljs-params,
+.hljs-meta,
+.hljs-link {
+	color: #f5871f;
+}
+
+/* Tomorrow Yellow */
+.hljs-attribute {
+	color: #eab700;
+}
+
+/* Tomorrow Green */
+.hljs-string,
+.hljs-symbol,
+.hljs-bullet,
+.hljs-addition {
+	color: #718c00;
+}
+
+/* Tomorrow Blue */
+.hljs-title,
+.hljs-section {
+	color: #4271ae;
+}
+
+/* Tomorrow Purple */
+.hljs-keyword,
+.hljs-selector-tag {
+	color: #8959a8;
+}
+
+.hljs {
+	display: block;
+	overflow-x: auto;
+	color: #4d4d4c;
+	padding: 0.5em;
+}
+
+.hljs-emphasis {
+	font-style: italic;
+}
+
+.hljs-strong {
+	font-weight: bold;
+}
+</style>
+
+<style>
+/*
+ * Markdown PDF CSS
+ */
+
+ body {
+	font-family: -apple-system, BlinkMacSystemFont, "Segoe WPC", "Segoe UI", "Ubuntu", "Droid Sans", sans-serif, "Meiryo";
+	padding: 0 12px;
+}
+
+pre {
+	background-color: #f8f8f8;
+	border: 1px solid #cccccc;
+	border-radius: 3px;
+	overflow-x: auto;
+	white-space: pre-wrap;
+	overflow-wrap: break-word;
+}
+
+pre:not(.hljs) {
+	padding: 23px;
+	line-height: 19px;
+}
+
+blockquote {
+	background: rgba(127, 127, 127, 0.1);
+	border-color: rgba(0, 122, 204, 0.5);
+}
+
+.emoji {
+	height: 1.4em;
+}
+
+code {
+	font-size: 14px;
+	line-height: 19px;
+}
+
+/* for inline code */
+:not(pre):not(.hljs) > code {
+	color: #C9AE75; /* Change the old color so it seems less like an error */
+	font-size: inherit;
+}
+
+/* Page Break : use <div class="page"/> to insert page break
+-------------------------------------------------------- */
+.page {
+	page-break-after: always;
+}
+
+</style>
+
+<script src="https://unpkg.com/mermaid/dist/mermaid.min.js"></script>
+</head>
+<body>
+  <script>
+    mermaid.initialize({
+      startOnLoad: true,
+      theme: document.body.classList.contains('vscode-dark') || document.body.classList.contains('vscode-high-contrast')
+          ? 'dark'
+          : 'default'
+    });
+  </script>
+<h1 id="digi-payment-gateway--client-integration-guide-v1">Digi Payment Gateway — Client Integration Guide v1</h1>
+<p>Welcome to the Digi Payment Gateway. This guide explains how to connect your business to our unified payment service—whether you are a product owner planning an integration or a developer implementing it.</p>
+<hr>
+<h2 id="1-overview">1. Overview</h2>
+<h3 id="what-is-the-digi-payment-gateway">What is the Digi Payment Gateway?</h3>
+<p>The Digi Payment Gateway is a <strong>single, unified payment service</strong> for your application. Instead of integrating separately with multiple payment providers, you connect once to our API. We handle routing to the configured payment channel (for example, card wallets or regional providers) and keep a consistent record of every payment.</p>
+<h3 id="what-can-you-do-with-it">What can you do with it?</h3>
+<table>
+<thead>
+<tr>
+<th>Capability</th>
+<th>Benefit for your business</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Generate payment links</strong></td>
+<td>Send customers a secure checkout URL to complete payment for an order, invoice, or booking.</td>
+</tr>
+<tr>
+<td><strong>Receive webhooks</strong></td>
+<td>Get automatic, server-to-server notifications when a payment <strong>succeeds</strong> or <strong>fails</strong>, so you can fulfill orders, update inventory, or notify users—without polling.</td>
+</tr>
+<tr>
+<td><strong>Query transactions</strong></td>
+<td>Look up payment status and details anytime using your API key.</td>
+</tr>
+</tbody>
+</table>
+<h3 id="how-it-fits-your-product">How it fits your product</h3>
+<ol>
+<li>Your backend calls our API to create a payment link for a specific order or reference.</li>
+<li>You share the returned link with your customer (email, SMS, in-app browser, QR code, etc.).</li>
+<li>The customer pays through the payment channel.</li>
+<li>Our gateway notifies <strong>your server</strong> at the webhook URL you provided during onboarding.</li>
+<li>Your server runs business logic (mark order paid, send receipt, release stock, etc.).</li>
+</ol>
+<p>You stay in control of the customer experience; we handle payment orchestration and status tracking.</p>
+<hr>
+<h2 id="2-onboarding-process">2. Onboarding Process</h2>
+<p>Before you can call the API in production, we onboard your business on the gateway. Onboarding is coordinated with the Digi Payment Gateway team (there is no self-service signup API in the current release).</p>
+<h3 id="what-you-provide">What you provide</h3>
+<table>
+<thead>
+<tr>
+<th>Item</th>
+<th>Description</th>
+<th>Example</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Business name</strong></td>
+<td>Legal or trading name shown on your merchant record</td>
+<td><code>Acme Restaurants Pvt Ltd</code></td>
+</tr>
+<tr>
+<td><strong>Business email</strong></td>
+<td>Primary contact for the merchant account</td>
+<td><code>payments@acme.example</code></td>
+</tr>
+<tr>
+<td><strong>Webhook URL</strong></td>
+<td>HTTPS endpoint on <strong>your</strong> server that accepts <code>POST</code> requests when payment status changes</td>
+<td><code>https://api.acme.example/webhooks/digi-payments</code></td>
+</tr>
+<tr>
+<td><strong>Default currency</strong></td>
+<td>ISO 4217 code used when creating payments (e.g. <code>INR</code>, <code>USD</code>)</td>
+<td><code>INR</code></td>
+</tr>
+<tr>
+<td><strong>Payment channel</strong></td>
+<td>Which provider(s) you will use (configured per environment)</td>
+<td>Production: Razorpay / Stripe; Sandbox: <code>TEST</code></td>
+</tr>
+</tbody>
+</table>
+<p><strong>Webhook URL requirements</strong></p>
+<ul>
+<li>Must be <strong>publicly reachable</strong> from the gateway (no localhost in production).</li>
+<li>Must use <strong>HTTPS</strong>.</li>
+<li>Should respond quickly with <strong>HTTP 200 OK</strong> (see <a href="#step-2-handling-webhooks">Handling webhooks</a>).</li>
+<li>Should be <strong>idempotent</strong>: the same payment outcome may be delivered more than once; your handler must safely ignore duplicates.</li>
+</ul>
+<h3 id="what-you-receive">What you receive</h3>
+<p>After onboarding, we provision your merchant account and share:</p>
+<table>
+<thead>
+<tr>
+<th>Credential / detail</th>
+<th>How you use it</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>API key</strong></td>
+<td>Send on every integration request in the <code>X-API-Key</code> header</td>
+</tr>
+<tr>
+<td><strong>Base URL</strong></td>
+<td>Host for all API calls (sandbox vs production)</td>
+</tr>
+<tr>
+<td><strong>Merchant ID</strong></td>
+<td>Internal identifier (visible in transaction responses)</td>
+</tr>
+<tr>
+<td><strong>Active payment channel</strong></td>
+<td>Determines how checkout links are created</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Keep your API key secret.</strong> Treat it like a password. Do not embed it in mobile apps or public frontends—only call the integration API from your <strong>backend</strong>.</p>
+<h3 id="environments">Environments</h3>
+<table>
+<thead>
+<tr>
+<th>Environment</th>
+<th>Typical base URL</th>
+<th>Purpose</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Sandbox</strong></td>
+<td><code>http://dev.digipaymentgateway</code> or URL provided by Digi</td>
+<td>Integration testing with the channel</td>
+</tr>
+<tr>
+<td><strong>Production</strong></td>
+<td>URL provided by Digi at go-live</td>
+<td>Live customer payments</td>
+</tr>
+</tbody>
+</table>
+<p>There is separate “sandbox API key”  — environment separation is by API key and Environment url.</p>
+<hr>
+<h2 id="3-how-it-works-visual-flow">3. How It Works (Visual Flow)</h2>
+<p>The diagram below shows the end-to-end path from your application through the gateway to your webhook.</p>
+<pre><code class="language-mermaid"><div class="mermaid">sequenceDiagram
+    autonumber
+    participant App as Your application (backend)
+    participant API as Digi Payment Gateway API
+    participant Customer as Customer
+    participant Channel as Payment channel
+
+    App->>API: POST /api/v1/integration/payment-link/generate<br/>(X-API-Key)
+    API-->>App: 201 Created — paymentChannelPayLink, paymentId
+    App->>Customer: Share payment link
+    Customer->>Channel: Opens link and completes payment
+    Channel->>API: Payment result (channel callback)
+    API->>API: Update payment status (SUCCESS / FAILED)
+    API->>App: POST to your webhook URL (server-to-server)
+    App-->>API: HTTP 200 OK
+    Note over App: Fulfill order, update DB, notify user
+    opt Optional verification
+        App->>API: GET /api/v1/integration/transactions/{id}
+        API-->>App: Payment details and status
+    end
+</div></code></pre>
+<p><strong>Status progression (typical happy path)</strong></p>
+<ol>
+<li><code>INITIATED</code> — payment record created internally</li>
+<li><code>PAYMENT_LINK_GENERATED</code> — checkout link ready (returned to you)</li>
+<li><code>SUCCESS</code> or <code>FAILED</code> — final outcome (sent to your webhook)</li>
+</ol>
+<hr>
+<h2 id="4-integration-guide-for-developers">4. Integration Guide (For Developers)</h2>
+<h3 id="base-url-and-headers">Base URL and headers</h3>
+<p>All examples use <code>{baseUrl}</code> (no context path). Common headers:</p>
+<table>
+<thead>
+<tr>
+<th>Header</th>
+<th>Value</th>
+<th>When</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>X-API-Key</code></td>
+<td>Your merchant API key</td>
+<td>All <code>/api/v1/integration/</code>** requests</td>
+</tr>
+<tr>
+<td><code>Content-Type</code></td>
+<td><code>application/json</code></td>
+<td>Requests with a body</td>
+</tr>
+<tr>
+<td><code>Accept</code></td>
+<td><code>application/json</code></td>
+<td>Recommended</td>
+</tr>
+</tbody>
+</table>
+<hr>
+<h3 id="authentication">Authentication</h3>
+<p>Integration endpoints live under <code>/api/v1/integration/</code> and require the merchant API key.</p>
+<p><strong>Header name:</strong> <code>X-API-Key</code><br>
+<strong>Value:</strong> The API key issued at onboarding (stored as <code>merchant.api_key</code>).</p>
+<p><strong>Example</strong></p>
+<pre class="hljs"><code><div><span class="hljs-keyword">POST</span> <span class="hljs-string">/api/v1/integration/payment-link/generate</span> HTTP/1.1
+<span class="hljs-attribute">Host</span>: api.your-gateway.example
+<span class="hljs-attribute">X-API-Key</span>: b4bdb71a-51c5-4565-985d-e0c13f72b970
+<span class="hljs-attribute">Content-Type</span>: application/json
+<span class="hljs-attribute">Accept</span>: application/json
+</div></code></pre>
+<p><strong>Success:</strong> The gateway resolves your merchant and grants the <code>ROLE_INTEGRATION</code> authority for that request.</p>
+<p><strong>Failure (401 Unauthorized)</strong></p>
+<pre class="hljs"><code><div>{
+  <span class="hljs-attr">"error"</span>: <span class="hljs-string">"Missing API key"</span>
+}
+</div></code></pre>
+<p>or</p>
+<pre class="hljs"><code><div>{
+  <span class="hljs-attr">"error"</span>: <span class="hljs-string">"Invalid API key"</span>
+}
+</div></code></pre>
+<p>An invalid or inactive merchant account always receives <code>401</code>. Never log or expose the full API key in client-side code or error reports.</p>
+<hr>
+<h3 id="step-1-generating-a-payment-link">Step 1: Generating a payment link</h3>
+<p>Create a payment and receive a channel-specific URL for the customer to complete checkout.</p>
+<table>
+<thead>
+<tr>
+<th></th>
+<th></th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Method</strong></td>
+<td><code>POST</code></td>
+</tr>
+<tr>
+<td><strong>Path</strong></td>
+<td><code>/api/v1/integration/payment-link/generate</code></td>
+</tr>
+<tr>
+<td><strong>Auth</strong></td>
+<td><code>X-API-Key</code></td>
+</tr>
+<tr>
+<td><strong>Success</strong></td>
+<td><code>201 Created</code></td>
+</tr>
+</tbody>
+</table>
+<h4 id="request-body">Request body</h4>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Type</th>
+<th>Required</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>merchantReferencePaymentId</code></td>
+<td>string</td>
+<td>Yes</td>
+<td>Your unique reference for this payment (e.g. order ID). Used for reconciliation and webhooks.</td>
+</tr>
+<tr>
+<td><code>amount</code></td>
+<td>number</td>
+<td>Yes</td>
+<td>Payment amount; minimum <code>0.01</code>.</td>
+</tr>
+<tr>
+<td><code>merchantMetadataJson</code></td>
+<td>string</td>
+<td>No</td>
+<td>Opaque JSON string for your own use (stored and returned on transaction queries).</td>
+</tr>
+<tr>
+<td><code>redirectSuccessUrl</code></td>
+<td>string</td>
+<td>No</td>
+<td>Reserved for future redirect-after-pay flows.</td>
+</tr>
+<tr>
+<td><code>redirectFailureUrl</code></td>
+<td>string</td>
+<td>No</td>
+<td>Reserved for future redirect-after-pay flows.</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Currency</strong> is not sent in the request body. It is taken from your merchant configuration (<code>merchant_config.currency</code>) at onboarding.</p>
+<h4 id="example-request">Example request</h4>
+<pre class="hljs"><code><div>curl -X POST <span class="hljs-string">"{baseUrl}/api/v1/integration/payment-link/generate"</span> \
+  -H <span class="hljs-string">"X-API-Key: YOUR_API_KEY"</span> \
+  -H <span class="hljs-string">"Content-Type: application/json"</span> \
+  -d <span class="hljs-string">'{
+    "merchantReferencePaymentId": "order-1001",
+    "amount": 99.50,
+    "merchantMetadataJson": "{\"table\":\"T5\"}"
+  }'</span>
+</div></code></pre>
+<h4 id="example-response-201-created">Example response (<code>201 Created</code>)</h4>
+<pre class="hljs"><code><div>{
+  <span class="hljs-attr">"paymentId"</span>: <span class="hljs-number">1</span>,
+  <span class="hljs-attr">"paymentChannelPayLink"</span>: <span class="hljs-string">"http://localhost:8080/test-payment-link.html?paymentId=1&amp;merchantId=1&amp;amount=99.50&amp;currency=INR"</span>,
+  <span class="hljs-attr">"status"</span>: <span class="hljs-string">"PAYMENT_LINK_GENERATED"</span>
+}
+</div></code></pre>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>paymentId</code></td>
+<td>Gateway payment ID—store this and/or <code>merchantReferencePaymentId</code> for support and webhooks.</td>
+</tr>
+<tr>
+<td><code>paymentChannelPayLink</code></td>
+<td>URL to present to the customer. In production this is the live checkout URL from the active channel.</td>
+</tr>
+<tr>
+<td><code>status</code></td>
+<td><code>PAYMENT_LINK_GENERATED</code> when the link is ready.</td>
+</tr>
+<tr>
+<td></td>
+<td></td>
+</tr>
+</tbody>
+</table>
+<p><strong>Next step for your app:</strong> Redirect or deep-link the user to <code>paymentChannelPayLink</code>, or render it as a “Pay now” button.</p>
+<h4 id="validation-errors-400-bad-request">Validation errors (<code>400 Bad Request</code>)</h4>
+<p>If required fields are missing or <code>amount</code> is below <code>0.01</code>, validation returns <code>400</code> with field-level error details.</p>
+<h4 id="configuration-errors-404-not-found">Configuration errors (<code>404 Not Found</code>)</h4>
+<p>Examples (structured error body from the global handler):</p>
+<pre class="hljs"><code><div>{
+  <span class="hljs-attr">"timestamp"</span>: <span class="hljs-string">"2026-05-20T10:15:30.123Z"</span>,
+  <span class="hljs-attr">"status"</span>: <span class="hljs-number">404</span>,
+  <span class="hljs-attr">"error"</span>: <span class="hljs-string">"Not Found"</span>,
+  <span class="hljs-attr">"message"</span>: <span class="hljs-string">"Merchant config not found for merchantId: 1"</span>,
+  <span class="hljs-attr">"path"</span>: <span class="hljs-string">"/api/v1/integration/payment-link/generate"</span>
+}
+</div></code></pre>
+<p>Ensure onboarding completed: merchant config, active payment channel, and <code>is_active = true</code>.</p>
+<hr>
+<h3 id="step-2-handling-webhooks">Step 2: Handling webhooks</h3>
+<p>When a payment reaches a <strong>terminal outcome</strong> (<code>SUCCESS</code> or <code>FAILED</code>), the gateway sends an <strong>outbound webhook</strong> to the URL you provided at onboarding (<code>merchant_config.webhook_url</code>).</p>
+<p>This is a <strong>server-to-server</strong> <code>POST</code> from the gateway to <strong>your</strong> infrastructure—not a browser callback.</p>
+<h4 id="your-endpoint-contract">Your endpoint contract</h4>
+<table>
+<thead>
+<tr>
+<th></th>
+<th></th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Method</strong></td>
+<td><code>POST</code></td>
+</tr>
+<tr>
+<td><strong>URL</strong></td>
+<td>Your registered webhook URL</td>
+</tr>
+<tr>
+<td><strong>Content-Type</strong></td>
+<td><code>application/json</code></td>
+</tr>
+<tr>
+<td><strong>Expected response</strong></td>
+<td><strong>HTTP 200 OK</strong> with an empty or minimal body</td>
+</tr>
+</tbody>
+</table>
+<p>Respond with <code>200</code> as soon as you have <strong>accepted</strong> the event (e.g. queued for processing). Long-running work should happen asynchronously. Non-2xx responses may trigger retries</p>
+<h4 id="webhook-payload">Webhook payload</h4>
+<p>The JSON body matches the gateway’s <code>MerchantWebhookResponse</code> shape:</p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Type</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>paymentId</code></td>
+<td>long</td>
+<td>Gateway payment ID</td>
+</tr>
+<tr>
+<td><code>merchantReferencePaymentId</code></td>
+<td>string</td>
+<td>Your reference from link generation</td>
+</tr>
+<tr>
+<td><code>status</code></td>
+<td>string</td>
+<td><code>SUCCESS</code> or <code>FAILED</code> (see <a href="#payment-statuses">Payment statuses</a>)</td>
+</tr>
+<tr>
+<td><code>merchantMetadata</code></td>
+<td></td>
+<td>Provider when available</td>
+</tr>
+</tbody>
+</table>
+<h4 id="example--payment-succeeded">Example — payment succeeded</h4>
+<pre class="hljs"><code><div>{
+  <span class="hljs-attr">"paymentId"</span>: <span class="hljs-number">1</span>,
+  <span class="hljs-attr">"merchantReferencePaymentId"</span>: <span class="hljs-string">"order-1001"</span>,
+  <span class="hljs-attr">"status"</span>: <span class="hljs-string">"SUCCESS"</span>,
+  <span class="hljs-attr">"merchantMetadataJson"</span>: <span class="hljs-string">"{\"table\":\"T5\"}"</span>
+}
+</div></code></pre>
+<p><strong>Suggested handler logic</strong></p>
+<ol>
+<li>Verify the event (see <a href="#5-best-practices--next-steps">Best practices</a>).</li>
+<li>Load your order by <code>merchantReferencePaymentId</code> (or map via <code>paymentId</code>).</li>
+<li>If already marked paid/failed, return <code>200</code> .</li>
+<li>On <code>SUCCESS</code>: fulfill the order, capture revenue, notify the customer.</li>
+<li>On <code>FAILED</code>: cancel hold, prompt retry, or alert operations.</li>
+<li>Return <code>200 OK</code>.</li>
+</ol>
+<h4 id="example--payment-failed">Example — payment failed</h4>
+<pre class="hljs"><code><div>{
+  <span class="hljs-attr">"paymentId"</span>: <span class="hljs-number">1</span>,
+  <span class="hljs-attr">"merchantReferencePaymentId"</span>: <span class="hljs-string">"order-1001"</span>,
+  <span class="hljs-attr">"status"</span>: <span class="hljs-string">"FAILED"</span>,
+  <span class="hljs-attr">"merchantMetadataJson"</span>: <span class="hljs-string">"{\"table\":\"T5\"}"</span>
+}
+</div></code></pre>
+<h4 id="example-handler-pseudo-code">Example handler (pseudo-code)</h4>
+<pre class="hljs"><code><div>app.post(<span class="hljs-string">'/webhooks/digi-payments'</span>, express.json(), <span class="hljs-keyword">async</span> (req, res) =&gt; {
+  <span class="hljs-keyword">const</span> { paymentId, merchantReferencePaymentId, status, paymentChannelTxnId } = req.body;
+
+  <span class="hljs-comment">// <span class="hljs-doctag">TODO:</span> verify signature when the gateway provides one</span>
+
+  <span class="hljs-keyword">if</span> (status === <span class="hljs-string">'SUCCESS'</span>) {
+    <span class="hljs-keyword">await</span> orderService.markPaid(merchantReferencePaymentId, { paymentId, paymentChannelTxnId });
+  } <span class="hljs-keyword">else</span> <span class="hljs-keyword">if</span> (status === <span class="hljs-string">'FAILED'</span>) {
+    <span class="hljs-keyword">await</span> orderService.markPaymentFailed(merchantReferencePaymentId, { paymentId });
+  }
+
+  res.sendStatus(<span class="hljs-number">200</span>);
+});
+</div></code></pre>
+<hr>
+<h3 id="querying-transactions-optional">Querying transactions (optional )</h3>
+<p>Use these endpoints to reconcile webhooks, support tooling, or recovery if a webhook was missed.</p>
+<h4 id="list-all-payments-for-your-merchant">List all payments for your merchant</h4>
+<pre class="hljs"><code><div><span class="hljs-attribute">GET /api/v1/integration/transactions
+X-API-Key</span>: YOUR_API_KEY
+</div></code></pre>
+<p><strong>Response:</strong> <code>200 OK</code> — array of payment objects.</p>
+<h4 id="get-one-payment-by-id">Get one payment by ID</h4>
+<pre class="hljs"><code><div><span class="hljs-attribute">GET /api/v1/integration/transactions/{id}
+X-API-Key</span>: YOUR_API_KEY
+</div></code></pre>
+<p><strong>Response:</strong> <code>200 OK</code> — single object, or <code>404</code> if the ID does not exist or belongs to another merchant.</p>
+<h4 id="example-transaction-object">Example transaction object</h4>
+<pre class="hljs"><code><div>{
+  <span class="hljs-attr">"id"</span>: <span class="hljs-number">1</span>,
+  <span class="hljs-attr">"amount"</span>: <span class="hljs-number">99.50</span>,
+  <span class="hljs-attr">"currency"</span>: <span class="hljs-string">"INR"</span>,
+  <span class="hljs-attr">"status"</span>: <span class="hljs-string">"SUCCESS"</span>,
+  <span class="hljs-attr">"merchantId"</span>: <span class="hljs-number">1</span>,
+  <span class="hljs-attr">"merchantReferencePaymentId"</span>: <span class="hljs-string">"order-1001"</span>,
+  <span class="hljs-attr">"merchantMetadataJson"</span>: <span class="hljs-string">"{\"table\":\"T5\"}"</span>,
+  <span class="hljs-attr">"paymentChannelId"</span>: <span class="hljs-number">1</span>,
+  <span class="hljs-attr">"paymentChannelName"</span>: <span class="hljs-string">"TEST"</span>,
+  <span class="hljs-attr">"paymentChannelTxnId"</span>: <span class="hljs-string">"TEST-TXN-8f3c2a1b-4d5e-6f7a-8b9c-0d1e2f3a4b5c"</span>,
+  <span class="hljs-attr">"paymentChannelPayLink"</span>: <span class="hljs-string">"http://localhost:8080/test-payment-link.html?paymentId=1&amp;merchantId=1&amp;amount=99.50&amp;currency=INR"</span>,
+  <span class="hljs-attr">"createdDateTime"</span>: <span class="hljs-string">"2026-05-20T10:00:00"</span>,
+  <span class="hljs-attr">"updatedDateTime"</span>: <span class="hljs-string">"2026-05-20T10:05:00"</span>
+}
+</div></code></pre>
+<hr>
+<h3 id="payment-statuses">Payment statuses</h3>
+<table>
+<thead>
+<tr>
+<th>Status</th>
+<th>Meaning</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>INITIATED</code></td>
+<td>Payment record created; link not yet finalized.</td>
+</tr>
+<tr>
+<td><code>PAYMENT_LINK_GENERATED</code></td>
+<td>Checkout link issued to client.</td>
+</tr>
+<tr>
+<td><code>SUCCESS</code></td>
+<td>Payment completed successfully.</td>
+</tr>
+<tr>
+<td><code>FAILED</code></td>
+<td>Payment failed or was declined.</td>
+</tr>
+<tr>
+<td><code>REFUNDED</code></td>
+<td>Refund processed (when supported).</td>
+</tr>
+<tr>
+<td><code>VOIDED</code></td>
+<td>Payment voided (when supported).</td>
+</tr>
+</tbody>
+</table>
+<p>Webhooks for client integration focus on <code>**SUCCESS**</code> and <code>**FAILED**</code>.</p>
+<hr>
+<h3 id="error-responses-summary">Error responses (summary)</h3>
+<table>
+<thead>
+<tr>
+<th>Situation</th>
+<th>HTTP</th>
+<th>Body shape</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Missing/invalid API key</td>
+<td>401</td>
+<td><code>{&quot;error&quot;:&quot;&lt;message&gt;&quot;}</code></td>
+</tr>
+<tr>
+<td>Validation error</td>
+<td>400</td>
+<td>Spring validation JSON</td>
+</tr>
+<tr>
+<td>Not found (payment, config)</td>
+<td>404</td>
+<td><code>{ &quot;timestamp&quot;, &quot;status&quot;, &quot;error&quot;, &quot;message&quot;, &quot;path&quot; }</code></td>
+</tr>
+<tr>
+<td>Server error</td>
+<td>500</td>
+<td>Same structured object as 404</td>
+</tr>
+</tbody>
+</table>
+<hr>
+<h2 id="5-best-practices--next-steps">5. Best Practices / Next Steps</h2>
+<h3 id="security">Security</h3>
+<ul>
+<li><strong>Never expose the API key</strong> in browsers, mobile apps, or public repositories. Use environment variables or a secrets manager on your server.</li>
+<li><strong>Use HTTPS</strong> for your webhook URL in production.</li>
+<li><strong>Do not trust client-side payment UI alone</strong>—always confirm <code>SUCCESS</code> via webhook or server-side status query before shipping goods or granting access.</li>
+</ul>
+<h3 id="reliability">Reliability</h3>
+<ul>
+<li><strong>Idempotency:</strong> Store <code>paymentId</code> or <code>merchantReferencePaymentId</code> and skip duplicate processing if the order is already in the target state.</li>
+<li><strong>Fast 200 responses:</strong> Acknowledge webhooks quickly; process fulfillment in a background job.</li>
+</ul>
+<h3 id="going-live-checklist">Going live checklist</h3>
+<ul>
+<li>Production base URL and API key received from Digi</li>
+<li>Production webhook URL registered (HTTPS, monitored, returns 200)</li>
+<li>Payment channel credentials configured for production</li>
+<li>Default currency confirmed (<code>merchant_config.currency</code>)</li>
+<li>End-to-end test: generate link → pay → webhook received → order fulfilled</li>
+<li>Error handling and alerts for <code>FAILED</code> payments</li>
+<li>Runbook for support (lookup by <code>merchantReferencePaymentId</code> and <code>paymentId</code>)</li>
+<li>API key rotation process agreed with Digi</li>
+</ul>
+<hr>
+<p><em>Document version: aligned with gateway integration API v1 (<code>/api/v1/integration</code>).</em></p>
+
+</body>
+</html>
