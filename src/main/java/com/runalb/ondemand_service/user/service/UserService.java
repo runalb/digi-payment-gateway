@@ -5,6 +5,7 @@ import com.runalb.ondemand_service.role.enums.RoleNameEnum;
 import com.runalb.ondemand_service.role.repository.RoleRepository;
 import com.runalb.ondemand_service.user.dto.UserCreateRequest;
 import com.runalb.ondemand_service.user.dto.UserResponse;
+import com.runalb.ondemand_service.user.mapper.UserDtoMapper;
 import com.runalb.ondemand_service.user.dto.UserUpdateRequest;
 import com.runalb.ondemand_service.user.entity.UserEntity;
 import com.runalb.ondemand_service.user.repository.UserRepository;
@@ -120,13 +121,13 @@ public class UserService {
         UserEntity saved = userRepository.save(entity);
         saved = userRepository.findWithRolesByIdAndIsDeletedFalse(saved.getId()).orElse(saved);
 
-        return toResponse(saved);
+        return UserDtoMapper.toResponse(saved);
     }
 
     @Transactional(readOnly = true)
     public UserResponse getUser(Long userId) {
         UserEntity user = findUserByIdWithRoles(userId);
-        return toResponse(user);
+        return UserDtoMapper.toResponse(user);
     }
 
     @Transactional
@@ -171,7 +172,7 @@ public class UserService {
 
         user = userRepository.save(user);
         user = userRepository.findWithRolesByIdAndIsDeletedFalse(userId).orElse(user);
-        return toResponse(user);
+        return UserDtoMapper.toResponse(user);
     }
 
     @Transactional
@@ -204,21 +205,6 @@ public class UserService {
         user.setIsDeleted(Boolean.FALSE);
         user = userRepository.save(user);
         user = userRepository.findWithRolesByIdAndIsDeletedFalse(userId).orElse(user);
-        return toResponse(user);
-    }
-
-    private static UserResponse toResponse(UserEntity user) {
-        List<String> roles = user.getRoles().stream()
-                .map(r -> r.getRoleName().name())
-                .distinct()
-                .sorted()
-                .toList();
-        return new UserResponse(
-                user.getId(),
-                user.getEmail(),
-                user.getMobileNumber(),
-                user.getName(),
-                user.getIsVerified(),
-                roles);
+        return UserDtoMapper.toResponse(user);
     }
 }

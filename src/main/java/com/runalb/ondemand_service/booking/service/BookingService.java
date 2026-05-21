@@ -5,15 +5,13 @@ import com.runalb.ondemand_service.booking.dto.BookingResponse;
 import com.runalb.ondemand_service.booking.entity.BookingEntity;
 import com.runalb.ondemand_service.booking.enums.BookingStatusEnum;
 import com.runalb.ondemand_service.booking.repository.BookingRepository;
-import com.runalb.ondemand_service.business.dto.BusinessResponse;
+import com.runalb.ondemand_service.booking.mapper.BookingDtoMapper;
 import com.runalb.ondemand_service.business.entity.BusinessEntity;
 import com.runalb.ondemand_service.business.repository.BusinessRepository;
 import com.runalb.ondemand_service.catalog.entity.CatalogServiceEntity;
-import com.runalb.ondemand_service.catalog.mapper.CatalogDtoMapper;
 import com.runalb.ondemand_service.offering.entity.BusinessOfferingEntity;
 import com.runalb.ondemand_service.offering.repository.BusinessOfferingRepository;
 import com.runalb.ondemand_service.relationship.service.EntityLinkService;
-import com.runalb.ondemand_service.user.dto.UserResponse;
 import com.runalb.ondemand_service.user.entity.UserEntity;
 import com.runalb.ondemand_service.util.InputSanitizer;
 import java.time.LocalDateTime;
@@ -68,14 +66,14 @@ public class BookingService {
         booking.setIsDeleted(Boolean.FALSE);
 
         booking = bookingRepository.save(booking);
-        return toBookingResponse(booking);
+        return BookingDtoMapper.toResponse(booking);
     }
 
     @Transactional(readOnly = true)
     public List<BookingResponse> listBookingsForUser(Long userId) {
         return bookingRepository.findByUser_IdAndIsDeletedFalseOrderByCreatedDateTimeDesc(userId)
                 .stream()
-                .map(BookingService::toBookingResponse)
+                .map(BookingDtoMapper::toResponse)
                 .toList();
     }
 
@@ -87,7 +85,7 @@ public class BookingService {
                     HttpStatus.FORBIDDEN, "You are not authorized to access this resource");
         }
         return bookingRepository.findByBusiness_IdAndIsDeletedFalseOrderByCreatedDateTimeDesc(businessId).stream()
-                .map(BookingService::toBookingResponse)
+                .map(BookingDtoMapper::toResponse)
                 .toList();
     }
 
@@ -96,7 +94,7 @@ public class BookingService {
         BookingEntity booking = bookingRepository
                 .findByIdAndIsDeletedFalse(bookingId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Booking not found"));
-        return toBookingResponse(booking);
+        return BookingDtoMapper.toResponse(booking);
     }
 
     private void validateBookableOffering(BusinessOfferingEntity offering) {
@@ -126,43 +124,4 @@ public class BookingService {
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Business not found"));
     }
 
-    private static BookingResponse toBookingResponse(BookingEntity booking) {
-        UserEntity user = booking.getUser();
-        BusinessEntity business = booking.getBusiness();
-        return new BookingResponse(
-                booking.getId(),
-                booking.getStatus(),
-                booking.getScheduledAt(),
-                booking.getNotes(),
-                booking.getBusinessOffering().getId(),
-                CatalogDtoMapper.toServiceResponse(booking.getCatalogService()),
-                toUserResponse(user),
-                toBusinessResponse(business),
-                booking.getCreatedDateTime(),
-                booking.getUpdatedDateTime());
-    }
-
-    private static UserResponse toUserResponse(UserEntity user) {
-        return new UserResponse(
-                user.getId(),
-                user.getEmail(),
-                user.getMobileNumber(),
-                user.getName(),
-                user.getIsVerified(),
-                List.of());
-    }
-
-    private static BusinessResponse toBusinessResponse(BusinessEntity business) {
-        return new BusinessResponse(
-                business.getId(),
-                business.getName(),
-                business.getEmail(),
-                business.getIsDeleted(),
-                business.getBusinessType(),
-                business.getDescription(),
-                Boolean.TRUE.equals(business.getIsVerified()),
-                business.getAverageRating() != null ? business.getAverageRating() : 0.0,
-                business.getAddress(),
-                business.getMobileNumber());
-    }
 }

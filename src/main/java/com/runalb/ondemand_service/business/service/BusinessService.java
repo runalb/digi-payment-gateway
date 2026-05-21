@@ -2,6 +2,7 @@ package com.runalb.ondemand_service.business.service;
 
 import com.runalb.ondemand_service.business.dto.BusinessCreateRequest;
 import com.runalb.ondemand_service.business.dto.BusinessResponse;
+import com.runalb.ondemand_service.business.mapper.BusinessDtoMapper;
 import com.runalb.ondemand_service.business.dto.BusinessUpdateRequest;
 import com.runalb.ondemand_service.business.entity.BusinessConfigEntity;
 import com.runalb.ondemand_service.business.entity.BusinessEntity;
@@ -71,7 +72,7 @@ public class BusinessService {
 
         entityLinkService.linkUserToBusiness(user, business);
 
-        return toBusinessResponse(business);
+        return BusinessDtoMapper.toResponse(business);
     }
 
     @Transactional(readOnly = true)
@@ -79,7 +80,7 @@ public class BusinessService {
         UserEntity user = currentUserService.resolveAuthenticatedUser();
 
         return businessRepository.findByUsers_IdAndIsDeletedFalseOrderByIdAsc(user.getId()).stream()
-                .map(BusinessService::toBusinessResponse)
+                .map(BusinessDtoMapper::toResponse)
                 .toList();
     }
 
@@ -88,7 +89,7 @@ public class BusinessService {
         BusinessEntity business = businessRepository
                 .findByIdAndIsDeletedFalse(businessId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Business not found"));
-        return toBusinessResponse(business);
+        return BusinessDtoMapper.toResponse(business);
     }
 
     @Transactional
@@ -143,7 +144,7 @@ public class BusinessService {
         }
 
         business = businessRepository.save(business);
-        return toBusinessResponse(business);
+        return BusinessDtoMapper.toResponse(business);
     }
 
     @Transactional
@@ -153,20 +154,6 @@ public class BusinessService {
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Business not found"));
         business.setIsDeleted(true);
         businessRepository.save(business);
-    }
-
-    private static BusinessResponse toBusinessResponse(BusinessEntity business) {
-        return new BusinessResponse(
-                business.getId(),
-                business.getName(),
-                business.getEmail(),
-                business.getIsDeleted(),
-                business.getBusinessType(),
-                business.getDescription(),
-                Boolean.TRUE.equals(business.getIsVerified()),
-                business.getAverageRating() != null ? business.getAverageRating() : 0.0,
-                business.getAddress(),
-                business.getMobileNumber());
     }
 
 }
