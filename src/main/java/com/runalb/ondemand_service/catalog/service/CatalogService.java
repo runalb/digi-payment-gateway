@@ -116,8 +116,30 @@ public class CatalogService {
     }
 
     @Transactional(readOnly = true)
+    public List<CatalogServiceResponse> searchServicesInCategory(Long categoryId, String query) {
+        requireNonDeletedCategory(categoryId);
+        String keyword = requireSearchKeyword(query);
+        return catalogServiceRepository
+                .findByCatalogCategory_IdAndIsDeletedFalseAndNameContainingIgnoreCaseOrderByDisplayOrderAscIdAsc(
+                        categoryId, keyword)
+                .stream()
+                .map(CatalogDtoMapper::toServiceResponse)
+                .toList();
+    }
+
+    @Transactional(readOnly = true)
     public List<CatalogServiceResponse> listAllCatalogServices() {
         return catalogServiceRepository.findAllByIsDeletedFalse(Sort.by("id")).stream()
+                .map(CatalogDtoMapper::toServiceResponse)
+                .toList();
+    }
+
+    @Transactional(readOnly = true)
+    public List<CatalogServiceResponse> searchCatalogServices(String query) {
+        String keyword = requireSearchKeyword(query);
+        return catalogServiceRepository
+                .findByIsDeletedFalseAndNameContainingIgnoreCase(keyword, Sort.by("displayOrder", "id"))
+                .stream()
                 .map(CatalogDtoMapper::toServiceResponse)
                 .toList();
     }
@@ -260,5 +282,13 @@ public class CatalogService {
 
     private int displayOrderVal(Integer v) {
         return v == null ? 0 : v;
+    }
+
+    private String requireSearchKeyword(String query) {
+        String keyword = InputSanitizer.normalizeSearchQuery(query);
+        if (keyword == null) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "q is required");
+        }
+        return keyword;
     }
 }

@@ -40,6 +40,15 @@ public final class InputSanitizer {
         return WHITESPACE_RUN.matcher(trimmed).replaceAll(" ");
     }
 
+    /** Returns null when blank after trim; otherwise trimmed text with collapsed whitespace. */
+    public static String normalizeSearchQuery(String query) {
+        if (!StringUtils.hasText(query)) {
+            return null;
+        }
+        String normalized = WHITESPACE_RUN.matcher(query.trim()).replaceAll(" ");
+        return normalized.isEmpty() ? null : normalized;
+    }
+
     /** Returns null when the value is blank; otherwise returns the trimmed string. */
     public static String trimToNull(String value) {
         if (!StringUtils.hasText(value)) {

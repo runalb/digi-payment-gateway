@@ -1,66 +1,41 @@
 package com.runalb.ondemand_service.catalog.repository;
 
-
-
 import com.runalb.ondemand_service.catalog.entity.CatalogServiceEntity;
-
 import java.util.List;
-
 import java.util.Optional;
-
 import org.springframework.data.domain.Sort;
-
 import org.springframework.data.jpa.repository.EntityGraph;
-
 import org.springframework.data.jpa.repository.JpaRepository;
-
-
 
 public interface CatalogServiceRepository extends JpaRepository<CatalogServiceEntity, Long> {
 
-
-
     boolean existsByCatalogCategory_IdAndNameIgnoreCase(Long catalogCategoryId, String name);
 
-
-
-    boolean existsByCatalogCategory_IdAndNameIgnoreCaseAndIdNot(
-
-            Long catalogCategoryId, String name, Long id);
-
-
+    boolean existsByCatalogCategory_IdAndNameIgnoreCaseAndIdNot(Long catalogCategoryId, String name, Long id);
 
     List<CatalogServiceEntity> findByCatalogCategory_Id(Long catalogCategoryId);
 
-
-
     @EntityGraph(attributePaths = {"catalogCategory", "images"})
-
     List<CatalogServiceEntity> findAllByIsDeletedFalse(Sort sort);
 
-
+    @EntityGraph(attributePaths = {"catalogCategory", "images"})
+    List<CatalogServiceEntity> findByIsDeletedFalseAndNameContainingIgnoreCase(String name, Sort sort);
 
     @EntityGraph(attributePaths = {"catalogCategory", "images"})
-
-    List<CatalogServiceEntity> findByCatalogCategory_IdAndIsDeletedFalseOrderByDisplayOrderAscIdAsc(
-
-            Long categoryId);
-
-
+    List<CatalogServiceEntity> findByCatalogCategory_IdAndIsDeletedFalseOrderByDisplayOrderAscIdAsc(Long categoryId);
 
     @EntityGraph(attributePaths = {"catalogCategory", "images"})
+    List<CatalogServiceEntity>
+            findByCatalogCategory_IdAndIsDeletedFalseAndNameContainingIgnoreCaseOrderByDisplayOrderAscIdAsc(
+                    Long categoryId, String name);
 
+    @EntityGraph(attributePaths = {"catalogCategory", "images"})
     Optional<CatalogServiceEntity> findWithCatalogCategoryById(Long id);
 
-
-
     @EntityGraph(attributePaths = {"catalogCategory", "images"})
-
     Optional<CatalogServiceEntity> findWithCatalogCategoryByIdAndIsDeletedFalse(Long id);
 
     @EntityGraph(attributePaths = {"catalogCategory", "images"})
     Optional<CatalogServiceEntity> findWithCatalogCategoryByIdAndCatalogCategory_IdAndIsDeletedFalse(
             Long id, Long catalogCategoryId);
-
 }
-
