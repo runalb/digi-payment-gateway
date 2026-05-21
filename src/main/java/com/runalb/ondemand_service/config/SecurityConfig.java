@@ -58,6 +58,11 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.PATCH, "/api/v1/catalog/services/**").hasRole("SUPER_ADMIN")
                         .requestMatchers(HttpMethod.DELETE, "/api/v1/catalog/services/**").hasRole("SUPER_ADMIN")
 
+                        // Banners
+                        .requestMatchers(HttpMethod.POST, "/api/v1/banners/**").hasRole("SUPER_ADMIN")
+                        .requestMatchers(HttpMethod.PATCH, "/api/v1/banners/**").hasRole("SUPER_ADMIN")
+                        .requestMatchers(HttpMethod.DELETE, "/api/v1/banners/**").hasRole("SUPER_ADMIN")
+
                         // Catalog service offerings
                         .requestMatchers(HttpMethod.GET, "/api/v1/catalog/services/*/business-offerings").authenticated()
 
