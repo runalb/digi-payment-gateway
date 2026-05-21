@@ -5,14 +5,18 @@ import com.runalb.ondemand_service.catalog.dto.CatalogCategoryResponse;
 import com.runalb.ondemand_service.catalog.dto.CatalogCategoryUpdateRequest;
 import com.runalb.ondemand_service.catalog.dto.CatalogServiceCreateRequest;
 import com.runalb.ondemand_service.catalog.dto.CatalogServiceResponse;
+import com.runalb.ondemand_service.catalog.mapper.CatalogDtoMapper;
 import com.runalb.ondemand_service.catalog.dto.CatalogServiceUpdateRequest;
 import com.runalb.ondemand_service.catalog.entity.CatalogCategoryEntity;
 import com.runalb.ondemand_service.catalog.entity.CatalogServiceEntity;
+import com.runalb.ondemand_service.catalog.entity.CatalogServiceImageEntity;
 import com.runalb.ondemand_service.catalog.repository.CatalogCategoryRepository;
 import com.runalb.ondemand_service.catalog.repository.CatalogServiceRepository;
+import com.runalb.ondemand_service.util.ImageUrlValidator;
 import com.runalb.ondemand_service.util.InputSanitizer;
 import java.util.List;
 import java.util.Objects;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.domain.Sort;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
@@ -26,23 +30,27 @@ public class CatalogService {
 
     private final CatalogCategoryRepository categoryRepository;
     private final CatalogServiceRepository catalogServiceRepository;
+    private final int maxServiceImages;
 
     public CatalogService(
-            CatalogCategoryRepository categoryRepository, CatalogServiceRepository catalogServiceRepository) {
+            CatalogCategoryRepository categoryRepository,
+            CatalogServiceRepository catalogServiceRepository,
+            @Value("${catalog.service.max-images:5}") int maxServiceImages) {
         this.categoryRepository = categoryRepository;
         this.catalogServiceRepository = catalogServiceRepository;
+        this.maxServiceImages = maxServiceImages;
     }
 
     @Transactional(readOnly = true)
     public List<CatalogCategoryResponse> listCategories() {
         return categoryRepository.findByIsDeletedFalse(Sort.by("displayOrder", "id")).stream()
-                .map(CatalogService::toCatalogCategoryResponse)
+                .map(CatalogDtoMapper::toCategoryResponse)
                 .toList();
     }
 
     @Transactional(readOnly = true)
     public CatalogCategoryResponse getCategory(Long id) {
-        return toCatalogCategoryResponse(requireNonDeletedCategory(id));
+        return CatalogDtoMapper.toCategoryResponse(requireNonDeletedCategory(id));
     }
 
     @Transactional
@@ -52,15 +60,17 @@ public class CatalogService {
         CatalogCategoryEntity e = new CatalogCategoryEntity();
         e.setName(name);
         e.setDescription(InputSanitizer.trimToNull(request.description()));
+        e.setImageUrl(ImageUrlValidator.normalizeImageUrl(request.imageUrl()));
         e.setDisplayOrder(displayOrderVal(request.displayOrder()));
         e = categoryRepository.save(e);
-        return toCatalogCategoryResponse(e);
+        return CatalogDtoMapper.toCategoryResponse(e);
     }
 
     @Transactional
     public CatalogCategoryResponse updateCategory(Long id, CatalogCategoryUpdateRequest request) {
         if (request.name() == null
                 && request.description() == null
+                && request.imageUrl() == null
                 && request.displayOrder() == null) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Request body must not be empty");
         }
@@ -73,11 +83,14 @@ public class CatalogService {
         if (request.description() != null) {
             e.setDescription(InputSanitizer.trimToNull(request.description()));
         }
+        if (request.imageUrl() != null) {
+            e.setImageUrl(ImageUrlValidator.normalizeImageUrl(request.imageUrl()));
+        }
         if (request.displayOrder() != null) {
             e.setDisplayOrder(request.displayOrder());
         }
         e = categoryRepository.save(e);
-        return toCatalogCategoryResponse(e);
+        return CatalogDtoMapper.toCategoryResponse(e);
     }
 
     @Transactional
@@ -98,14 +111,14 @@ public class CatalogService {
         return catalogServiceRepository
                 .findByCatalogCategory_IdAndIsDeletedFalseOrderByDisplayOrderAscIdAsc(categoryId)
                 .stream()
-                .map(CatalogService::toCatalogServiceResponse)
+                .map(CatalogDtoMapper::toServiceResponse)
                 .toList();
     }
 
     @Transactional(readOnly = true)
     public List<CatalogServiceResponse> listAllCatalogServices() {
         return catalogServiceRepository.findAllByIsDeletedFalse(Sort.by("id")).stream()
-                .map(CatalogService::toCatalogServiceResponse)
+                .map(CatalogDtoMapper::toServiceResponse)
                 .toList();
     }
 
@@ -113,7 +126,7 @@ public class CatalogService {
     public CatalogServiceResponse getCatalogService(Long id) {
         return catalogServiceRepository
                 .findWithCatalogCategoryByIdAndIsDeletedFalse(id)
-                .map(CatalogService::toCatalogServiceResponse)
+                .map(CatalogDtoMapper::toServiceResponse)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Service not found"));
     }
 
@@ -122,7 +135,7 @@ public class CatalogService {
         requireNonDeletedCategory(categoryId);
         return catalogServiceRepository
                 .findWithCatalogCategoryByIdAndCatalogCategory_IdAndIsDeletedFalse(serviceId, categoryId)
-                .map(CatalogService::toCatalogServiceResponse)
+                .map(CatalogDtoMapper::toServiceResponse)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Service not found"));
     }
 
@@ -136,14 +149,16 @@ public class CatalogService {
         e.setName(name);
         e.setDescription(InputSanitizer.trimToNull(request.description()));
         e.setDisplayOrder(displayOrderVal(request.displayOrder()));
+        applyServiceImages(e, request.imageUrls());
         e = catalogServiceRepository.save(e);
-        return toCatalogServiceResponse(e);
+        return CatalogDtoMapper.toServiceResponse(e);
     }
 
     @Transactional
     public CatalogServiceResponse updateCatalogService(Long id, CatalogServiceUpdateRequest request) {
         if (request.name() == null
                 && request.description() == null
+                && request.imageUrls() == null
                 && request.displayOrder() == null
                 && request.categoryId() == null) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Request body must not be empty");
@@ -166,8 +181,11 @@ public class CatalogService {
         if (request.displayOrder() != null) {
             e.setDisplayOrder(request.displayOrder());
         }
+        if (request.imageUrls() != null) {
+            replaceServiceImages(e, request.imageUrls());
+        }
         e = catalogServiceRepository.save(e);
-        return toCatalogServiceResponse(e);
+        return CatalogDtoMapper.toServiceResponse(e);
     }
 
     @Transactional
@@ -216,17 +234,28 @@ public class CatalogService {
         }
     }
 
-    private static CatalogCategoryResponse toCatalogCategoryResponse(CatalogCategoryEntity e) {
-        return new CatalogCategoryResponse(e.getId(), e.getName(), e.getDescription(), e.getDisplayOrder());
+    private void applyServiceImages(CatalogServiceEntity service, List<String> imageUrls) {
+        List<String> normalized = ImageUrlValidator.normalizeImageUrlList(imageUrls, maxServiceImages);
+        if (normalized == null || normalized.isEmpty()) {
+            return;
+        }
+        replaceServiceImages(service, normalized);
     }
 
-    private static CatalogServiceResponse toCatalogServiceResponse(CatalogServiceEntity e) {
-        return new CatalogServiceResponse(
-                e.getId(),
-                e.getName(),
-                e.getDescription(),
-                e.getDisplayOrder(),
-                toCatalogCategoryResponse(e.getCatalogCategory()));
+    private void replaceServiceImages(CatalogServiceEntity service, List<String> imageUrls) {
+        List<String> normalized = ImageUrlValidator.normalizeImageUrlList(imageUrls, maxServiceImages);
+        if (normalized == null) {
+            return;
+        }
+        service.getImages().clear();
+        int order = 0;
+        for (String url : normalized) {
+            CatalogServiceImageEntity image = new CatalogServiceImageEntity();
+            image.setCatalogService(service);
+            image.setImageUrl(url);
+            image.setDisplayOrder(order++);
+            service.getImages().add(image);
+        }
     }
 
     private int displayOrderVal(Integer v) {

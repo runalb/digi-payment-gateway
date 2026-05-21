@@ -13,26 +13,50 @@ public interface BusinessOfferingRepository extends JpaRepository<BusinessOfferi
 
     Optional<BusinessOfferingEntity> findByBusiness_IdAndCatalogService_Id(Long businessId, Long catalogServiceId);
 
-    @EntityGraph(attributePaths = {"catalogService", "catalogService.catalogCategory"})
+    @EntityGraph(attributePaths = {"catalogService", "catalogService.catalogCategory", "catalogService.images"})
     List<BusinessOfferingEntity> findByBusiness_IdAndIsDeletedFalseOrderByIdAsc(Long businessId);
 
-    @EntityGraph(attributePaths = {"catalogService", "catalogService.catalogCategory"})
+    @EntityGraph(attributePaths = {"catalogService", "catalogService.catalogCategory", "catalogService.images"})
     Optional<BusinessOfferingEntity> findByIdAndBusiness_IdAndIsDeletedFalse(Long id, Long businessId);
 
     long countByCatalogService_IdAndIsDeletedFalseAndIsActiveTrue(Long catalogServiceId);
 
-    @EntityGraph(attributePaths = {"business", "catalogService", "catalogService.catalogCategory"})
+    @EntityGraph(
+            attributePaths = {
+                "business",
+                "catalogService",
+                "catalogService.catalogCategory",
+                "catalogService.images"
+            })
     List<BusinessOfferingEntity> findByCatalogService_IdAndIsDeletedFalseAndIsActiveTrueOrderByIdAsc(
             Long catalogServiceId);
 
-    @EntityGraph(attributePaths = {"business", "catalogService", "catalogService.catalogCategory"})
+    @EntityGraph(
+            attributePaths = {
+                "business",
+                "catalogService",
+                "catalogService.catalogCategory",
+                "catalogService.images"
+            })
     List<BusinessOfferingEntity>
             findByCatalogService_IdAndIsDeletedFalseAndIsActiveTrueAndIsVerifiedTrueOrderByIdAsc(
                     Long catalogServiceId);
 
-    @EntityGraph(attributePaths = {"business", "catalogService", "catalogService.catalogCategory"})
+    @EntityGraph(
+            attributePaths = {
+                "business",
+                "catalogService",
+                "catalogService.catalogCategory",
+                "catalogService.images"
+            })
     Optional<BusinessOfferingEntity> findByIdAndIsDeletedFalse(Long id);
 
-    @EntityGraph(attributePaths = {"business", "catalogService", "catalogService.catalogCategory"})
+    @EntityGraph(
+            attributePaths = {
+                "business",
+                "catalogService",
+                "catalogService.catalogCategory",
+                "catalogService.images"
+            })
     List<BusinessOfferingEntity> findByIdInAndIsDeletedFalse(Collection<Long> ids);
 }

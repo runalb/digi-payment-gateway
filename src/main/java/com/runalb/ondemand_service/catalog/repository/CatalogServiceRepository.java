@@ -34,13 +34,13 @@ public interface CatalogServiceRepository extends JpaRepository<CatalogServiceEn
 
 
 
-    @EntityGraph(attributePaths = "catalogCategory")
+    @EntityGraph(attributePaths = {"catalogCategory", "images"})
 
     List<CatalogServiceEntity> findAllByIsDeletedFalse(Sort sort);
 
 
 
-    @EntityGraph(attributePaths = "catalogCategory")
+    @EntityGraph(attributePaths = {"catalogCategory", "images"})
 
     List<CatalogServiceEntity> findByCatalogCategory_IdAndIsDeletedFalseOrderByDisplayOrderAscIdAsc(
 
@@ -48,17 +48,17 @@ public interface CatalogServiceRepository extends JpaRepository<CatalogServiceEn
 
 
 
-    @EntityGraph(attributePaths = "catalogCategory")
+    @EntityGraph(attributePaths = {"catalogCategory", "images"})
 
     Optional<CatalogServiceEntity> findWithCatalogCategoryById(Long id);
 
 
 
-    @EntityGraph(attributePaths = "catalogCategory")
+    @EntityGraph(attributePaths = {"catalogCategory", "images"})
 
     Optional<CatalogServiceEntity> findWithCatalogCategoryByIdAndIsDeletedFalse(Long id);
 
-    @EntityGraph(attributePaths = "catalogCategory")
+    @EntityGraph(attributePaths = {"catalogCategory", "images"})
     Optional<CatalogServiceEntity> findWithCatalogCategoryByIdAndCatalogCategory_IdAndIsDeletedFalse(
             Long id, Long catalogCategoryId);
 

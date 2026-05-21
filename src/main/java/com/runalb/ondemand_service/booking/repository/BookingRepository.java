@@ -14,7 +14,8 @@ public interface BookingRepository extends JpaRepository<BookingEntity, Long> {
                 "businessOffering",
                 "business",
                 "catalogService",
-                "catalogService.catalogCategory"
+                "catalogService.catalogCategory",
+                "catalogService.images"
             })
     List<BookingEntity> findByUser_IdAndIsDeletedFalseOrderByCreatedDateTimeDesc(Long userId);
 
@@ -24,7 +25,8 @@ public interface BookingRepository extends JpaRepository<BookingEntity, Long> {
                 "businessOffering",
                 "business",
                 "catalogService",
-                "catalogService.catalogCategory"
+                "catalogService.catalogCategory",
+                "catalogService.images"
             })
     List<BookingEntity> findByBusiness_IdAndIsDeletedFalseOrderByCreatedDateTimeDesc(Long businessId);
 
@@ -34,7 +36,8 @@ public interface BookingRepository extends JpaRepository<BookingEntity, Long> {
                 "businessOffering",
                 "business",
                 "catalogService",
-                "catalogService.catalogCategory"
+                "catalogService.catalogCategory",
+                "catalogService.images"
             })
     Optional<BookingEntity> findByIdAndIsDeletedFalse(Long id);
 }

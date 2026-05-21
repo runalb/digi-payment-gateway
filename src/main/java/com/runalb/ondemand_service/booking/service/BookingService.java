@@ -8,10 +8,8 @@ import com.runalb.ondemand_service.booking.repository.BookingRepository;
 import com.runalb.ondemand_service.business.dto.BusinessResponse;
 import com.runalb.ondemand_service.business.entity.BusinessEntity;
 import com.runalb.ondemand_service.business.repository.BusinessRepository;
-import com.runalb.ondemand_service.catalog.dto.CatalogCategoryResponse;
-import com.runalb.ondemand_service.catalog.dto.CatalogServiceResponse;
-import com.runalb.ondemand_service.catalog.entity.CatalogCategoryEntity;
 import com.runalb.ondemand_service.catalog.entity.CatalogServiceEntity;
+import com.runalb.ondemand_service.catalog.mapper.CatalogDtoMapper;
 import com.runalb.ondemand_service.offering.entity.BusinessOfferingEntity;
 import com.runalb.ondemand_service.offering.repository.BusinessOfferingRepository;
 import com.runalb.ondemand_service.relationship.service.EntityLinkService;
@@ -137,25 +135,11 @@ public class BookingService {
                 booking.getScheduledAt(),
                 booking.getNotes(),
                 booking.getBusinessOffering().getId(),
-                toCatalogServiceResponse(booking.getCatalogService()),
+                CatalogDtoMapper.toServiceResponse(booking.getCatalogService()),
                 toUserResponse(user),
                 toBusinessResponse(business),
                 booking.getCreatedDateTime(),
                 booking.getUpdatedDateTime());
-    }
-
-    private static CatalogServiceResponse toCatalogServiceResponse(CatalogServiceEntity service) {
-        return new CatalogServiceResponse(
-                service.getId(),
-                service.getName(),
-                service.getDescription(),
-                service.getDisplayOrder(),
-                toCatalogCategoryResponse(service.getCatalogCategory()));
-    }
-
-    private static CatalogCategoryResponse toCatalogCategoryResponse(CatalogCategoryEntity category) {
-        return new CatalogCategoryResponse(
-                category.getId(), category.getName(), category.getDescription(), category.getDisplayOrder());
     }
 
     private static UserResponse toUserResponse(UserEntity user) {

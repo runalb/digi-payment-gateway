@@ -7,9 +7,14 @@ import jakarta.persistence.FetchType;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
+import jakarta.persistence.CascadeType;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
+import jakarta.persistence.OneToMany;
+import jakarta.persistence.OrderBy;
 import jakarta.persistence.Table;
+import java.util.ArrayList;
+import java.util.List;
 import lombok.Getter;
 import lombok.Setter;
 
@@ -32,6 +37,10 @@ public class CatalogServiceEntity extends AuditableEntity {
 
     @Column(length = 4000)
     private String description;
+
+    @OneToMany(mappedBy = "catalogService", cascade = CascadeType.ALL, orphanRemoval = true)
+    @OrderBy("displayOrder ASC, id ASC")
+    private List<CatalogServiceImageEntity> images = new ArrayList<>();
 
     @Column(name = "display_order", nullable = false)
     private Integer displayOrder = 0;

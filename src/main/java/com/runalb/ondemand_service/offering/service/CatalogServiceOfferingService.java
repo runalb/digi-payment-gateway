@@ -1,9 +1,6 @@
 package com.runalb.ondemand_service.offering.service;
 
-import com.runalb.ondemand_service.catalog.dto.CatalogCategoryResponse;
-import com.runalb.ondemand_service.catalog.dto.CatalogServiceResponse;
-import com.runalb.ondemand_service.catalog.entity.CatalogCategoryEntity;
-import com.runalb.ondemand_service.catalog.entity.CatalogServiceEntity;
+import com.runalb.ondemand_service.catalog.mapper.CatalogDtoMapper;
 import com.runalb.ondemand_service.catalog.repository.CatalogServiceRepository;
 import com.runalb.ondemand_service.offering.dto.CatalogBusinessOfferingResponse;
 import com.runalb.ondemand_service.offering.entity.BusinessOfferingEntity;
@@ -49,20 +46,6 @@ public class CatalogServiceOfferingService {
                 offering.getBusiness().getName(),
                 offering.getBusiness().getAverageRating(),
                 Boolean.TRUE.equals(offering.getIsActive()),
-                toCatalogServiceResponse(offering.getCatalogService()));
-    }
-
-    private static CatalogServiceResponse toCatalogServiceResponse(CatalogServiceEntity service) {
-        return new CatalogServiceResponse(
-                service.getId(),
-                service.getName(),
-                service.getDescription(),
-                service.getDisplayOrder(),
-                toCatalogCategoryResponse(service.getCatalogCategory()));
-    }
-
-    private static CatalogCategoryResponse toCatalogCategoryResponse(CatalogCategoryEntity category) {
-        return new CatalogCategoryResponse(
-                category.getId(), category.getName(), category.getDescription(), category.getDisplayOrder());
+                CatalogDtoMapper.toServiceResponse(offering.getCatalogService()));
     }
 }

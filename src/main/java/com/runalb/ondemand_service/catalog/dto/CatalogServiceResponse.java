@@ -1,9 +1,11 @@
 package com.runalb.ondemand_service.catalog.dto;
 
+import java.util.List;
+
 public record CatalogServiceResponse(
         Long id,
         String name,
         String description,
         Integer displayOrder,
-        CatalogCategoryResponse category
-) {}
+        List<CatalogServiceImageResponse> images,
+        CatalogCategoryResponse category) {}

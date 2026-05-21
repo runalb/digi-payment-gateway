@@ -35,6 +35,7 @@ erDiagram
     business ||--o{ business_payment_channel_config : has
     business ||--o{ business_offering : offers
     catalog_category ||--o{ catalog_service : contains
+    catalog_service ||--o{ catalog_service_image : has
     catalog_service ||--o{ business_offering : linked
 
     users {
@@ -76,6 +77,7 @@ erDiagram
         bigint id PK
         varchar name
         varchar description
+        varchar image_url
         int display_order
         boolean is_deleted
     }
@@ -87,6 +89,13 @@ erDiagram
         varchar description
         int display_order
         boolean is_deleted
+    }
+
+    catalog_service_image {
+        bigint id PK
+        bigint catalog_service_id FK
+        varchar image_url
+        int display_order
     }
 ```
 
@@ -313,6 +322,7 @@ Top-level catalog grouping for on-demand services.
 | `id` | `bigint` | `PK`, identity | `id` |
 | `name` | `varchar(255)` | `NOT NULL` | `name` |
 | `description` | `varchar(2000)` | | `description` |
+| `image_url` | `varchar(2048)` | | `imageUrl` |
 | `display_order` | `integer` | `NOT NULL`, default `0` | `displayOrder` |
 | `is_deleted` | `boolean` | `NOT NULL`, default `false` | `isDeleted` |
 | `createdDateTime` | `timestamp` | `NOT NULL` | audit |
@@ -344,9 +354,29 @@ Individual catalog entries under a category.
 **Relationships:**
 
 - N:1 → `catalog_category`
+- 1:N → `catalog_service_image`
 - 1:N ← `business_offering`
 
 **Common queries:** `findWithCatalogCategoryByIdAndIsDeletedFalse`, `findByCatalogCategory_IdAndIsDeletedFalseOrderByDisplayOrderAscIdAsc`, `existsByCatalogCategory_IdAndNameIgnoreCase`
+
+---
+
+### `catalog_service_image`
+
+Image URLs for a catalog service (0–5 per service, enforced in application code).
+
+| Column | Type | Constraints | Entity field |
+|--------|------|-------------|--------------|
+| `id` | `bigint` | `PK`, identity | `id` |
+| `catalog_service_id` | `bigint` | `NOT NULL`, `FK` → `catalog_service.id` | `catalogService` |
+| `image_url` | `varchar(2048)` | `NOT NULL` | `imageUrl` |
+| `display_order` | `integer` | `NOT NULL`, default `0` | `displayOrder` |
+| `createdDateTime` | `timestamp` | `NOT NULL` | audit |
+| `updatedDateTime` | `timestamp` | `NOT NULL` | audit |
+
+**Entity:** `CatalogServiceImageEntity`
+
+**Relationships:** N:1 → `catalog_service` (cascade delete via JPA `orphanRemoval`)
 
 ---
 
@@ -409,6 +439,7 @@ With `spring.jpa.show-sql=true` (dev), Hibernate logs DDL and DML to the applica
 | `business_offering` | `BusinessOfferingEntity` | `offering.entity` |
 | `catalog_category` | `CatalogCategoryEntity` | `catalog.entity` |
 | `catalog_service` | `CatalogServiceEntity` | `catalog.entity` |
+| `catalog_service_image` | `CatalogServiceImageEntity` | `catalog.entity` |
 
 ---
 
