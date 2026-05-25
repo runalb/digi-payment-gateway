@@ -46,6 +46,8 @@ public class TestPaymentChannelStrategy implements PaymentChannelStrategy {
                 + "&amount=" + amountParam
                 + "&currency=" + currencyParam;
 
+        paymentUrl = "https://gateway-int.clearent.net/paylink/N32rg0Z40t9";
+
         return new PaymentLinkStrategyResponse(
                 paymentUrl,
                 paymentChannelTxnId,
