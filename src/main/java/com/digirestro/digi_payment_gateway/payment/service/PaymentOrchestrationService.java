@@ -9,9 +9,9 @@ import com.digirestro.digi_payment_gateway.merchant.service.MerchantService;
 import com.digirestro.digi_payment_gateway.payment.contract.PaymentLinkOrchestrationContract;
 import com.digirestro.digi_payment_gateway.payment.entity.PaymentEntity;
 import com.digirestro.digi_payment_gateway.payment.enums.PaymentStatusEnum;
-import com.digirestro.digi_payment_gateway.paymentchannelstrategy.interfaces.PaymentChannelStrategy;
-import com.digirestro.digi_payment_gateway.paymentchannelstrategy.resolver.PaymentChannelStrategyResolver;
-import com.digirestro.digi_payment_gateway.paymentchannelstrategy.dto.PaymentLinkStrategyResponse;
+import com.digirestro.digi_payment_gateway.payment_channel_strategy.dto.PaymentLinkStrategyResponse;
+import com.digirestro.digi_payment_gateway.payment_channel_strategy.interfaces.PaymentChannelStrategy;
+import com.digirestro.digi_payment_gateway.payment_channel_strategy.resolver.PaymentChannelStrategyResolver;
 
 import java.util.UUID;
 
@@ -34,7 +34,7 @@ import org.springframework.stereotype.Service;
  * <ul>
  *   <li>Do not add {@code @Transactional} on {@link #generatePaymentLink} — external HTTP must run outside a DB transaction</li>
  *   <li>Do not merge both phases into one transaction</li>
- *   <li>Do not persist payment or set status inside {@link com.digirestro.digi_payment_gateway.paymentchannelstrategy.interfaces.PaymentChannelStrategy#createPaymentLink}</li>
+ *   <li>Do not persist payment or set status inside {@link com.digirestro.digi_payment_gateway.payment_channel_strategy.interfaces.PaymentChannelStrategy#createPaymentLink}</li>
  *   <li>Always refetch and resolve strategy from persisted payment channel in {@link #completePaymentLinkGeneration}</li>
  * </ul>
  */
