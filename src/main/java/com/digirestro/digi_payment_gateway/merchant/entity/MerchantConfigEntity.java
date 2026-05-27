@@ -33,4 +33,10 @@ public class MerchantConfigEntity extends AuditableEntity {
     /** ISO 4217 alphabetic code (e.g. USD, EUR). */
     @Column(nullable = false, length = 3)
     private String currency;
+
+    @Column(columnDefinition = "TEXT")
+    private String redirectSuccessUrl;
+
+    @Column(columnDefinition = "TEXT")
+    private String redirectFailureUrl;
 }

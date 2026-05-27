@@ -8,7 +8,9 @@ import java.math.BigDecimal;
 public record PaymentLinkRequest(
         @NotBlank String merchantReferencePaymentId,
         @NotNull @DecimalMin("0.01") BigDecimal amount,
-        String merchantMetadataJson,
         String redirectSuccessUrl,
         String redirectFailureUrl
+
+         // TODO: Add json key and value pairs to merchantMetadataJson
+        String merchantMetadataJson
 ) {}

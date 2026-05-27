@@ -17,7 +17,6 @@ import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
 import java.math.BigDecimal;
-import java.util.UUID;
 import lombok.Getter;
 import lombok.Setter;
 
@@ -31,8 +30,8 @@ public class PaymentEntity extends AuditableEntity {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(nullable = false, columnDefinition = "uuid", unique = true)
-    private UUID paymentReferenceId;
+    // @Column(nullable = false, columnDefinition = "uuid", unique = true)
+    // private UUID paymentReferenceId;
 
     @ManyToOne(optional = false)
     @JoinColumn(name = "merchant_id", nullable = false)
@@ -65,6 +64,12 @@ public class PaymentEntity extends AuditableEntity {
     
     @Column(columnDefinition = "TEXT")
     private String merchantMetadataJson;
+
+    @Column(columnDefinition = "TEXT")
+    private String redirectSuccessUrl;
+
+    @Column(columnDefinition = "TEXT")
+    private String redirectFailureUrl;
 
     // private String digiPaymentLink;
 

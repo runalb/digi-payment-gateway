@@ -13,9 +13,8 @@ import com.digirestro.digi_payment_gateway.payment_channel_strategy.dto.PaymentL
 import com.digirestro.digi_payment_gateway.payment_channel_strategy.interfaces.PaymentChannelStrategy;
 import com.digirestro.digi_payment_gateway.payment_channel_strategy.resolver.PaymentChannelStrategyResolver;
 
-import java.util.UUID;
-
 import org.springframework.stereotype.Service;
+import org.springframework.util.StringUtils;
 
 /**
  * Orchestrates payment-link creation using a fixed two-phase flow.
@@ -66,7 +65,6 @@ public class PaymentOrchestrationService {
         MerchantConfigEntity merchantConfig = merchantService.findMerchantConfigByMerchantId(merchantId);
 
         PaymentEntity payment = new PaymentEntity();
-        payment.setPaymentReferenceId(UUID.randomUUID());
         payment.setMerchant(merchant);
         payment.setMerchantPaymentChannelConfig(merchantPaymentChannelConfig);
         payment.setPaymentChannel(merchantPaymentChannelConfig.getPaymentChannel());
@@ -74,6 +72,10 @@ public class PaymentOrchestrationService {
         payment.setAmount(request.amount());
         payment.setMerchantReferencePaymentId(request.merchantReferencePaymentId());
         payment.setMerchantMetadataJson(request.merchantMetadataJson());
+        payment.setRedirectSuccessUrl(resolveRedirectUrl(
+                request.redirectSuccessUrl(), merchantConfig.getRedirectSuccessUrl(), "redirectSuccessUrl"));
+        payment.setRedirectFailureUrl(resolveRedirectUrl(
+                request.redirectFailureUrl(), merchantConfig.getRedirectFailureUrl(), "redirectFailureUrl"));
         payment.setStatus(PaymentStatusEnum.INITIATED);
         payment = paymentService.save(payment);
 
@@ -103,5 +105,16 @@ public class PaymentOrchestrationService {
         paymentToUpdate.setPaymentChannelTxnId(strategyResponse.paymentChannelTxnId());
         paymentToUpdate.setStatus(strategyResponse.status());
         return paymentService.save(paymentToUpdate);
+    }
+
+    private static String resolveRedirectUrl(String fromRequest, String fromMerchantConfig, String fieldName) {
+        if (StringUtils.hasText(fromRequest)) {
+            return fromRequest.trim();
+        }
+        if (StringUtils.hasText(fromMerchantConfig)) {
+            return fromMerchantConfig.trim();
+        }
+        throw new IllegalArgumentException(
+                fieldName + " must be provided in the request or configured on the merchant");
     }
 }
