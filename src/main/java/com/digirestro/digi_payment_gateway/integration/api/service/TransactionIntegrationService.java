@@ -39,7 +39,6 @@ public class TransactionIntegrationService {
                 payment.getStatus(),
                 payment.getMerchant().getId(),
                 payment.getMerchantReferencePaymentId(),
-                payment.getMerchantMetadataJson(),
                 payment.getPaymentChannel().getId(),
                 payment.getPaymentChannel().getName(),
                 payment.getPaymentChannelTxnId(),

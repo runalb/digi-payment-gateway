@@ -12,5 +12,5 @@ public record PaymentLinkRequest(
         String redirectFailureUrl
 
          // TODO: Add json key and value pairs to merchantMetadataJson
-        String merchantMetadataJson
+        // String merchantMetadataJson
 ) {}

@@ -13,7 +13,6 @@ public record PaymentDetailsResponse(
         PaymentStatusEnum status,
         Long merchantId,
         String merchantReferencePaymentId,
-        String merchantMetadataJson,
         Long paymentChannelId,
         PaymentChannelNameEnum paymentChannelName,
         String paymentChannelTxnId,

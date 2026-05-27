@@ -62,8 +62,8 @@ public class PaymentEntity extends AuditableEntity {
 
     private String paymentChannelPayLink;
     
-    @Column(columnDefinition = "TEXT")
-    private String merchantMetadataJson;
+    // @Column(columnDefinition = "TEXT")
+    // private String merchantMetadataJson;
 
     @Column(columnDefinition = "TEXT")
     private String redirectSuccessUrl;
