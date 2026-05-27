@@ -60,6 +60,7 @@ public class PaymentEntity extends AuditableEntity {
     @Column(nullable = false)
     private PaymentStatusEnum status = PaymentStatusEnum.INITIATED;
 
+    @Column(columnDefinition = "TEXT")
     private String paymentChannelPayLink;
     
     // @Column(columnDefinition = "TEXT")
