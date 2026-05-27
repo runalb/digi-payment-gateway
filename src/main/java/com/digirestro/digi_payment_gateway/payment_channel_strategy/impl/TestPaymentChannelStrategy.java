@@ -9,31 +9,20 @@ import com.digirestro.digi_payment_gateway.payment_channel_strategy.interfaces.P
 
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
-import java.util.Map;
 import java.util.UUID;
 import lombok.extern.slf4j.Slf4j;
 
-import org.springframework.beans.factory.annotation.Value;
-import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Component;
-import org.springframework.web.server.ResponseStatusException;
 
 @Component
 @Slf4j
 public class TestPaymentChannelStrategy implements PaymentChannelStrategy {
 
-    private static final PaymentChannelNameEnum CHANNEL_NAME = PaymentChannelNameEnum.TEST;
-    private final String testPaymentLinkBaseUrl;
-
-    public TestPaymentChannelStrategy(
-            @Value("${payment-channel.test.payment-link-base-url:http://localhost:8080/test-payment-link.html}")
-            String testPaymentLinkBaseUrl) {
-        this.testPaymentLinkBaseUrl = testPaymentLinkBaseUrl;
-    }
+    private static final String TEST_PAYMENT_LINK_BASE_URL = "http://localhost:8080/test-payment-link.html";
 
     @Override
     public PaymentChannelNameEnum getChannelName() {
-        return CHANNEL_NAME;
+        return PaymentChannelNameEnum.TEST;
     }
 
     @Override
@@ -41,12 +30,12 @@ public class TestPaymentChannelStrategy implements PaymentChannelStrategy {
         String paymentChannelTxnId = "TEST-TXN-" + UUID.randomUUID();
         String amountParam = URLEncoder.encode(payment.getAmount().toPlainString(), StandardCharsets.UTF_8);
         String currencyParam = URLEncoder.encode(payment.getCurrency(), StandardCharsets.UTF_8);
-        String paymentUrl = testPaymentLinkBaseUrl + "?paymentId=" + payment.getId()
+        String paymentUrl = TEST_PAYMENT_LINK_BASE_URL + "?paymentId=" + payment.getId()
                 + "&merchantId=" + payment.getMerchant().getId()
                 + "&amount=" + amountParam
                 + "&currency=" + currencyParam;
 
-        paymentUrl = "https://gateway-int.clearent.net/paylink/N32rg0Z40t9";
+        // paymentUrl = "https://gateway-int.clearent.net/paylink/N32rg0Z40t9";
 
         return new PaymentLinkStrategyResponse(
                 paymentUrl,
@@ -67,13 +56,13 @@ public class TestPaymentChannelStrategy implements PaymentChannelStrategy {
     //     return new WebhookStrategyResponse(paymentStatus, paymentId, null, null);
     // }
 
-    private static Long extractPaymentId(Object paymentIdValue) {
-        if (paymentIdValue == null) {
-            return null;
-        }
-        if (paymentIdValue instanceof Number number) {
-            return number.longValue();
-        }
-        throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Payment ID must be a number");
-    }
+    // private static Long extractPaymentId(Object paymentIdValue) {
+    //     if (paymentIdValue == null) {
+    //         return null;
+    //     }
+    //     if (paymentIdValue instanceof Number number) {
+    //         return number.longValue();
+    //     }
+    //     throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Payment ID must be a number");
+    // }
 }
