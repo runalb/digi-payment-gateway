@@ -11,6 +11,7 @@ import java.util.LinkedHashMap;
 import java.util.Map;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpMethod;
@@ -99,15 +100,15 @@ public class PhonePePaymentChannelStrategy implements PaymentChannelStrategy {
                 throw new IllegalStateException("PhonePe pay API returned an empty response body");
             }
 
-            Map<String, Object> data = resolveResponseData(responseBody);
-            String checkoutRedirectUrl = requireNonBlankString(data, "redirectUrl");
-            String orderId = requireNonBlankString(data, "orderId");
+            String checkoutRedirectUrl = requireNonBlankString(responseBody, "redirectUrl");
+            String orderId = requireNonBlankString(responseBody, "orderId");
+            String rawResponseJson = objectMapper.writeValueAsString(responseBody);
 
             return new PaymentLinkStrategyResponse(
                     checkoutRedirectUrl,
                     orderId,
                     PaymentStatusEnum.PAYMENT_LINK_GENERATED,
-                    payResponse.getBody().toString());
+                    rawResponseJson);
         } catch (IllegalArgumentException ex) {
             throw ex;
         } catch (Exception ex) {
@@ -127,11 +128,11 @@ public class PhonePePaymentChannelStrategy implements PaymentChannelStrategy {
         form.add("grant_type", GRANT_TYPE_CLIENT_CREDENTIALS);
 
         String tokenUrl = baseUrl + "/v1/oauth/token";
-        ResponseEntity<Map> response = restTemplate.exchange(
+        ResponseEntity<Map<String, Object>> response = restTemplate.exchange(
                 tokenUrl,
                 HttpMethod.POST,
                 new HttpEntity<>(form, headers),
-                Map.class);
+                new ParameterizedTypeReference<Map<String, Object>>() {});
 
         Map<String, Object> body = response.getBody();
         if (body == null) {
@@ -173,15 +174,6 @@ public class PhonePePaymentChannelStrategy implements PaymentChannelStrategy {
         } catch (Exception ex) {
             throw new IllegalArgumentException("Invalid merchant payment channel configJson for PhonePe", ex);
         }
-    }
-
-    @SuppressWarnings("unchecked")
-    private static Map<String, Object> resolveResponseData(Map<String, Object> responseBody) {
-        Object data = responseBody.get("data");
-        if (data instanceof Map<?, ?> nested) {
-            return (Map<String, Object>) nested;
-        }
-        return responseBody;
     }
 
     private static String requireNonBlankString(Map<String, Object> data, String key) {

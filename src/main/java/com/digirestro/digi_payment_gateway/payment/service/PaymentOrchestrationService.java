@@ -102,6 +102,7 @@ public class PaymentOrchestrationService {
         paymentToUpdate.setPaymentChannelPayLink(strategyResponse.paymentChannelPayLink());
         paymentToUpdate.setPaymentChannelTxnId(strategyResponse.paymentChannelTxnId());
         paymentToUpdate.setStatus(strategyResponse.status());
+        paymentToUpdate.setPaymentChannelRawResponseJson(strategyResponse.paymentChannelRawResponseJson());
         return paymentService.save(paymentToUpdate);
     }
 

@@ -72,6 +72,9 @@ public class PaymentEntity extends AuditableEntity {
     @Column(columnDefinition = "TEXT")
     private String redirectFailureUrl;
 
+    @Column(columnDefinition = "TEXT")
+    private String paymentChannelRawResponseJson;
+
     // private String digiPaymentLink;
 
     // @Column(nullable = false)

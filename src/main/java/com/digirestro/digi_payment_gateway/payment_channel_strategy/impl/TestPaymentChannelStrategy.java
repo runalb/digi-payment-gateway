@@ -9,16 +9,25 @@ import com.digirestro.digi_payment_gateway.payment_channel_strategy.interfaces.P
 
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
+import java.util.LinkedHashMap;
+import java.util.Map;
 import java.util.UUID;
 import lombok.extern.slf4j.Slf4j;
 
 import org.springframework.stereotype.Component;
+import tools.jackson.databind.ObjectMapper;
 
 @Component
 @Slf4j
 public class TestPaymentChannelStrategy implements PaymentChannelStrategy {
 
     private static final String TEST_PAYMENT_LINK_BASE_URL = "http://localhost:8080/test-payment-link.html";
+
+    private final ObjectMapper objectMapper;
+
+    public TestPaymentChannelStrategy(ObjectMapper objectMapper) {
+        this.objectMapper = objectMapper;
+    }
 
     @Override
     public PaymentChannelNameEnum getChannelName() {
@@ -37,11 +46,16 @@ public class TestPaymentChannelStrategy implements PaymentChannelStrategy {
 
         // paymentUrl = "https://gateway-int.clearent.net/paylink/N32rg0Z40t9";
 
+        Map<String, Object> rawResponse = new LinkedHashMap<>();
+        rawResponse.put("redirectUrl", paymentUrl);
+        rawResponse.put("orderId", paymentChannelTxnId);
+        String rawResponseJson = objectMapper.writeValueAsString(rawResponse);
+
         return new PaymentLinkStrategyResponse(
                 paymentUrl,
                 paymentChannelTxnId,
                 PaymentStatusEnum.PAYMENT_LINK_GENERATED,
-                null);
+                rawResponseJson);
     }
 
     // @Override

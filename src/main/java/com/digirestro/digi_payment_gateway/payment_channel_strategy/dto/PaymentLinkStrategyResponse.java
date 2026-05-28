@@ -6,5 +6,5 @@ public record PaymentLinkStrategyResponse(
         String paymentChannelPayLink,
         String paymentChannelTxnId,
         PaymentStatusEnum status,
-        String paymentChannelRawResponse
+        String paymentChannelRawResponseJson
 ) {}
