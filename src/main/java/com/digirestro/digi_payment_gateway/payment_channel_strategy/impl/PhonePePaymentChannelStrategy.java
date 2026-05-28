@@ -106,7 +106,8 @@ public class PhonePePaymentChannelStrategy implements PaymentChannelStrategy {
             return new PaymentLinkStrategyResponse(
                     checkoutRedirectUrl,
                     orderId,
-                    PaymentStatusEnum.PAYMENT_LINK_GENERATED);
+                    PaymentStatusEnum.PAYMENT_LINK_GENERATED,
+                    payResponse.getBody().toString());
         } catch (IllegalArgumentException ex) {
             throw ex;
         } catch (Exception ex) {

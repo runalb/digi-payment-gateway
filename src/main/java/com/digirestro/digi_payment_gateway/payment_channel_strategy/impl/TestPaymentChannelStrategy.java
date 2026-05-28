@@ -40,7 +40,8 @@ public class TestPaymentChannelStrategy implements PaymentChannelStrategy {
         return new PaymentLinkStrategyResponse(
                 paymentUrl,
                 paymentChannelTxnId,
-                PaymentStatusEnum.PAYMENT_LINK_GENERATED);
+                PaymentStatusEnum.PAYMENT_LINK_GENERATED,
+                null);
     }
 
     // @Override
