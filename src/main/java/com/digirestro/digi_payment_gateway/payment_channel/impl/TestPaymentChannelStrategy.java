@@ -1,11 +1,11 @@
-package com.digirestro.digi_payment_gateway.payment_channel_strategy.impl;
+package com.digirestro.digi_payment_gateway.payment_channel.impl;
 
 import com.digirestro.digi_payment_gateway.payment.entity.PaymentEntity;
 import com.digirestro.digi_payment_gateway.payment.enums.PaymentStatusEnum;
 import com.digirestro.digi_payment_gateway.payment_channel.enums.PaymentChannelNameEnum;
-import com.digirestro.digi_payment_gateway.payment_channel_strategy.dto.PaymentLinkStrategyResponse;
-import com.digirestro.digi_payment_gateway.payment_channel_strategy.dto.WebhookStrategyResponse;
-import com.digirestro.digi_payment_gateway.payment_channel_strategy.interfaces.PaymentChannelStrategy;
+import com.digirestro.digi_payment_gateway.payment_channel.dto.PaymentLinkStrategyResponse;
+import com.digirestro.digi_payment_gateway.payment_channel.dto.WebhookStrategyResponse;
+import com.digirestro.digi_payment_gateway.payment_channel.interfaces.PaymentChannelStrategy;
 
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;

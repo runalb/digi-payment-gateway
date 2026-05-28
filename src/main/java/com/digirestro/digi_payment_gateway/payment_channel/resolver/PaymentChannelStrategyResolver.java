@@ -1,7 +1,7 @@
-package com.digirestro.digi_payment_gateway.payment_channel_strategy.resolver;
+package com.digirestro.digi_payment_gateway.payment_channel.resolver;
 
 import com.digirestro.digi_payment_gateway.payment_channel.enums.PaymentChannelNameEnum;
-import com.digirestro.digi_payment_gateway.payment_channel_strategy.interfaces.PaymentChannelStrategy;
+import com.digirestro.digi_payment_gateway.payment_channel.interfaces.PaymentChannelStrategy;
 
 import java.util.HashMap;
 import java.util.List;
