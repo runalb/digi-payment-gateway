@@ -69,15 +69,17 @@ public class PhonePePaymentChannelStrategy implements PaymentChannelStrategy {
                 throw new IllegalArgumentException("PhonePe amount must be at least 100 paise (₹1.00)");
             }
 
-            String merchantOrderId = payment.getId().toString();
+            String paymentId = payment.getId().toString();
+            String digiMerchantReferenceId = payment.getMerchantReferenceId();
 
             Map<String, Object> merchantUrls = Map.of("redirectUrl", redirectUrl);
             Map<String, Object> paymentFlow = Map.of(
                     "type", PAYMENT_FLOW_TYPE,
+                    "message", "Payment for merchant reference ID: " + digiMerchantReferenceId,
                     "merchantUrls", merchantUrls);
 
             Map<String, Object> payload = new LinkedHashMap<>();
-            payload.put("merchantOrderId", merchantOrderId);
+            payload.put("merchantOrderId", paymentId);
             payload.put("amount", amountInPaise);
             payload.put("paymentFlow", paymentFlow);
 
@@ -87,7 +89,10 @@ public class PhonePePaymentChannelStrategy implements PaymentChannelStrategy {
             headers.set("X-Merchant-Id", phonepeMerchatMid);
 
             String payUrl = baseUrl + "/checkout/v2/pay";
-            log.debug("PhonePe pay request for paymentId={}, merchantOrderId={}", payment.getId(), merchantOrderId);
+            
+            log.info("PhonePe pay request for paymentId={}, merchantReferenceId={}", paymentId, digiMerchantReferenceId);
+            log.info("PhonePe pay request headers: {}", headers);
+            log.info("PhonePe pay request payload: {}", payload);
 
             ResponseEntity<Map> payResponse = restTemplate.exchange(
                     payUrl,
@@ -128,6 +133,11 @@ public class PhonePePaymentChannelStrategy implements PaymentChannelStrategy {
         form.add("grant_type", GRANT_TYPE_CLIENT_CREDENTIALS);
 
         String tokenUrl = baseUrl + "/v1/oauth/token";
+        
+        log.info("PhonePe OAuth token request to: {}", tokenUrl);
+        log.info("PhonePe OAuth token request headers: {}", headers);
+        log.info("PhonePe OAuth token request form: {}", form);
+
         ResponseEntity<Map<String, Object>> response = restTemplate.exchange(
                 tokenUrl,
                 HttpMethod.POST,
