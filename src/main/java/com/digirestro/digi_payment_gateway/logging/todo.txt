@@ -1,0 +1,20 @@
+
+// create new entity and new columns for logging all requests , respose and errors.
+// log table can be used for debugging and monitoring without accessing server logs.
+
+
+
+
+// optional data-
+
+   @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
+
+    @ManyToOne
+    @JoinColumn(name = "payment_id")
+    private PaymentEntity payment;
+
+    @ManyToOne
+    @JoinColumn(name = "merchant_id")
+    private MerchantEntity merchant;
