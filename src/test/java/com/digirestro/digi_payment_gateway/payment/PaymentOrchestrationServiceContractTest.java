@@ -3,8 +3,9 @@ package com.digirestro.digi_payment_gateway.payment;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-import com.digirestro.digi_payment_gateway.integration.api.dto.PaymentLinkRequest;
 import com.digirestro.digi_payment_gateway.merchant.entity.MerchantEntity;
+import com.digirestro.digi_payment_gateway.integration.api.dto.PaymentLinkRequest;
+import com.digirestro.digi_payment_gateway.payment.enums.PaymentOriginEnum;
 import com.digirestro.digi_payment_gateway.payment.contract.PaymentLinkOrchestrationContract;
 import com.digirestro.digi_payment_gateway.payment.entity.PaymentEntity;
 import com.digirestro.digi_payment_gateway.payment.service.PaymentOrchestrationService;
@@ -24,7 +25,10 @@ class PaymentOrchestrationServiceContractTest {
     @Test
     void generatePaymentLinkMustNotBeTransactional() throws NoSuchMethodException {
         Method method = PaymentOrchestrationService.class.getDeclaredMethod(
-                "generatePaymentLink", MerchantEntity.class, PaymentLinkRequest.class);
+                "generatePaymentLink",
+                MerchantEntity.class,
+                PaymentLinkRequest.class,
+                PaymentOriginEnum.class);
 
         assertFalse(method.isAnnotationPresent(Transactional.class));
     }

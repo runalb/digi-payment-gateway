@@ -8,10 +8,14 @@ import com.digirestro.digi_payment_gateway.merchant.entity.MerchantPaymentChanne
 import com.digirestro.digi_payment_gateway.merchant.service.MerchantService;
 import com.digirestro.digi_payment_gateway.payment.contract.PaymentLinkOrchestrationContract;
 import com.digirestro.digi_payment_gateway.payment.entity.PaymentEntity;
+import com.digirestro.digi_payment_gateway.payment.enums.PaymentOriginEnum;
 import com.digirestro.digi_payment_gateway.payment.enums.PaymentStatusEnum;
+import com.digirestro.digi_payment_gateway.payment.enums.PaymentTypeEnum;
 import com.digirestro.digi_payment_gateway.payment_channel.dto.PaymentLinkStrategyResponse;
 import com.digirestro.digi_payment_gateway.payment_channel.interfaces.PaymentChannelStrategy;
 import com.digirestro.digi_payment_gateway.payment_channel.resolver.PaymentChannelStrategyResolver;
+
+import java.util.Objects;
 
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
@@ -54,7 +58,9 @@ public class PaymentOrchestrationService {
         this.strategyResolver = strategyResolver;
     }
 
-    public PaymentLinkResponse generatePaymentLink(MerchantEntity merchant, PaymentLinkRequest request) {
+    public PaymentLinkResponse generatePaymentLink(MerchantEntity merchant, PaymentLinkRequest request, PaymentOriginEnum paymentOrigin) {
+        Objects.requireNonNull(paymentOrigin, "paymentOrigin");
+
         // Phase 1
         Long merchantId = merchant.getId();
 
@@ -74,6 +80,8 @@ public class PaymentOrchestrationService {
                 request.redirectSuccessUrl(), merchantConfig.getRedirectSuccessUrl(), "redirectSuccessUrl"));
         payment.setRedirectFailureUrl(resolveRedirectUrl(
                 request.redirectFailureUrl(), merchantConfig.getRedirectFailureUrl(), "redirectFailureUrl"));
+        payment.setPaymentType(PaymentTypeEnum.PAYLINK);
+        payment.setPaymentOrigin(paymentOrigin);
         payment.setStatus(PaymentStatusEnum.INITIATED);
         payment = paymentService.save(payment);
 

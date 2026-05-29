@@ -3,7 +3,9 @@ package com.digirestro.digi_payment_gateway.payment.entity;
 import com.digirestro.digi_payment_gateway.common.persistence.AuditableEntity;
 import com.digirestro.digi_payment_gateway.merchant.entity.MerchantEntity;
 import com.digirestro.digi_payment_gateway.merchant.entity.MerchantPaymentChannelConfigEntity;
+import com.digirestro.digi_payment_gateway.payment.enums.PaymentOriginEnum;
 import com.digirestro.digi_payment_gateway.payment.enums.PaymentStatusEnum;
+import com.digirestro.digi_payment_gateway.payment.enums.PaymentTypeEnum;
 import com.digirestro.digi_payment_gateway.payment_channel.entity.PaymentChannelEntity;
 
 import jakarta.persistence.Column;
@@ -32,6 +34,14 @@ public class PaymentEntity extends AuditableEntity {
 
     // @Column(nullable = false, columnDefinition = "uuid", unique = true)
     // private UUID paymentReferenceId;
+
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false)
+    private PaymentTypeEnum paymentType;
+
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false)
+    private PaymentOriginEnum paymentOrigin;
 
     @ManyToOne(optional = false)
     @JoinColumn(name = "merchant_id", nullable = false)

@@ -1,8 +1,9 @@
 package com.digirestro.digi_payment_gateway.integration.api.service;
 
+import com.digirestro.digi_payment_gateway.merchant.entity.MerchantEntity;
 import com.digirestro.digi_payment_gateway.integration.api.dto.PaymentLinkRequest;
 import com.digirestro.digi_payment_gateway.integration.api.dto.PaymentLinkResponse;
-import com.digirestro.digi_payment_gateway.merchant.entity.MerchantEntity;
+import com.digirestro.digi_payment_gateway.payment.enums.PaymentOriginEnum;
 import com.digirestro.digi_payment_gateway.payment.service.PaymentOrchestrationService;
 
 import org.springframework.stereotype.Service;
@@ -17,6 +18,6 @@ public class PaymentLinkIntegrationService {
     }
 
     public PaymentLinkResponse generatePaymentLink(MerchantEntity merchant, PaymentLinkRequest request) {
-        return paymentOrchestrationService.generatePaymentLink(merchant, request);
+        return paymentOrchestrationService.generatePaymentLink(merchant, request, PaymentOriginEnum.INTEGRATION);
     }
 }
