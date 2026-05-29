@@ -82,8 +82,8 @@ public class PaymentEntity extends AuditableEntity {
     @Column(columnDefinition = "TEXT")
     private String redirectFailureUrl;
 
-    @Column(columnDefinition = "TEXT")
-    private String paymentChannelRawResponseJson;
+    @Column(name = "http_exchange_correlation_id", length = 64)
+    private String httpExchangeCorrelationId;
 
     // @Column(nullable = false)
     // private Integer attempts = 0;

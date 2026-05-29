@@ -107,13 +107,11 @@ public class PhonePePaymentChannelStrategy implements PaymentChannelStrategy {
 
             String checkoutRedirectUrl = requireNonBlankString(responseBody, "redirectUrl");
             String orderId = requireNonBlankString(responseBody, "orderId");
-            String rawResponseJson = objectMapper.writeValueAsString(responseBody);
 
             return new CheckoutStrategyResponse(
                     checkoutRedirectUrl,
                     orderId,
-                    PaymentStatusEnum.CHECKOUT_URL_GENERATED,
-                    rawResponseJson);
+                    PaymentStatusEnum.CHECKOUT_URL_GENERATED);
         } catch (IllegalArgumentException ex) {
             throw ex;
         } catch (Exception ex) {

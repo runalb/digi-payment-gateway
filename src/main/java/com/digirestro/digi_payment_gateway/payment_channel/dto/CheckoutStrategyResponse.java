@@ -5,5 +5,4 @@ import com.digirestro.digi_payment_gateway.payment.enums.PaymentStatusEnum;
 public record CheckoutStrategyResponse(
         String paymentChannelCheckoutUrl,
         String paymentChannelTxnId,
-        PaymentStatusEnum status,
-        String paymentChannelRawResponseJson) {}
+        PaymentStatusEnum status) {}

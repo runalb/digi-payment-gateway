@@ -2,6 +2,7 @@ package com.digirestro.digi_payment_gateway.payment.service;
 
 import com.digirestro.digi_payment_gateway.integration.api.dto.CheckoutRequest;
 import com.digirestro.digi_payment_gateway.integration.api.dto.CheckoutResponse;
+import com.digirestro.digi_payment_gateway.logging.support.HttpExchangeCorrelation;
 import com.digirestro.digi_payment_gateway.merchant.entity.MerchantConfigEntity;
 import com.digirestro.digi_payment_gateway.merchant.entity.MerchantEntity;
 import com.digirestro.digi_payment_gateway.merchant.entity.MerchantPaymentChannelConfigEntity;
@@ -84,6 +85,10 @@ public class PaymentOrchestrationService {
         payment.setPaymentType(PaymentTypeEnum.CHECKOUT);
         payment.setPaymentOrigin(paymentOrigin);
         payment.setStatus(PaymentStatusEnum.INITIATED);
+        String correlationId = HttpExchangeCorrelation.currentOrNull();
+        if (StringUtils.hasText(correlationId)) {
+            payment.setHttpExchangeCorrelationId(correlationId.trim());
+        }
         payment = paymentService.save(payment);
 
         // Phase 2
@@ -111,7 +116,6 @@ public class PaymentOrchestrationService {
         paymentToUpdate.setPaymentChannelCheckoutUrl(strategyResponse.paymentChannelCheckoutUrl());
         paymentToUpdate.setPaymentChannelTxnId(strategyResponse.paymentChannelTxnId());
         paymentToUpdate.setStatus(strategyResponse.status());
-        paymentToUpdate.setPaymentChannelRawResponseJson(strategyResponse.paymentChannelRawResponseJson());
         return paymentService.save(paymentToUpdate);
     }
 

@@ -40,7 +40,7 @@ public class ApiKeyAuthenticationFilter extends OncePerRequestFilter {
             filterChain.doFilter(request, response);
             return;
         }
-        if (!path.startsWith(integrationPathPrefix)) {
+        if (!requiresApiKeyAuth(path)) {
             filterChain.doFilter(request, response);
             return;
         }
@@ -63,6 +63,10 @@ public class ApiKeyAuthenticationFilter extends OncePerRequestFilter {
                 List.of(new SimpleGrantedAuthority("ROLE_INTEGRATION")));
         SecurityContextHolder.getContext().setAuthentication(auth);
         filterChain.doFilter(request, response);
+    }
+
+    private boolean requiresApiKeyAuth(String path) {
+        return path != null && path.startsWith(integrationPathPrefix);
     }
 
     private void unauthorized(HttpServletResponse response, String message) throws IOException {
