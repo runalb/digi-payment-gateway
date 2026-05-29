@@ -26,9 +26,10 @@ public class PaymentChannelWebhookEntity extends AuditableEntity {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @ManyToOne
-    @JoinColumn(name = "payment_id")
-    private PaymentEntity payment;
+    // Temporary removed payment id
+    // @ManyToOne
+    // @JoinColumn(name = "payment_id")
+    // private PaymentEntity payment;
 
     @ManyToOne
     @JoinColumn(name = "payment_channel_id")
