@@ -56,7 +56,7 @@ public class PaymentEntity extends AuditableEntity {
     private PaymentChannelEntity paymentChannel;
 
     @Column(nullable = false)
-    private String merchantReferencePaymentId;
+    private String merchantReferenceId;
 
     private String paymentChannelTxnId;
 

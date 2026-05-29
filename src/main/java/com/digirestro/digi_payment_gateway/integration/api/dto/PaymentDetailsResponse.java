@@ -12,7 +12,7 @@ public record PaymentDetailsResponse(
         String currency,
         PaymentStatusEnum status,
         Long merchantId,
-        String merchantReferencePaymentId,
+        String merchantReferenceId,
         Long paymentChannelId,
         PaymentChannelNameEnum paymentChannelName,
         String paymentChannelTxnId,

@@ -6,5 +6,5 @@ public record WebhookStrategyResponse(
         PaymentStatusEnum status,
         Long paymentId,
         String paymentChannelTxnId,
-        String merchantReferencePaymentId
+        String merchantReferenceId
 ) {}

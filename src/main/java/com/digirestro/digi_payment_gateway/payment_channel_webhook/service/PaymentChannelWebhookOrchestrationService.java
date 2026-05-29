@@ -39,6 +39,6 @@ public class PaymentChannelWebhookOrchestrationService {
     //             payment.getStatus(),
     //             payment.getId(),
     //             payment.getPaymentChannelTxnId(),
-    //             payment.getMerchantReferencePaymentId());
+    //             payment.getMerchantReferenceId());
     // }
 }
