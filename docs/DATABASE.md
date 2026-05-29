@@ -2,7 +2,9 @@
 
 **Audience:** Database administrators, SRE, and backend engineers reviewing schema, backups, and migrations.
 
-**Source of truth (application mapping):** JPA entities under `src/main/java/com/digirestro/digi_payment_gateway/entity/`.
+**Source of truth (application mapping):** JPA entities under `src/main/java/com/digirestro/digi_payment_gateway/**/entity/`.
+
+**Related:** [ARCHITECTURE.md](./ARCHITECTURE.md) (flows and module layout).
 
 **Target DBMS:** PostgreSQL (see `application-dev.properties` for connection settings).
 
@@ -14,8 +16,21 @@
 | ----- | ----- |
 | **ORM** | Spring Data JPA / Hibernate |
 | **Development** | `spring.jpa.hibernate.ddl-auto=update` may apply DDL at startup — convenient for dev, **not** a controlled migration for production. |
-| **Physical column naming** | Spring Boot’s default Hibernate physical naming usually maps Java camelCase to **snake_case** (e.g. `apiKey` → `api_key`, `passwordHash` → `password_hash`) unless you override `spring.jpa.hibernate.naming.*`. **Exception:** `AuditableEntity` sets explicit names **`createdDateTime`** and **`updatedDateTime`** (see §3.1) — those columns are not snake_case. **Always validate** against `information_schema.columns` or Hibernate-exported DDL. |
+| **Physical column naming** | Spring Boot’s default Hibernate physical naming usually maps Java camelCase to **snake_case** (e.g. `apiKey` → `api_key`, `paymentReferenceId` → `payment_reference_id`) unless you override `spring.jpa.hibernate.naming.*`. **Exception:** `AuditableEntity` sets explicit names **`createdDateTime`** and **`updatedDateTime`** (see §3.1) — those columns are not snake_case. **Always validate** against `information_schema.columns` or Hibernate-exported DDL. |
 | **Auditing** | `@EnableJpaAuditing` on `DigiPaymentGatewayApplication`; all entities extending `AuditableEntity` get the columns in §3.1. |
+| **Tables in codebase** | Seven mapped tables (§3.2–§3.8). No `users`, `user_merchant`, or `payment_channel_api_log` entities in the current application. |
+
+### 1.1 Entity → table map
+
+| JPA entity | Package | Table |
+| ---------- | ------- | ----- |
+| `MerchantEntity` | `merchant.entity` | `merchant` |
+| `MerchantConfigEntity` | `merchant.entity` | `merchant_config` |
+| `MerchantPaymentChannelConfigEntity` | `merchant.entity` | `merchant_payment_channel_config` |
+| `PaymentChannelEntity` | `payment_channel.entity` | `payment_channel` |
+| `PaymentEntity` | `payment.entity` | `payment` |
+| `PaymentChannelWebhookEntity` | `payment_channel_webhook.entity` | `payment_channel_webhook` |
+| `MerchantWebhookEntity` | `merchant_webhook.entity` | `merchant_webhook` |
 
 ---
 
@@ -25,73 +40,50 @@
 
 ```mermaid
 erDiagram
-  users ||--o{ user_merchant : has_access_to
-  merchant ||--o{ user_merchant : managed_by
-
-  merchant ||--|| merchant_config : has_config
-  merchant ||--o{ merchant_channel_config : channel_setup
-  payment_channel ||--o{ merchant_channel_config : configured_for
+  merchant ||--o| merchant_config : has_config
+  merchant ||--o{ merchant_payment_channel_config : channel_setup
+  payment_channel ||--o{ merchant_payment_channel_config : configured_for
 
   merchant ||--o{ payment : creates
   payment_channel ||--o{ payment : processes
-  merchant_channel_config ||--o{ payment : uses_config
+  merchant_payment_channel_config ||--o{ payment : uses_config
 
-  payment ||--o{ webhook_incoming_log : receives
-  payment ||--o{ webhook_merchant_log : notifies
-  payment ||--o{ payment_channel_api_log : api_calls
+  payment ||--o{ payment_channel_webhook : receives
+  payment ||--o{ merchant_webhook : notifies
+  merchant ||--o{ merchant_webhook : optional_link
+  merchant ||--o{ payment_channel_webhook : optional_link
 ```
 
 ### 2.2 Detailed ER diagram
 
-High-level relationships (cardinality as enforced or implied by the JPA model):
-
 ```mermaid
 erDiagram
-  users ||--o{ user_merchant : "user_id"
-  merchant ||--o{ user_merchant : "merchant_id"
-  merchant ||--|| merchant_config : "1_to_1"
-  merchant ||--o{ merchant_channel_config : "merchant_id"
-  payment_channel ||--o{ merchant_channel_config : "payment_channel_id"
+  merchant ||--o| merchant_config : "merchant_id"
+  merchant ||--o{ merchant_payment_channel_config : "merchant_id"
+  payment_channel ||--o{ merchant_payment_channel_config : "payment_channel_id"
   merchant ||--o{ payment : "merchant_id"
-  merchant_channel_config ||--o{ payment : "channel_config_id"
+  merchant_payment_channel_config ||--o{ payment : "merchant_payment_channel_config_id"
   payment_channel ||--o{ payment : "payment_channel_id"
-  payment ||--o{ webhook_incoming_log : "payment_id"
-  payment_channel ||--o{ webhook_incoming_log : "payment_channel_id"
-  payment ||--o{ webhook_merchant_log : "payment_id"
-  payment_channel ||--o{ webhook_merchant_log : "payment_channel_id"
-  webhook_incoming_log ||--o{ webhook_merchant_log : "webhook_incoming_log_id"
-  payment ||--o{ payment_channel_api_log : "payment_id"
-  payment_channel ||--o{ payment_channel_api_log : "payment_channel_id"
-  merchant_channel_config ||--o{ payment_channel_api_log : "channel_config_id"
-
-  users {
-    bigint id PK
-    string email UK
-    string password_hash
-    string name
-    boolean is_active
-    boolean is_verified
-    timestamp createdDateTime
-    timestamp updatedDateTime
-  }
+  payment ||--o{ payment_channel_webhook : "payment_id"
+  payment_channel ||--o{ payment_channel_webhook : "payment_channel_id"
+  merchant ||--o{ payment_channel_webhook : "merchant_id"
+  payment ||--o{ merchant_webhook : "payment_id"
+  payment_channel ||--o{ merchant_webhook : "payment_channel_id"
+  merchant ||--o{ merchant_webhook : "merchant_id"
 
   merchant {
     bigint id PK
     string name
     string api_key UK
+    string email UK
     boolean is_active
     timestamp createdDateTime
     timestamp updatedDateTime
   }
 
-  user_merchant {
-    bigint user_id PK
-    bigint merchant_id PK
-  }
-
   merchant_config {
     bigint id PK
-    bigint merchant_id FK
+    bigint merchant_id FK UK
     text webhook_url
     varchar currency
     timestamp createdDateTime
@@ -106,7 +98,7 @@ erDiagram
     timestamp updatedDateTime
   }
 
-  merchant_channel_config {
+  merchant_payment_channel_config {
     bigint id PK
     bigint merchant_id FK
     bigint payment_channel_id FK
@@ -118,58 +110,42 @@ erDiagram
 
   payment {
     bigint id PK
+    uuid payment_reference_id UK
     bigint merchant_id FK
-    bigint channel_config_id FK
+    bigint merchant_payment_channel_config_id FK
     bigint payment_channel_id FK
-    string merchant_reference_payment_id
+    string merchant_reference_id
     string payment_channel_txn_id
     numeric amount
     varchar currency
     varchar status
-    string payment_link_url
+    string payment_channel_pay_link
     text merchant_metadata_json
     timestamp createdDateTime
     timestamp updatedDateTime
   }
 
-  webhook_incoming_log {
+  payment_channel_webhook {
     bigint id PK
     bigint payment_id FK
     bigint payment_channel_id FK
+    bigint merchant_id FK
     text raw_payload
     string status
     timestamp createdDateTime
     timestamp updatedDateTime
   }
 
-  webhook_merchant_log {
+  merchant_webhook {
     bigint id PK
-    bigint webhook_incoming_log_id FK
     bigint payment_id FK
     bigint payment_channel_id FK
+    bigint merchant_id FK
     string webhook_url
     text payload
     string status
     integer retry_count
     timestamp last_attempt_at
-    timestamp createdDateTime
-    timestamp updatedDateTime
-  }
-
-  payment_channel_api_log {
-    bigint id PK
-    bigint payment_id FK
-    bigint payment_channel_id FK
-    bigint channel_config_id FK
-    string operation
-    string request_method
-    string request_url
-    text request_headers
-    text request_body
-    int response_status_code
-    text response_headers
-    text response_body
-    int duration_ms
     timestamp createdDateTime
     timestamp updatedDateTime
   }
@@ -179,17 +155,16 @@ erDiagram
 
 | From | To | Cardinality | Implementation notes |
 | ---- | -- | ----------- | -------------------- |
-| `users` | `merchant` | **M:N** | Join table `user_merchant` (`user_id`, `merchant_id`). Composite PK recommended for DBA control (JPA may not declare PK on join table — verify DDL). |
 | `merchant` | `merchant_config` | **1:0..1** | `merchant_config.merchant_id` **UNIQUE** + NOT NULL → at most one config row per merchant. |
-| `merchant` | `merchant_channel_config` | **1:N** | Multiple channel configs per merchant (e.g. per `payment_channel`). |
-| `payment_channel` | `merchant_channel_config` | **1:N** | Same channel can be configured for many merchants. |
+| `merchant` | `merchant_payment_channel_config` | **1:N** | Multiple channel configs per merchant; orchestration currently loads **one** active row via `findByMerchant_IdAndIsActiveTrue`. |
+| `payment_channel` | `merchant_payment_channel_config` | **1:N** | Same channel can be configured for many merchants. |
 | `merchant` | `payment` | **1:N** | |
-| `merchant_channel_config` | `payment` | **1:N** | |
-| `payment_channel` | `payment` | **1:N** | `payment.payment_channel_id` references the channel row; channel key is `payment_channel.name` (enum string), not duplicated on `payment`. |
-| `payment` | `webhook_incoming_log` | **1:N** | `payment_id` nullable on entity → optional FK in DB. |
-| `payment` | `webhook_merchant_log` | **1:N** | `payment_id` NOT NULL. |
-| `webhook_incoming_log` | `webhook_merchant_log` | **1:N** | `webhook_incoming_log_id` nullable. |
-| `payment` | `payment_channel_api_log` | **1:N** | `payment_id` nullable. |
+| `merchant_payment_channel_config` | `payment` | **1:N** | FK column `merchant_payment_channel_config_id`. |
+| `payment_channel` | `payment` | **1:N** | Channel key is `payment_channel.name` (`PaymentChannelNameEnum` string); not duplicated on `payment`. |
+| `payment` | `payment_channel_webhook` | **1:N** | `payment_id` nullable on entity → optional FK in DB. |
+| `payment` | `merchant_webhook` | **1:N** | `payment_id` NOT NULL. |
+| `merchant` | `merchant_webhook` | **1:N** | `merchant_id` nullable on entity. |
+| `merchant` | `payment_channel_webhook` | **1:N** | `merchant_id` nullable on entity. |
 
 ---
 
@@ -199,221 +174,189 @@ Naming below: non-audit fields use **snake_case** as typically produced by Sprin
 
 ### 3.1 Auditing columns (inherited)
 
-Present on every entity that extends `AuditableEntity` (`UserEntity`, `MerchantEntity`, `MerchantConfigEntity`, `PaymentChannelEntity`, `MerchantChannelConfigEntity`, `PaymentEntity`, `WebhookIncomingLogEntity`, `WebhookMerchantLogEntity`, `PaymentChannelApiLogEntity`). Mapped in `AuditableEntity` with explicit `@Column` names:
+Present on every entity that extends `AuditableEntity`:
+
+`MerchantEntity`, `MerchantConfigEntity`, `MerchantPaymentChannelConfigEntity`, `PaymentChannelEntity`, `PaymentEntity`, `PaymentChannelWebhookEntity`, `MerchantWebhookEntity`.
+
+Mapped in `common.persistence.AuditableEntity` with explicit `@Column` names:
 
 | Column | Type | Nullable | Description |
 | ------ | ---- | -------- | ----------- |
 | `createdDateTime` | `timestamp` | NOT NULL | Set on insert (`@CreatedDate`). |
 | `updatedDateTime` | `timestamp` | NOT NULL | Updated on each change (`@LastModifiedDate`). |
 
-On PostgreSQL, Hibernate typically emits quoted identifiers for these names so casing matches the mapping. Per-table “+ audit” rows in §3.2–§3.11 refer to these two columns.
+On PostgreSQL, Hibernate typically emits quoted identifiers for these names so casing matches the mapping. Per-table “+ audit” rows in §3.2–§3.8 refer to these two columns.
 
 ---
 
-### 3.2 `users`
+### 3.2 `merchant`
 
-Back-office / UI users; many-to-many with merchants.
+Core merchant record; API key for server-to-server integration (`MerchantEntity`).
 
 | Column | Type | Constraints | Description |
 | ------ | ---- | ----------- | ----------- |
 | `id` | `bigint` | PK, identity | Surrogate key. |
-| `email` | `varchar` | NOT NULL, UNIQUE | Login identifier. |
-| `password_hash` | `varchar` | NOT NULL | Password storage (e.g. BCrypt). |
-| `name` | `varchar` | NOT NULL | Display name. |
-| `is_active` | `boolean` | NOT NULL | Account enabled. |
-| `is_verified` | `boolean` | NOT NULL | Verification flag. |
+| `name` | `varchar` | NOT NULL | Display / business name. |
+| `api_key` | `varchar` | NOT NULL, UNIQUE | Merchant API key (e.g. UUID string). Used by `ApiKeyAuthenticationFilter`. |
+| `email` | `varchar` | NOT NULL, UNIQUE | Merchant contact / identifier. |
+| `is_active` | `boolean` | NOT NULL | Default `true`. Inactive merchants fail API key auth. |
 | + audit | `createdDateTime`, `updatedDateTime` | NOT NULL | §3.1 |
 
-**Indexes (recommended):** PK on `id`, UNIQUE on `email`.
+**Indexes (recommended):** PK on `id`; UNIQUE on `api_key`; UNIQUE on `email`.
 
 ---
 
-### 3.3 `user_merchant`
+### 3.3 `merchant_config`
 
-Join table for `users` ↔ `merchant`.
-
-| Column | Type | Constraints | Description |
-| ------ | ---- | ----------- | ----------- |
-| `user_id` | `bigint` | FK → `users.id` | |
-| `merchant_id` | `bigint` | FK → `merchant.id` | |
-
-**Indexes (recommended):** Composite PK `(user_id, merchant_id)`; index on `merchant_id` for reverse lookups.
-
----
-
-### 3.4 `merchant`
-
-Core merchant record; API key for server-to-server integration.
-
-| Column | Type | Constraints | Description |
-| ------ | ---- | ----------- | ----------- |
-| `id` | `bigint` | PK, identity | |
-| `name` | `varchar` | NOT NULL | |
-| `api_key` | `varchar` | NOT NULL, UNIQUE | Merchant API key (e.g. UUID string). |
-| `is_active` | `boolean` | NOT NULL | |
-| + audit | `createdDateTime`, `updatedDateTime` | NOT NULL | §3.1 |
-
-**Indexes:** PK, UNIQUE(`api_key`).
-
----
-
-### 3.5 `merchant_config`
-
-**One row per merchant** (integration defaults and callbacks).
+**One row per merchant** (integration defaults and outbound webhook URL).
 
 | Column | Type | Constraints | Description |
 | ------ | ---- | ----------- | ----------- |
 | `id` | `bigint` | PK, identity | |
 | `merchant_id` | `bigint` | NOT NULL, FK → `merchant.id`, **UNIQUE** | Enforces 1:1. |
-| `webhook_url` | `text` | NULL | Consumer webhook URL for outbound notifications. |
-| `currency` | `varchar(3)` | NOT NULL | ISO 4217 alphabetic code (e.g. `USD`). Used when creating payments / links. |
+| `webhook_url` | `text` | NULL | Consumer webhook URL for outbound notifications (delivery not fully wired in app). |
+| `currency` | `varchar(3)` | NOT NULL | ISO 4217 alphabetic code (e.g. `USD`). Copied onto `payment.currency` at link creation. |
 | + audit | `createdDateTime`, `updatedDateTime` | NOT NULL | §3.1 |
 
 **Indexes:** UNIQUE(`merchant_id`); FK to `merchant`.
 
 ---
 
-### 3.6 `payment_channel`
+### 3.4 `payment_channel`
 
-Catalog of integrated payment providers. Mapped by **`PaymentChannelEntity`**, which **extends `AuditableEntity`** (same audit columns as §3.1).
+Catalog of integrated payment providers (`PaymentChannelEntity`).
 
 | Column | Type | Constraints | Description |
 | ------ | ---- | ----------- | ----------- |
 | `id` | `bigint` | PK, identity | |
-| `name` | `varchar` | NOT NULL, UNIQUE | Enum string — see §4.1. |
-| `is_active` | `boolean` | NOT NULL | Whether this channel is available for new routing / configuration. |
+| `name` | `varchar` | NOT NULL, UNIQUE | Enum string — see §4.1 (`PaymentChannelNameEnum`). |
+| `is_active` | `boolean` | NOT NULL | Whether this channel is available for configuration / routing. |
 | + audit | `createdDateTime`, `updatedDateTime` | NOT NULL | §3.1 |
 
 ---
 
-### 3.7 `merchant_channel_config`
+### 3.5 `merchant_payment_channel_config`
 
-Per-merchant, per-channel credentials and settings (often JSON).
+Per-merchant, per-channel credentials and settings (`MerchantPaymentChannelConfigEntity`).
 
 | Column | Type | Constraints | Description |
 | ------ | ---- | ----------- | ----------- |
 | `id` | `bigint` | PK, identity | |
 | `merchant_id` | `bigint` | NOT NULL, FK → `merchant.id` | |
 | `payment_channel_id` | `bigint` | NOT NULL, FK → `payment_channel.id` | |
-| `is_active` | `boolean` | NOT NULL | Only active configs should be used by orchestration. |
+| `is_active` | `boolean` | NOT NULL | Orchestration uses `findByMerchant_IdAndIsActiveTrue` — expect **at most one** active row per merchant in practice. |
 | `config_json` | `text` | NULL | Channel-specific secrets/config (protect at rest). |
 | + audit | `createdDateTime`, `updatedDateTime` | NOT NULL | §3.1 |
 
-**Indexes (recommended):** `(merchant_id, is_active)` for “resolve active config” queries; FKs.
+**Indexes (recommended):** `(merchant_id, is_active)` for active-config lookup; FKs on `merchant_id`, `payment_channel_id`.
 
 ---
 
-### 3.8 `payment`
+### 3.6 `payment`
 
-Payment attempt / transaction record.
+Payment attempt / transaction record (`PaymentEntity`).
 
 | Column | Type | Constraints | Description |
 | ------ | ---- | ----------- | ----------- |
-| `id` | `bigint` | PK, identity | Internal payment id (exposed to consumers as appropriate). |
+| `id` | `bigint` | PK, identity | Internal id; exposed in integration APIs. |
+| `payment_reference_id` | `uuid` | NOT NULL, UNIQUE | Gateway-generated correlation id (set at creation). |
 | `merchant_id` | `bigint` | NOT NULL, FK → `merchant.id` | |
-| `channel_config_id` | `bigint` | NOT NULL, FK → `merchant_channel_config.id` | |
-| `payment_channel_id` | `bigint` | NOT NULL, FK → `payment_channel.id` | Channel key is **`payment_channel.name`** (see §4.1); there is no separate name column on `payment`. |
-| `merchant_reference_payment_id` | `varchar` | NOT NULL | Idempotent / correlation id from consumer. |
-| `payment_channel_txn_id` | `varchar` | NULL | Provider transaction id after link creation / updates. |
-| `amount` | `numeric(19,4)` | NOT NULL | |
-| `currency` | `varchar(3)` | NOT NULL | Copied from `merchant_config.currency` at creation (not from raw API body in current design). |
-| `status` | `varchar` | NOT NULL | Enum string — see §4. Default `PENDING`. |
-| `payment_link_url` | `varchar` | NULL | Generated checkout URL. |
-| `merchant_metadata_json` | `text` | NULL | Opaque merchant metadata. |
+| `merchant_payment_channel_config_id` | `bigint` | NOT NULL, FK → `merchant_payment_channel_config.id` | Config used for this payment. |
+| `payment_channel_id` | `bigint` | NOT NULL, FK → `payment_channel.id` | Denormalized channel reference; name resolved via `payment_channel.name`. |
+| `merchant_reference_id` | `varchar` | NOT NULL | Idempotent / correlation id from merchant integration API. |
+| `payment_channel_txn_id` | `varchar` | NULL | Provider transaction id after link creation / webhook updates. |
+| `amount` | `numeric(19,4)` | NOT NULL | From integration request. |
+| `currency` | `varchar(3)` | NOT NULL | Copied from `merchant_config.currency` at creation (not from request body). |
+| `status` | `varchar` | NOT NULL | Enum string — see §4.2. Default `INITIATED`. |
+| `payment_channel_pay_link` | `varchar` | NULL | Checkout URL returned by channel strategy. |
+| `merchant_metadata_json` | `text` | NULL | Opaque merchant metadata from integration request. |
 | + audit | `createdDateTime`, `updatedDateTime` | NOT NULL | §3.1 |
 
-**Indexes (recommended):** FK indexes; optional UNIQUE(`merchant_id`, `merchant_reference_payment_id`) if business rules require global idempotency per merchant.
+**Indexes (recommended):** FK indexes; UNIQUE on `payment_reference_id`; optional UNIQUE(`merchant_id`, `merchant_reference_id`) if product requires idempotency per merchant.
+
+**Lifecycle (application):** `INITIATED` (phase 1 commit) → `CHECKOUT_GENERATED` (after successful strategy call) → terminal states via webhooks (planned).
 
 ---
 
-### 3.9 `webhook_incoming_log`
+### 3.7 `payment_channel_webhook`
 
-Inbound webhook payload audit from payment channels.
+Inbound webhook payload audit from payment channels (`PaymentChannelWebhookEntity`). Persistence/orchestration from controllers is **not fully implemented** yet.
 
 | Column | Type | Constraints | Description |
 | ------ | ---- | ----------- | ----------- |
 | `id` | `bigint` | PK, identity | |
 | `payment_id` | `bigint` | FK → `payment.id`, NULL | Optional link to payment. |
 | `payment_channel_id` | `bigint` | FK → `payment_channel.id`, NULL | |
-| `raw_payload` | `text` | NOT NULL | Raw body. |
+| `merchant_id` | `bigint` | FK → `merchant.id`, NULL | Optional denormalized merchant reference. |
+| `raw_payload` | `text` | NOT NULL | Raw inbound body. |
 | `status` | `varchar` | NOT NULL | Application-defined processing status. |
 | + audit | `createdDateTime`, `updatedDateTime` | NOT NULL | §3.1 |
 
 ---
 
-### 3.10 `webhook_merchant_log`
+### 3.8 `merchant_webhook`
 
-Outbound calls to the consumer webhook URL (and retries).
+Outbound calls to the merchant webhook URL (`MerchantWebhookEntity`). Delivery/retry worker **not implemented** in current application.
 
 | Column | Type | Constraints | Description |
 | ------ | ---- | ----------- | ----------- |
 | `id` | `bigint` | PK, identity | |
-| `webhook_incoming_log_id` | `bigint` | FK → `webhook_incoming_log.id`, NULL | |
 | `payment_id` | `bigint` | NOT NULL, FK → `payment.id` | |
 | `payment_channel_id` | `bigint` | NOT NULL, FK → `payment_channel.id` | |
-| `webhook_url` | `varchar` | NOT NULL | URL used for this attempt (copy at send time). |
-| `payload` | `text` | NOT NULL | JSON (or similar) sent to consumer. |
-| `status` | `varchar` | NOT NULL | e.g. PENDING / SUCCESS / FAILED. |
-| `retry_count` | `integer` | NOT NULL | Default 0. |
-| `last_attempt_at` | `timestamp` | NULL | |
+| `merchant_id` | `bigint` | FK → `merchant.id`, NULL | Optional merchant reference. |
+| `webhook_url` | `varchar` | NOT NULL | URL used for this attempt (snapshot at send time). |
+| `payload` | `text` | NOT NULL | JSON (or similar) sent to merchant. |
+| `status` | `varchar` | NOT NULL | e.g. `PENDING` / `SUCCESS` / `FAILED` (application-defined). |
+| `retry_count` | `integer` | NOT NULL | Default `0`. |
+| `last_attempt_at` | `timestamp` | NULL | Last delivery attempt. |
 | + audit | `createdDateTime`, `updatedDateTime` | NOT NULL | §3.1 |
 
----
-
-### 3.11 `payment_channel_api_log`
-
-Outbound HTTP audit to payment channel APIs.
-
-| Column | Type | Constraints | Description |
-| ------ | ---- | ----------- | ----------- |
-| `id` | `bigint` | PK, identity | |
-| `payment_id` | `bigint` | FK → `payment.id`, NULL | |
-| `payment_channel_id` | `bigint` | FK → `payment_channel.id`, NULL | |
-| `channel_config_id` | `bigint` | FK → `merchant_channel_config.id`, NULL | |
-| `operation` | `varchar` | NOT NULL | e.g. `CREATE_PAYMENT_LINK`. |
-| `request_method` | `varchar` | NOT NULL | GET, POST, … |
-| `request_url` | `varchar` | NOT NULL | |
-| `request_headers` | `text` | NULL | Mask secrets in application layer. |
-| `request_body` | `text` | NULL | |
-| `response_status_code` | `integer` | NULL | |
-| `response_headers` | `text` | NULL | |
-| `response_body` | `text` | NULL | |
-| `duration_ms` | `integer` | NULL | |
-| + audit | `createdDateTime`, `updatedDateTime` | NOT NULL | §3.1 |
-
-**Retention:** Log tables can grow quickly — define **retention/archival** policy (partitioning by month, TTL job, etc.).
+**Retention:** Webhook log tables can grow quickly — define **retention/archival** policy (partitioning by month, TTL job, etc.).
 
 ---
 
 ## 4. Enumerated values (application layer)
 
-Stored as **strings** in VARCHAR columns (`EnumType.STRING`).
+Stored as **strings** in VARCHAR columns (`@Enumerated(EnumType.STRING)`).
 
 ### 4.1 `payment_channel.name` — `PaymentChannelNameEnum`
 
-`XPLORPAY`, `PAYMOB`, `STRIPE`, `RAZORPAY`, `TEST`
+Current enum values in code:
 
-If the database was created with an older CHECK constraint (for example only `DUMMY` or without `TEST`), manual inserts or Hibernate may fail with:
+`STRIPE`, `RAZORPAY`, `PHONEPE`, `PAYTM`, `GOOGLE_PAY`, `XPLORPAY`, `PAYMOB`, `TEST`
 
-`violates check constraint "payment_channel_name_check"`.
+Each value used in production data should have:
 
-Reconcile the constraint with the enum by running:
+1. A row in `payment_channel` with `name` = enum name and `is_active = true` where appropriate.
+2. A Spring `@Component` implementing `PaymentChannelStrategy` (only `TEST` is fully implemented today).
+
+**Legacy CHECK constraint:** Older databases may have `payment_channel_name_check` allowing a smaller value set (e.g. `DUMMY`). If inserts fail with:
+
+`violates check constraint "payment_channel_name_check"`
+
+run:
 
 `scripts/sql/postgresql/update-payment-channel-name-check.sql`
 
-If any row still uses `DUMMY`, update it to `TEST` before applying the script (see comment in that file).
+That script **drops** the constraint permanently (it does not add a replacement CHECK). Migrate any `DUMMY` rows to `TEST` before relying on new channel names.
 
 ### 4.2 `payment.status` — `PaymentStatusEnum`
 
-`PENDING`, `SUCCESS`, `FAILED`, `CANCELLED`, `EXPIRED`
+`INITIATED`, `CHECKOUT_GENERATED`, `SUCCESS`, `FAILED`, `REFUNDED`, `VOIDED`
+
+Default on new payments: `INITIATED`.
 
 ---
 
 ## 5. Operational checklist for DBAs
 
-1. **FK consistency:** Nullable FKs on log tables allow partial records; monitor orphan rates if you add NOT NULL constraints later.
-2. **1:1 enforcement:** Rely on **UNIQUE** constraint on `merchant_config.merchant_id` (duplicate rows must fail).
+1. **Active channel config:** `MerchantPaymentChannelConfigRepository.findByMerchant_IdAndIsActiveTrue` returns a single `Optional` — ensure merchants have exactly one active config row for link generation, or orchestration will fail with `EntityNotFoundException`.
+2. **1:1 merchant config:** Rely on **UNIQUE** on `merchant_config.merchant_id`.
 3. **Currency:** `merchant_config.currency` and `payment.currency` should stay aligned with product rules (ISO 4217).
+4. **Payment reference:** `payment.payment_reference_id` is UUID and UNIQUE — use for external correlation where appropriate.
+5. **FK nullability:** Nullable FKs on `payment_channel_webhook` allow partial audit rows; monitor orphans if tightening constraints.
+6. **Secrets:** `merchant_payment_channel_config.config_json` may contain API keys — encrypt at rest and mask in logs.
+7. **Schema drift:** Validate column names against live DDL after Hibernate upgrades; audit columns keep camelCase names by design.
 
 ---
 
@@ -422,5 +365,6 @@ If any row still uses `DUMMY`, update it to `TEST` before applying the script (s
 | Version | Date | Author / note | Changes |
 | ------- | ---- | ------------- | ------- |
 | 1.0 | 2025-03-23 | Engineering | Initial DBA-oriented schema doc from JPA entities. |
-| 1.1 | 2025-03-23 | Engineering | `payment_channel`: `PaymentChannelEntity` extends `AuditableEntity`; document `is_active` and audit columns. |
-| 1.2 | 2026-03-25 | Engineering | Align with JPA: audit columns **`createdDateTime`** / **`updatedDateTime`** (`AuditableEntity`); remove obsolete `payment.payment_channel_name`; ER diagram and §1 naming notes; `@EnableJpaAuditing` reference. |
+| 1.1 | 2025-03-23 | Engineering | `payment_channel`: audit columns; `is_active`. |
+| 1.2 | 2026-03-25 | Engineering | Audit column naming; remove obsolete `payment.payment_channel_name`. |
+| 2.0 | 2026-05-27 | Engineering | Align with current codebase: table renames (`merchant_payment_channel_config`, `payment_channel_webhook`, `merchant_webhook`); remove `users` / `user_merchant` / `payment_channel_api_log`; add `merchant.email`, `payment.payment_reference_id`, `payment.payment_channel_pay_link`; update enums and CHECK constraint script behavior; entity path map. |

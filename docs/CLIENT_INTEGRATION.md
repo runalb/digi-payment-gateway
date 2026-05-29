@@ -97,8 +97,8 @@ sequenceDiagram
     participant Customer as Customer
     participant Channel as Payment channel
 
-    App->>API: POST /api/v1/integration/payment-link/generate<br/>(X-API-Key)
-    API-->>App: 201 Created — paymentChannelPayLink, paymentId
+    App->>API: POST /api/v1/integration/checkout/generate<br/>(X-API-Key)
+    API-->>App: 201 Created — checkoutUrl, paymentId
     App->>Customer: Share payment link
     Customer->>Channel: Opens link and completes payment
     Channel->>API: Payment result (channel callback)
@@ -117,7 +117,7 @@ sequenceDiagram
 **Status progression (typical happy path)**
 
 1. `INITIATED` — payment record created internally
-2. `PAYMENT_LINK_GENERATED` — checkout link ready (returned to you)
+2. `CHECKOUT_GENERATED` — checkout link ready (returned to you)
 3. `SUCCESS` or `FAILED` — final outcome (sent to your webhook)
 
 ---
@@ -148,7 +148,7 @@ Integration endpoints live under `/api/v1/integration/` and require the merchant
 **Example**
 
 ```http
-POST /api/v1/integration/payment-link/generate HTTP/1.1
+POST /api/v1/integration/checkout/generate HTTP/1.1
 Host: api.your-gateway.example
 X-API-Key: b4bdb71a-51c5-4565-985d-e0c13f72b970
 Content-Type: application/json
@@ -185,7 +185,7 @@ Create a payment and receive a channel-specific URL for the customer to complete
 |             |                                             |
 | ----------- | ------------------------------------------- |
 | **Method**  | `POST`                                      |
-| **Path**    | `/api/v1/integration/payment-link/generate` |
+| **Path**    | `/api/v1/integration/checkout/generate` |
 | **Auth**    | `X-API-Key`                                 |
 | **Success** | `201 Created`                               |
 
@@ -195,7 +195,7 @@ Create a payment and receive a channel-specific URL for the customer to complete
 
 | Field                        | Type   | Required | Description                                                                                   |
 | ---------------------------- | ------ | -------- | --------------------------------------------------------------------------------------------- |
-| `merchantReferencePaymentId` | string | Yes      | Your unique reference for this payment (e.g. order ID). Used for reconciliation and webhooks. |
+| `merchantReferenceId` | string | Yes      | Your unique reference for this payment (e.g. order ID). Used for reconciliation and webhooks. |
 | `amount`                     | number | Yes      | Payment amount; minimum `0.01`.                                                               |
 | `merchantMetadataJson`       | string | No       | Opaque JSON string for your own use (stored and returned on transaction queries).             |
 | `redirectSuccessUrl`         | string | No       | Reserved for future redirect-after-pay flows.                                                 |
@@ -207,11 +207,11 @@ Create a payment and receive a channel-specific URL for the customer to complete
 #### Example request
 
 ```bash
-curl -X POST "{baseUrl}/api/v1/integration/payment-link/generate" \
+curl -X POST "{baseUrl}/api/v1/integration/checkout/generate" \
   -H "X-API-Key: YOUR_API_KEY" \
   -H "Content-Type: application/json" \
   -d '{
-    "merchantReferencePaymentId": "order-1001",
+    "merchantReferenceId": "order-1001",
     "amount": 99.50,
     "merchantMetadataJson": "{\"table\":\"T5\"}"
   }'
@@ -222,21 +222,21 @@ curl -X POST "{baseUrl}/api/v1/integration/payment-link/generate" \
 ```json
 {
   "paymentId": 1,
-  "paymentChannelPayLink": "http://localhost:8080/test-payment-link.html?paymentId=1&merchantId=1&amount=99.50&currency=INR",
-  "status": "PAYMENT_LINK_GENERATED"
+  "checkoutUrl": "http://localhost:8080/test-checkout.html?paymentId=1&merchantId=1&amount=99.50&currency=INR",
+  "status": "CHECKOUT_GENERATED"
 }
 ```
 
 
 | Field                   | Description                                                                                          |
 | ----------------------- | ---------------------------------------------------------------------------------------------------- |
-| `paymentId`             | Gateway payment ID—store this and/or `merchantReferencePaymentId` for support and webhooks.          |
-| `paymentChannelPayLink` | URL to present to the customer. In production this is the live checkout URL from the active channel. |
-| `status`                | `PAYMENT_LINK_GENERATED` when the link is ready.                                                     |
+| `paymentId`             | Gateway payment ID—store this and/or `merchantReferenceId` for support and webhooks.          |
+| `checkoutUrl` | URL to present to the customer. In production this is the live checkout URL from the active channel. |
+| `status`                | `CHECKOUT_GENERATED` when the link is ready.                                                     |
 |                         |                                                                                                      |
 
 
-**Next step for your app:** Redirect or deep-link the user to `paymentChannelPayLink`, or render it as a “Pay now” button.
+**Next step for your app:** Redirect or deep-link the user to `checkoutUrl`, or render it as a “Pay now” button.
 
 #### Validation errors (`400 Bad Request`)
 
@@ -252,7 +252,7 @@ Examples (structured error body from the global handler):
   "status": 404,
   "error": "Not Found",
   "message": "Merchant config not found for merchantId: 1",
-  "path": "/api/v1/integration/payment-link/generate"
+  "path": "/api/v1/integration/checkout/generate"
 }
 ```
 
@@ -287,7 +287,7 @@ The JSON body matches the gateway’s `MerchantWebhookResponse` shape:
 | Field                        | Type   | Description                                                       |
 | ---------------------------- | ------ | ----------------------------------------------------------------- |
 | `paymentId`                  | long   | Gateway payment ID                                                |
-| `merchantReferencePaymentId` | string | Your reference from link generation                               |
+| `merchantReferenceId` | string | Your reference from link generation                               |
 | `status`                     | string | `SUCCESS` or `FAILED` (see [Payment statuses](#payment-statuses)) |
 | `merchantMetadata`           |        | Provider when available                                           |
 
@@ -297,7 +297,7 @@ The JSON body matches the gateway’s `MerchantWebhookResponse` shape:
 ```json
 {
   "paymentId": 1,
-  "merchantReferencePaymentId": "order-1001",
+  "merchantReferenceId": "order-1001",
   "status": "SUCCESS",
   "merchantMetadataJson": "{\"table\":\"T5\"}"
 }
@@ -306,7 +306,7 @@ The JSON body matches the gateway’s `MerchantWebhookResponse` shape:
 **Suggested handler logic**
 
 1. Verify the event (see [Best practices](#5-best-practices--next-steps)).
-2. Load your order by `merchantReferencePaymentId` (or map via `paymentId`).
+2. Load your order by `merchantReferenceId` (or map via `paymentId`).
 3. If already marked paid/failed, return `200` .
 4. On `SUCCESS`: fulfill the order, capture revenue, notify the customer.
 5. On `FAILED`: cancel hold, prompt retry, or alert operations.
@@ -317,7 +317,7 @@ The JSON body matches the gateway’s `MerchantWebhookResponse` shape:
 ```json
 {
   "paymentId": 1,
-  "merchantReferencePaymentId": "order-1001",
+  "merchantReferenceId": "order-1001",
   "status": "FAILED",
   "merchantMetadataJson": "{\"table\":\"T5\"}"
 }
@@ -327,14 +327,14 @@ The JSON body matches the gateway’s `MerchantWebhookResponse` shape:
 
 ```javascript
 app.post('/webhooks/digi-payments', express.json(), async (req, res) => {
-  const { paymentId, merchantReferencePaymentId, status, paymentChannelTxnId } = req.body;
+  const { paymentId, merchantReferenceId, status, paymentChannelTxnId } = req.body;
 
   // TODO: verify signature when the gateway provides one
 
   if (status === 'SUCCESS') {
-    await orderService.markPaid(merchantReferencePaymentId, { paymentId, paymentChannelTxnId });
+    await orderService.markPaid(merchantReferenceId, { paymentId, paymentChannelTxnId });
   } else if (status === 'FAILED') {
-    await orderService.markPaymentFailed(merchantReferencePaymentId, { paymentId });
+    await orderService.markPaymentFailed(merchantReferenceId, { paymentId });
   }
 
   res.sendStatus(200);
@@ -376,12 +376,12 @@ X-API-Key: YOUR_API_KEY
   "currency": "INR",
   "status": "SUCCESS",
   "merchantId": 1,
-  "merchantReferencePaymentId": "order-1001",
+  "merchantReferenceId": "order-1001",
   "merchantMetadataJson": "{\"table\":\"T5\"}",
   "paymentChannelId": 1,
   "paymentChannelName": "TEST",
   "paymentChannelTxnId": "TEST-TXN-8f3c2a1b-4d5e-6f7a-8b9c-0d1e2f3a4b5c",
-  "paymentChannelPayLink": "http://localhost:8080/test-payment-link.html?paymentId=1&merchantId=1&amount=99.50&currency=INR",
+  "checkoutUrl": "http://localhost:8080/test-checkout.html?paymentId=1&merchantId=1&amount=99.50&currency=INR",
   "createdDateTime": "2026-05-20T10:00:00",
   "updatedDateTime": "2026-05-20T10:05:00"
 }
@@ -395,7 +395,7 @@ X-API-Key: YOUR_API_KEY
 | Status                   | Meaning                                         |
 | ------------------------ | ----------------------------------------------- |
 | `INITIATED`              | Payment record created; link not yet finalized. |
-| `PAYMENT_LINK_GENERATED` | Checkout link issued to client.                 |
+| `CHECKOUT_GENERATED` | Checkout link issued to client.                 |
 | `SUCCESS`                | Payment completed successfully.                 |
 | `FAILED`                 | Payment failed or was declined.                 |
 | `REFUNDED`               | Refund processed (when supported).              |
@@ -429,7 +429,7 @@ Webhooks for client integration focus on `**SUCCESS**` and `**FAILED**`.
 
 ### Reliability
 
-- **Idempotency:** Store `paymentId` or `merchantReferencePaymentId` and skip duplicate processing if the order is already in the target state.
+- **Idempotency:** Store `paymentId` or `merchantReferenceId` and skip duplicate processing if the order is already in the target state.
 - **Fast 200 responses:** Acknowledge webhooks quickly; process fulfillment in a background job.
 
 
@@ -442,7 +442,7 @@ Webhooks for client integration focus on `**SUCCESS**` and `**FAILED**`.
 - Default currency confirmed (`merchant_config.currency`)  
 - End-to-end test: generate link → pay → webhook received → order fulfilled  
 - Error handling and alerts for `FAILED` payments  
-- Runbook for support (lookup by `merchantReferencePaymentId` and `paymentId`)  
+- Runbook for support (lookup by `merchantReferenceId` and `paymentId`)  
 - API key rotation process agreed with Digi
 
 

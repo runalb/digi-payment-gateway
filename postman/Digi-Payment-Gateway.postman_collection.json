@@ -2,7 +2,7 @@
   "info": {
     "_postman_id": "digi-payment-gateway-collection",
     "name": "Digi Payment Gateway",
-    "description": "REST API for the Digi Payment Gateway Spring Boot service.\n\n## Authentication\n\n| Area | Header | Notes |\n|------|--------|-------|\n| Integration (`/api/v1/integration/**`) | `X-API-Key` | Merchant API key from `merchant.api_key` |\n| Portal (`/api/**` except integration & webhooks) | `Authorization: Bearer <token>` | JWT infrastructure exists; no login endpoint yet |\n| Webhooks (`/webhook/**`) | None | Public |\n\n## Local setup\n\n1. Start PostgreSQL and run `scripts/sql/postgresql/merchant-setup.sql`\n2. Run the app with `dev` profile (default port `8080`)\n3. Set collection variables `baseUrl` and `apiKey`\n\n## Seed merchant (dev)\n\n- API key: `b4bdb71a-51c5-4565-985d-e0c13f72b970`\n- Payment channel: `TEST`",
+    "description": "REST API for the Digi Payment Gateway Spring Boot service.\n\n## Authentication\n\n| Area | Header | Notes |\n|------|--------|-------|\n| Integration (`/api/v1/integration/**`) | `X-API-Key` | Merchant API key from `merchant.api_key` |\n| Portal (`/api/**` except integration & webhooks) | `Authorization: Bearer <token>` | JWT infrastructure exists; no login endpoint yet |\n| Webhooks (`/webhook/**`) | None | Public |\n| Actuator (`/actuator/**`) | Bearer JWT | No public health endpoint; API key does not apply |\n\n## Local setup\n\n1. Start PostgreSQL and run `scripts/sql/postgresql/merchant-setup.sql`\n2. Run the app with `dev` profile (default port `8080`)\n3. Import **Digi-Payment-Gateway-Local** environment and select it\n4. Variables: `baseUrl`, `apiKey`, `paymentId`, `channelKey`\n\n## Suggested local flow (TEST channel)\n\n1. **Integration → Generate checkout** (saves `paymentId`)\n2. Open `checkoutUrl` in a browser (optional — `test-checkout.html`)\n3. **Webhooks → TEST channel webhook** (ack only — processing stubbed)\n4. **Integration → Get transaction by ID**\n\n## Seed merchant (dev)\n\n- API key: `b4bdb71a-51c5-4565-985d-e0c13f72b970`\n- Payment channel: `TEST`\n\n## Webhook note\n\n`PaymentChannelWebhookController` currently returns **200 OK with an empty body**. Orchestration (`processWebhook`) is not wired yet; payloads are logged only.",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "variable": [
@@ -38,17 +38,24 @@
       "description": "Merchant integration APIs. Authenticate with the `X-API-Key` header (merchant API key).",
       "item": [
         {
-          "name": "Generate payment link",
+          "name": "Generate checkout",
           "event": [
             {
               "listen": "test",
               "script": {
                 "type": "text/javascript",
                 "exec": [
+                  "function setSharedVar(key, value) {",
+                  "    pm.collectionVariables.set(key, value);",
+                  "    if (pm.environment.name) {",
+                  "        pm.environment.set(key, value);",
+                  "    }",
+                  "}",
+                  "",
                   "if (pm.response.code === 201) {",
                   "    const body = pm.response.json();",
                   "    if (body.paymentId) {",
-                  "        pm.collectionVariables.set('paymentId', String(body.paymentId));",
+                  "        setSharedVar('paymentId', String(body.paymentId));",
                   "    }",
                   "}",
                   "",
@@ -59,7 +66,7 @@
                   "pm.test('Response has paymentId', function () {",
                   "    const body = pm.response.json();",
                   "    pm.expect(body).to.have.property('paymentId');",
-                  "    pm.expect(body).to.have.property('paymentChannelPayLink');",
+                  "    pm.expect(body).to.have.property('checkoutUrl');",
                   "    pm.expect(body).to.have.property('status');",
                   "});"
                 ]
@@ -87,7 +94,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"merchantReferencePaymentId\": \"order-1001\",\n  \"amount\": 99.50,\n  \"merchantMetadataJson\": \"{\\\"table\\\":\\\"T5\\\"}\",\n  \"redirectSuccessUrl\": \"https://merchant.example/success\",\n  \"redirectFailureUrl\": \"https://merchant.example/failure\"\n}",
+              "raw": "{\n  \"merchantReferenceId\": \"order-1001\",\n  \"amount\": 99.50,\n  \"merchantMetadataJson\": \"{\\\"table\\\":\\\"T5\\\"}\",\n  \"redirectSuccessUrl\": \"https://merchant.example/success\",\n  \"redirectFailureUrl\": \"https://merchant.example/failure\"\n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -95,7 +102,7 @@
               }
             },
             "url": {
-              "raw": "{{baseUrl}}/api/v1/integration/payment-link/generate",
+              "raw": "{{baseUrl}}/api/v1/integration/checkout/generate",
               "host": [
                 "{{baseUrl}}"
               ],
@@ -103,11 +110,11 @@
                 "api",
                 "v1",
                 "integration",
-                "payment-link",
+                "checkout",
                 "generate"
               ]
             },
-            "description": "Creates a payment record and returns a channel-specific payment link.\n\n**Request body (`PaymentLinkRequest`)**\n\n| Field | Type | Required |\n|-------|------|----------|\n| `merchantReferencePaymentId` | string | yes |\n| `amount` | number (min 0.01) | yes |\n| `merchantMetadataJson` | string | no |\n| `redirectSuccessUrl` | string | no |\n| `redirectFailureUrl` | string | no |\n\n**Response (`PaymentLinkResponse`, 201)**\n\n| Field | Type |\n|-------|------|\n| `paymentId` | long |\n| `paymentChannelPayLink` | string |\n| `paymentChannelTxnId` | string |\n| `status` | enum: INITIATED, PAYMENT_LINK_GENERATED, SUCCESS, FAILED, REFUNDED, VOIDED |"
+            "description": "Creates a payment record and returns a channel-specific payment link.\n\n**Request body (`CheckoutRequest`)**\n\n| Field | Type | Required |\n|-------|------|----------|\n| `merchantReferenceId` | string | yes |\n| `amount` | number (min 0.01) | yes |\n| `merchantMetadataJson` | string | no |\n| `redirectSuccessUrl` | string | no |\n| `redirectFailureUrl` | string | no |\n\n**Response (`CheckoutResponse`, 201)**\n\n| Field | Type |\n|-------|------|\n| `paymentId` | long |\n| `checkoutUrl` | string |\n| `paymentChannelTxnId` | string |\n| `status` | enum: INITIATED, CHECKOUT_GENERATED, SUCCESS, FAILED, REFUNDED, VOIDED |"
           },
           "response": []
         },
@@ -208,7 +215,7 @@
                 "{{paymentId}}"
               ]
             },
-            "description": "Returns a single payment for the authenticated merchant.\n\n**Path parameter:** `id` — payment ID (use `{{paymentId}}` from Generate payment link).\n\n**404** if payment does not exist or belongs to another merchant."
+            "description": "Returns a single payment for the authenticated merchant.\n\n**Path parameter:** `id` — payment ID (use `{{paymentId}}` from Generate checkout).\n\n**404** if payment does not exist or belongs to another merchant."
           },
           "response": []
         }
@@ -216,7 +223,7 @@
     },
     {
       "name": "Webhooks (public)",
-      "description": "Inbound payment-channel webhooks. No authentication required.\n\n`channelKey` is case-insensitive and maps to `PaymentChannelNameEnum`: stripe, razorpay, phonepe, paytm, google_pay, xplorpay, paymob, test.",
+      "description": "Inbound payment-channel webhooks. No authentication required.\n\n**Current behavior:** returns `200 OK` with an **empty body** (orchestration stubbed; payload logged only).\n\n`channelKey` is case-insensitive and maps to `PaymentChannelNameEnum`: stripe, razorpay, phonepe, paytm, google_pay, xplorpay, paymob, test.\n\nWhen webhook processing is enabled, TEST channel will expect `paymentStatus` + `paymentId` in the JSON body.",
       "item": [
         {
           "name": "TEST channel webhook (success)",
@@ -230,10 +237,8 @@
                   "    pm.response.to.have.status(200);",
                   "});",
                   "",
-                  "pm.test('Webhook processed', function () {",
-                  "    const body = pm.response.json();",
-                  "    pm.expect(body).to.have.property('status');",
-                  "    pm.expect(body).to.have.property('paymentId');",
+                  "pm.test('Empty body (webhook orchestration stubbed)', function () {",
+                  "    pm.expect(pm.response.text()).to.be.empty;",
                   "});"
                 ]
               }
@@ -274,12 +279,29 @@
                 "{{channelKey}}"
               ]
             },
-            "description": "Simulates a TEST payment channel webhook.\n\n**TEST channel required fields:**\n- `paymentStatus` — PaymentStatusEnum name (e.g. SUCCESS, FAILED)\n- `paymentId` — numeric payment ID\n\n**Response (`WebhookStrategyResponse`)**\n\n| Field | Type |\n|-------|------|\n| `status` | PaymentStatusEnum |\n| `paymentId` | long |\n| `paymentChannelTxnId` | string |\n| `merchantReferencePaymentId` | string |"
+            "description": "Simulates a TEST payment channel webhook.\n\n**Current response:** `200 OK`, empty body (processing not wired).\n\n**Future TEST payload (when orchestration is enabled):**\n- `paymentStatus` — PaymentStatusEnum name (e.g. SUCCESS, FAILED)\n- `paymentId` — numeric payment ID\n\n**Future response (`WebhookStrategyResponse`):** `status`, `paymentId`, `paymentChannelTxnId`, `merchantReferenceId`"
           },
           "response": []
         },
         {
           "name": "TEST channel webhook (failed)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 200 OK', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('Empty body (webhook orchestration stubbed)', function () {",
+                  "    pm.expect(pm.response.text()).to.be.empty;",
+                  "});"
+                ]
+              }
+            }
+          ],
           "request": {
             "method": "POST",
             "header": [
@@ -315,12 +337,66 @@
                 "test"
               ]
             },
-            "description": "Marks a TEST payment as FAILED via webhook."
+            "description": "TEST webhook with `paymentStatus: FAILED`. Currently returns `200 OK` with empty body."
+          },
+          "response": []
+        },
+        {
+          "name": "PhonePe channel webhook (template)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              },
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"event\": \"checkout.order.completed\",\n  \"payload\": {}\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/webhook/v1/payment-channel/phonepe",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "webhook",
+                "v1",
+                "payment-channel",
+                "phonepe"
+              ]
+            },
+            "description": "Template for PhonePe webhooks. Payload shape is channel-specific; processing is not implemented yet — returns `200 OK` with empty body."
           },
           "response": []
         },
         {
           "name": "Payment channel webhook (generic)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 200 OK or 404 for unknown channel', function () {",
+                  "    pm.expect([200, 404]).to.include(pm.response.code);",
+                  "});"
+                ]
+              }
+            }
+          ],
           "request": {
             "method": "POST",
             "header": [
@@ -356,7 +432,56 @@
                 "stripe"
               ]
             },
-            "description": "Generic template for non-TEST channels. Payload shape is channel-specific; only TEST is fully implemented for local dev."
+            "description": "Generic template for non-TEST channels. Returns `200 OK` (empty body) for known channel keys, or `404` for unknown keys."
+          },
+          "response": []
+        },
+        {
+          "name": "Unknown channel (404)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 404 Not Found', function () {",
+                  "    pm.response.to.have.status(404);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/webhook/v1/payment-channel/unknown-channel",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "webhook",
+                "v1",
+                "payment-channel",
+                "unknown-channel"
+              ]
+            },
+            "description": "Expects `404` with message `Unknown payment channel: unknown-channel`."
           },
           "response": []
         }
@@ -406,10 +531,23 @@
     },
     {
       "name": "Actuator (dev)",
-      "description": "Spring Boot Actuator. In `dev` profile all endpoints are exposed (`management.endpoints.web.exposure.include=*`). Secured by Spring Security (typically 403 without credentials).",
+      "description": "Spring Boot Actuator. In `dev` profile all endpoints are exposed (`management.endpoints.web.exposure.include=*`). Secured by Spring Security — returns `401` without a valid Bearer JWT (`X-API-Key` does not apply outside integration routes).",
       "item": [
         {
           "name": "Health",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 401 without auth or 200 with credentials', function () {",
+                  "    pm.expect([200, 401]).to.include(pm.response.code);",
+                  "});"
+                ]
+              }
+            }
+          ],
           "request": {
             "method": "GET",
             "header": [
@@ -429,7 +567,7 @@
                 "health"
               ]
             },
-            "description": "Spring Boot health check. May return 403 when security is enabled."
+            "description": "Spring Boot health check. Returns `401` without credentials — `X-API-Key` only applies under `/api/v1/integration/**`; actuator requires a valid Bearer JWT (no token endpoint yet)."
           },
           "response": []
         }

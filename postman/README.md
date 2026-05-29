@@ -58,7 +58,7 @@ b4bdb71a-51c5-4565-985d-e0c13f72b970
 
 ### Integration (X-API-Key)
 
-#### POST `/api/v1/integration/payment-link/generate`
+#### POST `/api/v1/integration/checkout/generate`
 
 Creates a payment and returns a channel-specific payment link.
 
@@ -68,7 +68,7 @@ Creates a payment and returns a channel-specific payment link.
 
 | Field | Type | Required | Validation |
 |-------|------|----------|------------|
-| `merchantReferencePaymentId` | string | yes | not blank |
+| `merchantReferenceId` | string | yes | not blank |
 | `amount` | number | yes | min `0.01` |
 | `merchantMetadataJson` | string | no | — |
 | `redirectSuccessUrl` | string | no | — |
@@ -78,7 +78,7 @@ Creates a payment and returns a channel-specific payment link.
 
 ```json
 {
-  "merchantReferencePaymentId": "order-1001",
+  "merchantReferenceId": "order-1001",
   "amount": 99.50,
   "merchantMetadataJson": "{\"table\":\"T5\"}",
   "redirectSuccessUrl": "https://merchant.example/success",
@@ -91,7 +91,7 @@ Creates a payment and returns a channel-specific payment link.
 | Field | Type |
 |-------|------|
 | `paymentId` | long |
-| `paymentChannelPayLink` | string |
+| `checkoutUrl` | string |
 | `paymentChannelTxnId` | string |
 | `status` | `PaymentStatusEnum` |
 
@@ -123,12 +123,12 @@ Returns one payment for the authenticated merchant.
 | `currency` | string |
 | `status` | `PaymentStatusEnum` |
 | `merchantId` | long |
-| `merchantReferencePaymentId` | string |
+| `merchantReferenceId` | string |
 | `merchantMetadataJson` | string |
 | `paymentChannelId` | long |
 | `paymentChannelName` | `PaymentChannelNameEnum` |
 | `paymentChannelTxnId` | string |
-| `paymentChannelPayLink` | string |
+| `checkoutUrl` | string |
 | `createdDateTime` | ISO-8601 datetime |
 | `updatedDateTime` | ISO-8601 datetime |
 
@@ -168,9 +168,9 @@ Receives inbound webhooks from a payment channel. Payload shape is channel-speci
 | `status` | `PaymentStatusEnum` |
 | `paymentId` | long |
 | `paymentChannelTxnId` | string |
-| `merchantReferencePaymentId` | string |
+| `merchantReferenceId` | string |
 
-For local TEST payments, `paymentChannelPayLink` points to `/test-payment-link.html` with query params (`paymentId`, `merchantId`, `amount`, `currency`).
+For local TEST payments, `checkoutUrl` points to `/test-checkout.html` with query params (`paymentId`, `merchantId`, `amount`, `currency`).
 
 ---
 
@@ -190,7 +190,7 @@ Example: `GET /actuator/health`
 
 ### PaymentStatusEnum
 
-`INITIATED`, `PAYMENT_LINK_GENERATED`, `SUCCESS`, `FAILED`, `REFUNDED`, `VOIDED`
+`INITIATED`, `CHECKOUT_GENERATED`, `SUCCESS`, `FAILED`, `REFUNDED`, `VOIDED`
 
 ### PaymentChannelNameEnum
 

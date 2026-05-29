@@ -627,7 +627,7 @@ code {
 </thead>
 <tbody>
 <tr>
-<td><code>merchantReferencePaymentId</code></td>
+<td><code>merchantReferenceId</code></td>
 <td>string</td>
 <td>Yes</td>
 <td>Your unique reference for this payment (e.g. order ID). Used for reconciliation and webhooks.</td>
@@ -664,7 +664,7 @@ code {
   -H <span class="hljs-string">"X-API-Key: YOUR_API_KEY"</span> \
   -H <span class="hljs-string">"Content-Type: application/json"</span> \
   -d <span class="hljs-string">'{
-    "merchantReferencePaymentId": "order-1001",
+    "merchantReferenceId": "order-1001",
     "amount": 99.50,
     "merchantMetadataJson": "{\"table\":\"T5\"}"
   }'</span>
@@ -686,7 +686,7 @@ code {
 <tbody>
 <tr>
 <td><code>paymentId</code></td>
-<td>Gateway payment ID—store this and/or <code>merchantReferencePaymentId</code> for support and webhooks.</td>
+<td>Gateway payment ID—store this and/or <code>merchantReferenceId</code> for support and webhooks.</td>
 </tr>
 <tr>
 <td><code>paymentChannelPayLink</code></td>
@@ -765,7 +765,7 @@ code {
 <td>Gateway payment ID</td>
 </tr>
 <tr>
-<td><code>merchantReferencePaymentId</code></td>
+<td><code>merchantReferenceId</code></td>
 <td>string</td>
 <td>Your reference from link generation</td>
 </tr>
@@ -784,7 +784,7 @@ code {
 <h4 id="example--payment-succeeded">Example — payment succeeded</h4>
 <pre class="hljs"><code><div>{
   <span class="hljs-attr">"paymentId"</span>: <span class="hljs-number">1</span>,
-  <span class="hljs-attr">"merchantReferencePaymentId"</span>: <span class="hljs-string">"order-1001"</span>,
+  <span class="hljs-attr">"merchantReferenceId"</span>: <span class="hljs-string">"order-1001"</span>,
   <span class="hljs-attr">"status"</span>: <span class="hljs-string">"SUCCESS"</span>,
   <span class="hljs-attr">"merchantMetadataJson"</span>: <span class="hljs-string">"{\"table\":\"T5\"}"</span>
 }
@@ -792,7 +792,7 @@ code {
 <p><strong>Suggested handler logic</strong></p>
 <ol>
 <li>Verify the event (see <a href="#5-best-practices--next-steps">Best practices</a>).</li>
-<li>Load your order by <code>merchantReferencePaymentId</code> (or map via <code>paymentId</code>).</li>
+<li>Load your order by <code>merchantReferenceId</code> (or map via <code>paymentId</code>).</li>
 <li>If already marked paid/failed, return <code>200</code> .</li>
 <li>On <code>SUCCESS</code>: fulfill the order, capture revenue, notify the customer.</li>
 <li>On <code>FAILED</code>: cancel hold, prompt retry, or alert operations.</li>
@@ -801,21 +801,21 @@ code {
 <h4 id="example--payment-failed">Example — payment failed</h4>
 <pre class="hljs"><code><div>{
   <span class="hljs-attr">"paymentId"</span>: <span class="hljs-number">1</span>,
-  <span class="hljs-attr">"merchantReferencePaymentId"</span>: <span class="hljs-string">"order-1001"</span>,
+  <span class="hljs-attr">"merchantReferenceId"</span>: <span class="hljs-string">"order-1001"</span>,
   <span class="hljs-attr">"status"</span>: <span class="hljs-string">"FAILED"</span>,
   <span class="hljs-attr">"merchantMetadataJson"</span>: <span class="hljs-string">"{\"table\":\"T5\"}"</span>
 }
 </div></code></pre>
 <h4 id="example-handler-pseudo-code">Example handler (pseudo-code)</h4>
 <pre class="hljs"><code><div>app.post(<span class="hljs-string">'/webhooks/digi-payments'</span>, express.json(), <span class="hljs-keyword">async</span> (req, res) =&gt; {
-  <span class="hljs-keyword">const</span> { paymentId, merchantReferencePaymentId, status, paymentChannelTxnId } = req.body;
+  <span class="hljs-keyword">const</span> { paymentId, merchantReferenceId, status, paymentChannelTxnId } = req.body;
 
   <span class="hljs-comment">// <span class="hljs-doctag">TODO:</span> verify signature when the gateway provides one</span>
 
   <span class="hljs-keyword">if</span> (status === <span class="hljs-string">'SUCCESS'</span>) {
-    <span class="hljs-keyword">await</span> orderService.markPaid(merchantReferencePaymentId, { paymentId, paymentChannelTxnId });
+    <span class="hljs-keyword">await</span> orderService.markPaid(merchantReferenceId, { paymentId, paymentChannelTxnId });
   } <span class="hljs-keyword">else</span> <span class="hljs-keyword">if</span> (status === <span class="hljs-string">'FAILED'</span>) {
-    <span class="hljs-keyword">await</span> orderService.markPaymentFailed(merchantReferencePaymentId, { paymentId });
+    <span class="hljs-keyword">await</span> orderService.markPaymentFailed(merchantReferenceId, { paymentId });
   }
 
   res.sendStatus(<span class="hljs-number">200</span>);
@@ -841,7 +841,7 @@ X-API-Key</span>: YOUR_API_KEY
   <span class="hljs-attr">"currency"</span>: <span class="hljs-string">"INR"</span>,
   <span class="hljs-attr">"status"</span>: <span class="hljs-string">"SUCCESS"</span>,
   <span class="hljs-attr">"merchantId"</span>: <span class="hljs-number">1</span>,
-  <span class="hljs-attr">"merchantReferencePaymentId"</span>: <span class="hljs-string">"order-1001"</span>,
+  <span class="hljs-attr">"merchantReferenceId"</span>: <span class="hljs-string">"order-1001"</span>,
   <span class="hljs-attr">"merchantMetadataJson"</span>: <span class="hljs-string">"{\"table\":\"T5\"}"</span>,
   <span class="hljs-attr">"paymentChannelId"</span>: <span class="hljs-number">1</span>,
   <span class="hljs-attr">"paymentChannelName"</span>: <span class="hljs-string">"TEST"</span>,
@@ -931,7 +931,7 @@ X-API-Key</span>: YOUR_API_KEY
 </ul>
 <h3 id="reliability">Reliability</h3>
 <ul>
-<li><strong>Idempotency:</strong> Store <code>paymentId</code> or <code>merchantReferencePaymentId</code> and skip duplicate processing if the order is already in the target state.</li>
+<li><strong>Idempotency:</strong> Store <code>paymentId</code> or <code>merchantReferenceId</code> and skip duplicate processing if the order is already in the target state.</li>
 <li><strong>Fast 200 responses:</strong> Acknowledge webhooks quickly; process fulfillment in a background job.</li>
 </ul>
 <h3 id="going-live-checklist">Going live checklist</h3>
@@ -942,7 +942,7 @@ X-API-Key</span>: YOUR_API_KEY
 <li>Default currency confirmed (<code>merchant_config.currency</code>)</li>
 <li>End-to-end test: generate link → pay → webhook received → order fulfilled</li>
 <li>Error handling and alerts for <code>FAILED</code> payments</li>
-<li>Runbook for support (lookup by <code>merchantReferencePaymentId</code> and <code>paymentId</code>)</li>
+<li>Runbook for support (lookup by <code>merchantReferenceId</code> and <code>paymentId</code>)</li>
 <li>API key rotation process agreed with Digi</li>
 </ul>
 <hr>
