@@ -15,12 +15,9 @@ public class PaymentDetailsResponseMapper {
                 payment.getAmount(),
                 payment.getCurrency(),
                 payment.getStatus(),
-                payment.getMerchant().getId(),
                 payment.getMerchantReferenceId(),
-                payment.getPaymentChannel().getId(),
                 payment.getPaymentChannel().getName(),
                 payment.getPaymentChannelTxnId(),
-                payment.getPaymentChannelCheckoutUrl(),
                 payment.getCreatedDateTime(),
                 payment.getUpdatedDateTime());
     }

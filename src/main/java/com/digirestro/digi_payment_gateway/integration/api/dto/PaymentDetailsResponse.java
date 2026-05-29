@@ -11,11 +11,8 @@ public record PaymentDetailsResponse(
         BigDecimal amount,
         String currency,
         PaymentStatusEnum status,
-        Long merchantId,
         String merchantReferenceId,
-        Long paymentChannelId,
         PaymentChannelNameEnum paymentChannelName,
         String paymentChannelTxnId,
-        String paymentChannelCheckoutUrl,
         LocalDateTime createdDateTime,
         LocalDateTime updatedDateTime) {}
