@@ -20,7 +20,7 @@ public class PaymentDetailsResponseMapper {
                 payment.getPaymentChannel().getId(),
                 payment.getPaymentChannel().getName(),
                 payment.getPaymentChannelTxnId(),
-                payment.getPaymentChannelPayLink(),
+                payment.getPaymentChannelCheckoutUrl(),
                 payment.getCreatedDateTime(),
                 payment.getUpdatedDateTime());
     }

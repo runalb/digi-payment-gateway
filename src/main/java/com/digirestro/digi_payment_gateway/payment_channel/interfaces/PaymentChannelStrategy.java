@@ -1,21 +1,18 @@
 package com.digirestro.digi_payment_gateway.payment_channel.interfaces;
 
 import com.digirestro.digi_payment_gateway.payment.entity.PaymentEntity;
+import com.digirestro.digi_payment_gateway.payment_channel.dto.CheckoutStrategyResponse;
 import com.digirestro.digi_payment_gateway.payment_channel.enums.PaymentChannelNameEnum;
-import com.digirestro.digi_payment_gateway.payment_channel.dto.PaymentLinkStrategyResponse;
-import com.digirestro.digi_payment_gateway.payment_channel.dto.WebhookStrategyResponse;
-
-import java.util.Map;
 
 public interface PaymentChannelStrategy {
 
     PaymentChannelNameEnum getChannelName();
 
     /**
-     * Returns channel link data for an already-persisted payment.
+     * Returns channel checkout data for an already-persisted payment.
      * Must not save the payment or set its status — {@code PaymentOrchestrationService} owns persistence.
      */
-    PaymentLinkStrategyResponse createPaymentLink(PaymentEntity payment);
+    CheckoutStrategyResponse createCheckout(PaymentEntity payment);
 
 
 

@@ -71,8 +71,8 @@ public class PaymentEntity extends AuditableEntity {
     private PaymentStatusEnum status = PaymentStatusEnum.INITIATED;
 
     @Column(columnDefinition = "TEXT")
-    private String paymentChannelPayLink;
-    
+    private String paymentChannelCheckoutUrl;
+
     // @Column(columnDefinition = "TEXT")
     // private String merchantMetadataJson;
 
@@ -84,8 +84,6 @@ public class PaymentEntity extends AuditableEntity {
 
     @Column(columnDefinition = "TEXT")
     private String paymentChannelRawResponseJson;
-
-    // private String digiPaymentLink;
 
     // @Column(nullable = false)
     // private Integer attempts = 0;

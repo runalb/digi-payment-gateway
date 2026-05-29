@@ -3,11 +3,11 @@ package com.digirestro.digi_payment_gateway.payment;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import com.digirestro.digi_payment_gateway.integration.api.dto.CheckoutRequest;
 import com.digirestro.digi_payment_gateway.merchant.entity.MerchantEntity;
-import com.digirestro.digi_payment_gateway.integration.api.dto.PaymentLinkRequest;
-import com.digirestro.digi_payment_gateway.payment.enums.PaymentOriginEnum;
-import com.digirestro.digi_payment_gateway.payment.contract.PaymentLinkOrchestrationContract;
+import com.digirestro.digi_payment_gateway.payment.contract.CheckoutOrchestrationContract;
 import com.digirestro.digi_payment_gateway.payment.entity.PaymentEntity;
+import com.digirestro.digi_payment_gateway.payment.enums.PaymentOriginEnum;
 import com.digirestro.digi_payment_gateway.payment.service.PaymentOrchestrationService;
 import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
@@ -19,26 +19,26 @@ class PaymentOrchestrationServiceContractTest {
 
     @Test
     void serviceDeclaresOrchestrationContract() {
-        assertTrue(PaymentOrchestrationService.class.isAnnotationPresent(PaymentLinkOrchestrationContract.class));
+        assertTrue(PaymentOrchestrationService.class.isAnnotationPresent(CheckoutOrchestrationContract.class));
     }
 
     @Test
-    void generatePaymentLinkMustNotBeTransactional() throws NoSuchMethodException {
+    void generateCheckoutMustNotBeTransactional() throws NoSuchMethodException {
         Method method = PaymentOrchestrationService.class.getDeclaredMethod(
-                "generatePaymentLink",
+                "generateCheckout",
                 MerchantEntity.class,
-                PaymentLinkRequest.class,
+                CheckoutRequest.class,
                 PaymentOriginEnum.class);
 
         assertFalse(method.isAnnotationPresent(Transactional.class));
     }
 
     @Test
-    void completePaymentLinkGenerationMustRemainPrivatePhaseTwoHook() throws NoSuchMethodException {
+    void completeCheckoutGenerationMustRemainPrivatePhaseTwoHook() throws NoSuchMethodException {
         Method method = PaymentOrchestrationService.class.getDeclaredMethod(
-                "completePaymentLinkGeneration", PaymentEntity.class);
+                "completeCheckoutGeneration", PaymentEntity.class);
 
         assertTrue(Modifier.isPrivate(method.getModifiers()));
-        assertTrue(method.isAnnotationPresent(PaymentLinkOrchestrationContract.class));
+        assertTrue(method.isAnnotationPresent(CheckoutOrchestrationContract.class));
     }
 }

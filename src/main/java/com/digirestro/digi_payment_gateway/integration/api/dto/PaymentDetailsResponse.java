@@ -16,7 +16,6 @@ public record PaymentDetailsResponse(
         Long paymentChannelId,
         PaymentChannelNameEnum paymentChannelName,
         String paymentChannelTxnId,
-        // String digiPaymentLink,
-        String paymentChannelPayLink,
+        String paymentChannelCheckoutUrl,
         LocalDateTime createdDateTime,
         LocalDateTime updatedDateTime) {}

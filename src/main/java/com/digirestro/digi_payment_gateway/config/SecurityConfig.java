@@ -36,7 +36,7 @@ public class SecurityConfig {
                         // public routes
                         .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
                         .requestMatchers("/webhook/**").permitAll()
-                        .requestMatchers("/test-payment-link.html/**").permitAll()
+                        .requestMatchers("/test-checkout.html/**").permitAll()
 
                         // everything else requires authentication (JWT or API key)
                         .anyRequest().authenticated())

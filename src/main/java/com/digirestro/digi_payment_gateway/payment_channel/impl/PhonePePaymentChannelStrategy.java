@@ -3,7 +3,7 @@ package com.digirestro.digi_payment_gateway.payment_channel.impl;
 import com.digirestro.digi_payment_gateway.payment.entity.PaymentEntity;
 import com.digirestro.digi_payment_gateway.payment.enums.PaymentStatusEnum;
 import com.digirestro.digi_payment_gateway.payment_channel.enums.PaymentChannelNameEnum;
-import com.digirestro.digi_payment_gateway.payment_channel.dto.PaymentLinkStrategyResponse;
+import com.digirestro.digi_payment_gateway.payment_channel.dto.CheckoutStrategyResponse;
 import com.digirestro.digi_payment_gateway.payment_channel.interfaces.PaymentChannelStrategy;
 import tools.jackson.core.type.TypeReference;
 import tools.jackson.databind.ObjectMapper;
@@ -58,7 +58,7 @@ public class PhonePePaymentChannelStrategy implements PaymentChannelStrategy {
     }
 
     @Override
-    public PaymentLinkStrategyResponse createPaymentLink(PaymentEntity payment) {
+    public CheckoutStrategyResponse createCheckout(PaymentEntity payment) {
         try {
             String phonepeMerchatMid = extractPhonepeMerchatMid(payment);
             String redirectUrl = requireRedirectSuccessUrl(payment);
@@ -104,10 +104,10 @@ public class PhonePePaymentChannelStrategy implements PaymentChannelStrategy {
             String orderId = requireNonBlankString(responseBody, "orderId");
             String rawResponseJson = objectMapper.writeValueAsString(responseBody);
 
-            return new PaymentLinkStrategyResponse(
+            return new CheckoutStrategyResponse(
                     checkoutRedirectUrl,
                     orderId,
-                    PaymentStatusEnum.PAYMENT_LINK_GENERATED,
+                    PaymentStatusEnum.CHECKOUT_URL_GENERATED,
                     rawResponseJson);
         } catch (IllegalArgumentException ex) {
             throw ex;

@@ -1,9 +1,9 @@
 package com.digirestro.digi_payment_gateway.integration.api.controller;
 
-import com.digirestro.digi_payment_gateway.integration.api.dto.PaymentLinkRequest;
-import com.digirestro.digi_payment_gateway.integration.api.dto.PaymentLinkResponse;
 import com.digirestro.digi_payment_gateway.auth.service.IntegrationAuthService;
-import com.digirestro.digi_payment_gateway.integration.api.service.PaymentLinkIntegrationService;
+import com.digirestro.digi_payment_gateway.integration.api.dto.CheckoutRequest;
+import com.digirestro.digi_payment_gateway.integration.api.dto.CheckoutResponse;
+import com.digirestro.digi_payment_gateway.integration.api.service.CheckoutIntegrationService;
 import com.digirestro.digi_payment_gateway.merchant.entity.MerchantEntity;
 
 import jakarta.validation.Valid;
@@ -16,25 +16,25 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 @RestController
-@RequestMapping("/api/v1/integration/payment-link")
-public class PaymentLinkIntegrationController {
+@RequestMapping("/api/v1/integration/checkout")
+public class CheckoutIntegrationController {
 
-    private final PaymentLinkIntegrationService paymentLinkIntegrationService;
+    private final CheckoutIntegrationService checkoutIntegrationService;
     private final IntegrationAuthService integrationAuthService;
 
-    public PaymentLinkIntegrationController(
-            PaymentLinkIntegrationService paymentLinkIntegrationService,
+    public CheckoutIntegrationController(
+            CheckoutIntegrationService checkoutIntegrationService,
             IntegrationAuthService integrationAuthService) {
-        this.paymentLinkIntegrationService = paymentLinkIntegrationService;
+        this.checkoutIntegrationService = checkoutIntegrationService;
         this.integrationAuthService = integrationAuthService;
     }
 
     @PostMapping("/generate")
-    public ResponseEntity<PaymentLinkResponse> generatePaymentLink(
+    public ResponseEntity<CheckoutResponse> generateCheckout(
             Authentication authentication,
-            @Valid @RequestBody PaymentLinkRequest request) {
+            @Valid @RequestBody CheckoutRequest request) {
         MerchantEntity merchant = integrationAuthService.extractMerchant(authentication);
-        PaymentLinkResponse response = paymentLinkIntegrationService.generatePaymentLink(merchant, request);
+        CheckoutResponse response = checkoutIntegrationService.generateCheckout(merchant, request);
         return new ResponseEntity<>(response, HttpStatus.CREATED);
     }
 }

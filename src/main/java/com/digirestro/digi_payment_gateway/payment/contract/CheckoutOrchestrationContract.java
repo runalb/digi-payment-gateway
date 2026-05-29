@@ -7,11 +7,10 @@ import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
 
 /**
- * Marks payment-link orchestration code governed by a fixed two-phase flow.
+ * Marks checkout orchestration code governed by a fixed two-phase flow.
  * Changing annotated types or methods requires updating {@code PaymentOrchestrationServiceContractTest}.
  */
 @Documented
 @Retention(RetentionPolicy.RUNTIME)
 @Target({ElementType.TYPE, ElementType.METHOD})
-public @interface PaymentLinkOrchestrationContract {
-}
+public @interface CheckoutOrchestrationContract {}

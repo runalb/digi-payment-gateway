@@ -2,9 +2,8 @@ package com.digirestro.digi_payment_gateway.payment_channel.impl;
 
 import com.digirestro.digi_payment_gateway.payment.entity.PaymentEntity;
 import com.digirestro.digi_payment_gateway.payment.enums.PaymentStatusEnum;
+import com.digirestro.digi_payment_gateway.payment_channel.dto.CheckoutStrategyResponse;
 import com.digirestro.digi_payment_gateway.payment_channel.enums.PaymentChannelNameEnum;
-import com.digirestro.digi_payment_gateway.payment_channel.dto.PaymentLinkStrategyResponse;
-import com.digirestro.digi_payment_gateway.payment_channel.dto.WebhookStrategyResponse;
 import com.digirestro.digi_payment_gateway.payment_channel.interfaces.PaymentChannelStrategy;
 
 import java.net.URLEncoder;
@@ -21,7 +20,7 @@ import tools.jackson.databind.ObjectMapper;
 @Slf4j
 public class TestPaymentChannelStrategy implements PaymentChannelStrategy {
 
-    private static final String TEST_PAYMENT_LINK_BASE_URL = "http://localhost:8080/test-payment-link.html";
+    private static final String TEST_CHECKOUT_BASE_URL = "http://localhost:8080/test-checkout.html";
 
     private final ObjectMapper objectMapper;
 
@@ -35,26 +34,24 @@ public class TestPaymentChannelStrategy implements PaymentChannelStrategy {
     }
 
     @Override
-    public PaymentLinkStrategyResponse createPaymentLink(PaymentEntity payment) {
+    public CheckoutStrategyResponse createCheckout(PaymentEntity payment) {
         String paymentChannelTxnId = "TEST-TXN-" + UUID.randomUUID();
         String amountParam = URLEncoder.encode(payment.getAmount().toPlainString(), StandardCharsets.UTF_8);
         String currencyParam = URLEncoder.encode(payment.getCurrency(), StandardCharsets.UTF_8);
-        String paymentUrl = TEST_PAYMENT_LINK_BASE_URL + "?paymentId=" + payment.getId()
+        String checkoutUrl = TEST_CHECKOUT_BASE_URL + "?paymentId=" + payment.getId()
                 + "&merchantId=" + payment.getMerchant().getId()
                 + "&amount=" + amountParam
                 + "&currency=" + currencyParam;
 
-        // paymentUrl = "https://gateway-int.clearent.net/paylink/N32rg0Z40t9";
-
         Map<String, Object> rawResponse = new LinkedHashMap<>();
-        rawResponse.put("redirectUrl", paymentUrl);
+        rawResponse.put("redirectUrl", checkoutUrl);
         rawResponse.put("orderId", paymentChannelTxnId);
         String rawResponseJson = objectMapper.writeValueAsString(rawResponse);
 
-        return new PaymentLinkStrategyResponse(
-                paymentUrl,
+        return new CheckoutStrategyResponse(
+                checkoutUrl,
                 paymentChannelTxnId,
-                PaymentStatusEnum.PAYMENT_LINK_GENERATED,
+                PaymentStatusEnum.CHECKOUT_URL_GENERATED,
                 rawResponseJson);
     }
 

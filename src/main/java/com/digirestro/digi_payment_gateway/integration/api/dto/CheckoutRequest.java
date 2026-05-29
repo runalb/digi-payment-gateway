@@ -5,12 +5,12 @@ import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import java.math.BigDecimal;
 
-public record PaymentLinkRequest(
+public record CheckoutRequest(
         @NotBlank String merchantReferencePaymentId,
         @NotNull @DecimalMin("0.01") BigDecimal amount,
         String redirectSuccessUrl,
         String redirectFailureUrl
 
-         // TODO: Add json key and value pairs to merchantMetadataJson
+        // TODO: Add json key and value pairs to merchantMetadataJson
         // String merchantMetadataJson
-) {}
+        ) {}
