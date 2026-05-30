@@ -2,19 +2,67 @@ package com.digirestro.digi_payment_gateway.exception;
 
 import jakarta.persistence.EntityNotFoundException;
 import jakarta.servlet.http.HttpServletRequest;
+import jakarta.validation.ConstraintViolationException;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.http.converter.HttpMessageNotReadableException;
+import org.springframework.validation.FieldError;
+import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.web.method.annotation.HandlerMethodValidationException;
 
 import java.time.Instant;
 import java.util.LinkedHashMap;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 @Slf4j
 @RestControllerAdvice
 public class GlobalExceptionHandler {
+
+    @ExceptionHandler(MethodArgumentNotValidException.class)
+    public ResponseEntity<Map<String, Object>> handleMethodArgumentNotValidException(
+            MethodArgumentNotValidException ex,
+            HttpServletRequest request) {
+        String message = ex.getBindingResult().getFieldErrors().stream()
+                .map(FieldError::getDefaultMessage)
+                .collect(Collectors.joining(", "));
+        log.warn("Validation failed on path {}: {}", request.getRequestURI(), message);
+        return buildErrorResponse(HttpStatus.BAD_REQUEST, message, request.getRequestURI());
+    }
+
+    @ExceptionHandler(HandlerMethodValidationException.class)
+    public ResponseEntity<Map<String, Object>> handleHandlerMethodValidationException(
+            HandlerMethodValidationException ex,
+            HttpServletRequest request) {
+        String message = ex.getParameterValidationResults().stream()
+                .flatMap(result -> result.getResolvableErrors().stream())
+                .map(error -> error.getDefaultMessage())
+                .collect(Collectors.joining(", "));
+        log.warn("Validation failed on path {}: {}", request.getRequestURI(), message);
+        return buildErrorResponse(HttpStatus.BAD_REQUEST, message, request.getRequestURI());
+    }
+
+    @ExceptionHandler(ConstraintViolationException.class)
+    public ResponseEntity<Map<String, Object>> handleConstraintViolationException(
+            ConstraintViolationException ex,
+            HttpServletRequest request) {
+        String message = ex.getConstraintViolations().stream()
+                .map(violation -> violation.getMessage())
+                .collect(Collectors.joining(", "));
+        log.warn("Validation failed on path {}: {}", request.getRequestURI(), message);
+        return buildErrorResponse(HttpStatus.BAD_REQUEST, message, request.getRequestURI());
+    }
+
+    @ExceptionHandler(HttpMessageNotReadableException.class)
+    public ResponseEntity<Map<String, Object>> handleHttpMessageNotReadableException(
+            HttpMessageNotReadableException ex,
+            HttpServletRequest request) {
+        log.warn("Malformed request body on path {}: {}", request.getRequestURI(), ex.getMessage());
+        return buildErrorResponse(HttpStatus.BAD_REQUEST, "Request body is missing or invalid JSON", request.getRequestURI());
+    }
 
     @ExceptionHandler(IllegalArgumentException.class)
     public ResponseEntity<Map<String, Object>> handleIllegalArgumentException(
