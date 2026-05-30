@@ -6,7 +6,7 @@ import jakarta.validation.constraints.NotNull;
 import java.math.BigDecimal;
 
 public record CheckoutRequest(
-        @NotBlank String merchantReferenceId,
+        @NotBlank String merchantReferencePaymentId,
         @NotNull @DecimalMin("0.01") BigDecimal amount,
         String redirectSuccessUrl,
         String redirectFailureUrl

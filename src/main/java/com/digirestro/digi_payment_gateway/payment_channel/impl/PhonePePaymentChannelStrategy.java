@@ -70,12 +70,12 @@ public class PhonePePaymentChannelStrategy implements PaymentChannelStrategy {
             }
 
             String paymentId = payment.getId().toString();
-            String digiMerchantReferenceId = payment.getMerchantReferenceId();
+            String merchantReferencePaymentId = payment.getMerchantReferencePaymentId();
 
             Map<String, Object> merchantUrls = Map.of("redirectUrl", redirectUrl);
             Map<String, Object> paymentFlow = Map.of(
                     "type", PAYMENT_FLOW_TYPE,
-                    "message", "Payment for merchant reference ID: " + digiMerchantReferenceId,
+                    "message", "Payment for merchant reference payment ID: " + merchantReferencePaymentId,
                     "merchantUrls", merchantUrls);
 
             Map<String, Object> payload = new LinkedHashMap<>();
@@ -90,15 +90,15 @@ public class PhonePePaymentChannelStrategy implements PaymentChannelStrategy {
 
             String payUrl = baseUrl + "/checkout/v2/pay";
             
-            log.info("PhonePe pay request for paymentId={}, merchantReferenceId={}", paymentId, digiMerchantReferenceId);
+            log.info("PhonePe pay request for paymentId={}, merchantReferencePaymentId={}", paymentId, merchantReferencePaymentId);
             log.info("PhonePe pay request headers: {}", headers);
             log.info("PhonePe pay request payload: {}", payload);
 
-            ResponseEntity<Map> payResponse = restTemplate.exchange(
+            ResponseEntity<Map<String, Object>> payResponse = restTemplate.exchange(
                     payUrl,
                     HttpMethod.POST,
                     new HttpEntity<>(payload, headers),
-                    Map.class);
+                    new ParameterizedTypeReference<Map<String, Object>>() {});
 
             Map<String, Object> responseBody = payResponse.getBody();
             if (responseBody == null) {

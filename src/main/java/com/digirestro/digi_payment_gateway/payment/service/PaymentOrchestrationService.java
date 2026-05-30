@@ -77,7 +77,7 @@ public class PaymentOrchestrationService {
         payment.setPaymentChannel(merchantPaymentChannelConfig.getPaymentChannel());
         payment.setCurrency(merchantConfig.getCurrency());
         payment.setAmount(request.amount());
-        payment.setMerchantReferenceId(request.merchantReferenceId());
+        payment.setMerchantReferencePaymentId(request.merchantReferencePaymentId());
         payment.setRedirectSuccessUrl(resolveRedirectUrl(
                 request.redirectSuccessUrl(), merchantConfig.getRedirectSuccessUrl(), "redirectSuccessUrl"));
         payment.setRedirectFailureUrl(resolveRedirectUrl(
